@@ -1,0 +1,29 @@
+scalar Time
+scalar UUID
+scalar JSON
+
+type Query {
+  version: String!
+  healthz: String!
+  me: User
+  games(limit: Int = 20, offset: Int = 0): [Game!]!
+  game(id: ID!): Game
+  session(id: ID!): Session
+  goods(gameId: ID): [DigitalGood!]!   # list goods globally or by game
+  myInventory(gameId: ID): [Entitlement!]!
+}
+
+type Mutation {
+  # Auth (magic link)
+  loginMagic(email: String!): Boolean!
+  completeMagic(token: ID!): User!
+
+  # Games & sessions
+  createGame(input: CreateGameInput!): Game!
+  joinGame(gameId: ID!): JoinResult!
+  leaveQueue(gameId: ID!): Boolean!
+
+  # Digital goods (simple entitlement grant)
+  grantGood(userId: ID!, goodId: ID!, quantity: Int = 1): Boolean!
+  revokeGood(userId: ID!, goodId: ID!, quantity: Int = 1): Boolean!
+}

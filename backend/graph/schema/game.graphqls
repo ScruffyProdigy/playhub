@@ -1,0 +1,24 @@
+enum SessionStatus { PENDING ACTIVE ENDED }
+
+type Game {
+  id: ID!
+  name: String!
+  createdAt: Time!
+  activeSessions(limit: Int = 10): [Session!]!
+}
+
+type Session {
+  id: ID!
+  game: Game!
+  status: SessionStatus!
+  createdAt: Time!
+  players: [User!]!
+}
+
+input CreateGameInput { name: String! }
+
+type JoinResult {
+  queued: Boolean!
+  sessionId: ID
+  joinUrl: String
+}

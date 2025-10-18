@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lobby-db-migrate
+  namespace: lobby
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/golang-migrate/migrate:latest
+          args: ["-path=/migrations", "-database=$(DATABASE_URL)", "up"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pg-dsn
+                  key: DATABASE_URL
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+      volumes:
+        - name: migrations
+          configMap:
+            name: db-init

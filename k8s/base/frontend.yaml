@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lobby-frontend
+  namespace: lobby
+  labels: { app: lobby-frontend }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: lobby-frontend } }
+  template:
+    metadata:
+      labels: { app: lobby-frontend }
+    spec:
+      containers:
+        - name: frontend
+          image: docker.io/scruffyprodigy/lobby-frontend:0.0.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          # This feeds your nginx /docker-entrypoint.d script to write env.js
+          env:
+            - name: REACT_APP_ENV
+              value: "minikube"
+            - name: REACT_APP_API_BASE_URL
+              value: "http://api.lobby.local"
+          readinessProbe:
+            httpGet: { path: /, port: 80 }
+            initialDelaySeconds: 3
+          livenessProbe:
+            httpGet: { path: /, port: 80 }
+            initialDelaySeconds: 5
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits:   { cpu: "500m", memory: "512Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lobby-frontend
+  namespace: lobby
+spec:
+  selector: { app: lobby-frontend }
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  type: ClusterIP

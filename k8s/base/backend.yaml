@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lobby-backend
+  namespace: lobby
+  labels: { app: lobby-backend }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: lobby-backend } }
+  template:
+    metadata:
+      labels: { app: lobby-backend }
+    spec:
+      containers:
+        - name: backend
+          image: docker.io/scruffyprodigy/lobby-backend:0.0.2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }
+            initialDelaySeconds: 3
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 5
+          resources:
+            requests: { cpu: "200m", memory: "256Mi" }
+            limits:   { cpu: "1",    memory: "1Gi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lobby-backend
+  namespace: lobby
+spec:
+  selector: { app: lobby-backend }
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+  type: ClusterIP

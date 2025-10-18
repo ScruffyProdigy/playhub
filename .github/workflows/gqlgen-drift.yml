@@ -1,0 +1,34 @@
+name: GQLGen Drift Detection
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  check-gqlgen-drift:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.25'
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        go mod download
+    
+    - name: Check for gqlgen drift
+      run: |
+        cd backend
+        make check-drift
+    
+    - name: Run all tests
+      run: |
+        cd backend
+        make test-all
