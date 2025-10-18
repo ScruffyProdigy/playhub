@@ -1,0 +1,135 @@
+name: Environment Configuration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'frontend/**'
+      - 'k8s/**'
+      - 'docs/environment-configuration.md'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'frontend/**'
+      - 'k8s/**'
+      - 'docs/environment-configuration.md'
+
+jobs:
+  test-environment-config:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Install Playwright Browsers
+      run: |
+        cd frontend
+        npx playwright install --with-deps
+    
+    - name: Build application
+      run: |
+        cd frontend
+        npm run build
+    
+    - name: Test environment configuration
+      run: |
+        cd frontend
+        npm run test:e2e -- tests/e2e/environment-config.spec.js
+    
+    - name: Test with different environment variables
+      run: |
+        cd frontend
+        # Test with staging environment variables
+        REACT_APP_ENV=staging REACT_APP_API_BASE_URL=https://api-staging.playhub.com npm run test:e2e -- tests/e2e/environment-config.spec.js
+    
+    - name: Test with production environment variables
+      run: |
+        cd frontend
+        # Test with production environment variables
+        REACT_APP_ENV=production REACT_APP_API_BASE_URL=https://api.playhub.com npm run test:e2e -- tests/e2e/environment-config.spec.js
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: environment-config-test-results
+        path: frontend/playwright-report/
+        retention-days: 30
+
+  test-docker-environment-injection:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build frontend Docker image
+      run: |
+        docker build -t playhub-frontend:test frontend/
+    
+    - name: Test environment injection in Docker
+      run: |
+        # Test that the Docker entrypoint script works
+        docker run --rm -e REACT_APP_ENV=test -e REACT_APP_API_BASE_URL=http://test-api playhub-frontend:test sh -c '
+          /docker-entrypoint.d/30-env-injection.sh
+          cat /usr/share/nginx/html/env.js
+        ' | grep -q "REACT_APP_ENV.*test"
+    
+    - name: Test different environment configurations
+      run: |
+        # Test staging environment
+        docker run --rm -e REACT_APP_ENV=staging -e REACT_APP_API_BASE_URL=https://api-staging.playhub.com playhub-frontend:test sh -c '
+          /docker-entrypoint.d/30-env-injection.sh
+          cat /usr/share/nginx/html/env.js
+        ' | grep -q "staging"
+        
+        # Test production environment
+        docker run --rm -e REACT_APP_ENV=production -e REACT_APP_API_BASE_URL=https://api.playhub.com playhub-frontend:test sh -c '
+          /docker-entrypoint.d/30-env-injection.sh
+          cat /usr/share/nginx/html/env.js
+        ' | grep -q "production"
+
+  test-kubernetes-configmaps:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Validate Kubernetes ConfigMaps
+      run: |
+        # Test that all environment ConfigMaps are valid YAML
+        kubectl --dry-run=client apply -f k8s/env/local.yaml
+        kubectl --dry-run=client apply -f k8s/env/staging.yaml
+        kubectl --dry-run=client apply -f k8s/env/production.yaml
+    
+    - name: Validate environment variables in ConfigMaps
+      run: |
+        # Check that all ConfigMaps have required environment variables
+        for env_file in k8s/env/*.yaml; do
+          echo "Validating $env_file"
+          grep -q "REACT_APP_ENV" "$env_file" || (echo "Missing REACT_APP_ENV in $env_file" && exit 1)
+          grep -q "REACT_APP_API_BASE_URL" "$env_file" || (echo "Missing REACT_APP_API_BASE_URL in $env_file" && exit 1)
+        done
+    
+    - name: Test deployment scripts
+      run: |
+        # Test that deployment scripts are executable and valid
+        chmod +x scripts/deploy-*.sh
+        for script in scripts/deploy-*.sh; do
+          echo "Validating $script"
+          bash -n "$script" || (echo "Syntax error in $script" && exit 1)
+        done

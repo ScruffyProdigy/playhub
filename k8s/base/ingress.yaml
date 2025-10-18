@@ -2,7 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: lobby
-  namespace: lobby
+  namespace: playhub
 spec:
   ingressClassName: nginx
   rules:

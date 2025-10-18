@@ -72,12 +72,30 @@ cd backend
 go run github.com/99designs/gqlgen@v0.17.81 generate
 ```
 
+### Deployment
+
+Deploy to different environments:
+
+```bash
+# Local development (minikube)
+./deploy-local.sh
+
+# Staging environment
+./deploy-staging.sh
+
+# Production environment
+./deploy-production.sh
+```
+
+See [Environment Configuration](docs/environment-configuration.md) for detailed deployment instructions.
+
 ## Documentation
 
 - **[Development Guide](docs/development.md)** - Setup and development workflow
 - **[Architecture Overview](docs/architecture.md)** - System design and components
 - **[API Documentation](docs/api.md)** - GraphQL API reference
 - **[Testing Guide](docs/testing.md)** - Testing strategies and running tests
+- **[Environment Configuration](docs/environment-configuration.md)** - Environment setup for different deployments
 - **[Contributing Guide](docs/contributing.md)** - How to contribute to the project
 
 ## Contributing
