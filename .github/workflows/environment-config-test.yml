@@ -46,19 +46,23 @@ jobs:
     - name: Test environment configuration
       run: |
         cd frontend
+        # Create a test env.js file with test environment variables
+        echo 'window.env = { REACT_APP_ENV: "test", REACT_APP_API_BASE_URL: "http://localhost:8081" };' > public/env.js
         npm run test:e2e -- tests/e2e/environment-config.spec.js
     
     - name: Test with different environment variables
       run: |
         cd frontend
-        # Test with staging environment variables
-        REACT_APP_ENV=staging REACT_APP_API_BASE_URL=https://api-staging.playhub.com npm run test:e2e -- tests/e2e/environment-config.spec.js
+        # Create env.js with staging environment variables
+        echo 'window.env = { REACT_APP_ENV: "staging", REACT_APP_API_BASE_URL: "https://api-staging.playhub.com" };' > public/env.js
+        npm run test:e2e -- tests/e2e/environment-config.spec.js
     
     - name: Test with production environment variables
       run: |
         cd frontend
-        # Test with production environment variables
-        REACT_APP_ENV=production REACT_APP_API_BASE_URL=https://api.playhub.com npm run test:e2e -- tests/e2e/environment-config.spec.js
+        # Create env.js with production environment variables
+        echo 'window.env = { REACT_APP_ENV: "production", REACT_APP_API_BASE_URL: "https://api.playhub.com" };' > public/env.js
+        npm run test:e2e -- tests/e2e/environment-config.spec.js
     
     - name: Upload test results
       uses: actions/upload-artifact@v4
