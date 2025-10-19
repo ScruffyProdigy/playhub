@@ -77,7 +77,7 @@ jobs:
         
         # Run the E2E tests with the custom config
         echo "Running E2E tests..."
-        BASE_URL=http://localhost:4173 npx playwright test --config=playwright.config.env.js tests/e2e/basic.spec.js
+        BASE_URL=http://localhost:4173 npx playwright test --config=playwright.config.env.js tests/e2e/env-debug.spec.js
     
     - name: Upload test results
       uses: actions/upload-artifact@v4

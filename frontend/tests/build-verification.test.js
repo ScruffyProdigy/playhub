@@ -1,9 +1,23 @@
 import { test, expect } from 'vitest'
 import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+// Get the directory of this test file
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 test('build artifacts exist', () => {
-  const distPath = join(process.cwd(), 'dist')
+  // Look for dist directory relative to the frontend directory
+  const frontendDir = join(__dirname, '..')
+  const distPath = join(frontendDir, 'dist')
+  
+  // Debug information
+  console.log('Current working directory:', process.cwd())
+  console.log('Test file directory:', __dirname)
+  console.log('Frontend directory:', frontendDir)
+  console.log('Dist path:', distPath)
+  console.log('Dist exists:', existsSync(distPath))
   
   // Check that dist directory exists
   expect(existsSync(distPath)).toBe(true)
@@ -29,7 +43,9 @@ test('build artifacts exist', () => {
 })
 
 test('build artifacts have correct structure', () => {
-  const distPath = join(process.cwd(), 'dist')
+  // Look for dist directory relative to the frontend directory
+  const frontendDir = join(__dirname, '..')
+  const distPath = join(frontendDir, 'dist')
   
   // Check for assets directory
   const assetsPath = join(distPath, 'assets')
