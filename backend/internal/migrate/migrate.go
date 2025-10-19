@@ -47,7 +47,7 @@ func NewMigrator(db *sql.DB) (*Migrator, error) {
 // Up runs all pending migrations
 func (m *Migrator) Up() error {
 	log.Println("Running database migrations...")
-	
+
 	if err := m.migrator.Up(); err != nil {
 		if err == migrate.ErrNoChange {
 			log.Println("No new migrations to run")
@@ -63,7 +63,7 @@ func (m *Migrator) Up() error {
 // Down rolls back the last migration
 func (m *Migrator) Down() error {
 	log.Println("Rolling back last migration...")
-	
+
 	if err := m.migrator.Steps(-1); err != nil {
 		if err == migrate.ErrNoChange {
 			log.Println("No migrations to rollback")
@@ -79,7 +79,7 @@ func (m *Migrator) Down() error {
 // Steps runs a specific number of migrations (positive for up, negative for down)
 func (m *Migrator) Steps(steps int) error {
 	log.Printf("Running %d migration steps...", steps)
-	
+
 	if err := m.migrator.Steps(steps); err != nil {
 		if err == migrate.ErrNoChange {
 			log.Println("No migrations to run")
@@ -107,7 +107,7 @@ func (m *Migrator) Version() (uint, bool, error) {
 // Force sets the migration version (useful for fixing dirty migrations)
 func (m *Migrator) Force(version int) error {
 	log.Printf("Forcing migration version to %d...", version)
-	
+
 	if err := m.migrator.Force(version); err != nil {
 		return fmt.Errorf("failed to force migration version: %w", err)
 	}

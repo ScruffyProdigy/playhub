@@ -48,7 +48,38 @@ jobs:
         cd frontend
         # Create a test env.js file with test environment variables
         echo 'window.env = { REACT_APP_ENV: "test", REACT_APP_API_BASE_URL: "http://localhost:8081" };' > public/env.js
-        npm run test:e2e -- tests/e2e/basic.spec.js
+        
+        # Copy env.js to dist directory for the built application
+        cp public/env.js dist/env.js
+        
+        # Start vite preview server to serve the built application
+        npm run preview &
+        SERVER_PID=$!
+        
+        # Function to cleanup on exit
+        cleanup() {
+          echo "Cleaning up server..."
+          kill $SERVER_PID 2>/dev/null || true
+        }
+        trap cleanup EXIT
+        
+        # Wait for server to start and verify it's running
+        echo "Waiting for server to start..."
+        for i in {1..30}; do
+          if curl -s http://localhost:4173 > /dev/null; then
+            echo "Server is running!"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "Server failed to start after 30 seconds"
+            exit 1
+          fi
+          sleep 1
+        done
+        
+        # Run the E2E tests with the custom config
+        echo "Running E2E tests..."
+        BASE_URL=http://localhost:4173 npx playwright test --config=playwright.config.env.js tests/e2e/basic.spec.js
     
     - name: Upload test results
       uses: actions/upload-artifact@v4
