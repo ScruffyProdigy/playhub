@@ -7,7 +7,7 @@ This directory contains comprehensive documentation for the PlayHub gaming lobby
 - **[Development Guide](development.md)** - How to set up and run the project locally
 - **[Architecture Overview](architecture.md)** - System design and component relationships
 - **[API Documentation](api.md)** - GraphQL API reference and examples
-- **[Deployment Guide](deployment.md)** - How to deploy to different environments
+- **[Environment Configuration](environment-configuration.md)** - Environment setup and configuration system
 - **[Contributing Guide](contributing.md)** - How to contribute to the project
 - **[Testing Guide](testing.md)** - Testing strategies and running tests
 

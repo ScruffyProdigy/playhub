@@ -2,6 +2,23 @@
 
 This document describes the GraphQL API for PlayHub.
 
+## Implementation Status
+
+### ✅ Implemented
+- **System Queries**: `version`, `healthz` - Basic system information
+- **GraphQL Schema**: Complete schema definition with all types
+- **Mock Resolvers**: All resolvers return mock data for testing
+
+### 🚧 In Development
+- **Authentication**: JWT-based authentication system
+- **Database Integration**: Real data persistence
+- **Business Logic**: Actual game management and queuing
+
+### 📋 Planned
+- **Real-time Subscriptions**: WebSocket support for live updates
+- **File Uploads**: Support for game assets and user avatars
+- **Rate Limiting**: API rate limiting and throttling
+
 ## Base URL
 
 - **Development**: `http://localhost:8080/query`
@@ -9,7 +26,9 @@ This document describes the GraphQL API for PlayHub.
 
 ## Authentication
 
-PlayHub uses JWT-based authentication. Include the token in the Authorization header:
+> **Note**: Authentication is currently in development. The API currently accepts requests without authentication for testing purposes.
+
+PlayHub will use JWT-based authentication. Include the token in the Authorization header:
 
 ```
 Authorization: Bearer <your-jwt-token>
@@ -19,7 +38,7 @@ Authorization: Bearer <your-jwt-token>
 
 ### System Queries
 
-#### `version`
+#### `version` ✅
 Returns the current API version.
 
 ```graphql
@@ -37,7 +56,7 @@ query {
 }
 ```
 
-#### `healthz`
+#### `healthz` ✅
 Health check endpoint.
 
 ```graphql
@@ -57,8 +76,8 @@ query {
 
 ### User Queries
 
-#### `me`
-Get current user information.
+#### `me` 🚧
+Get current user information. *Returns mock data - authentication in development*
 
 ```graphql
 query {
@@ -87,8 +106,8 @@ query {
 
 ### Game Queries
 
-#### `games`
-List available games with pagination.
+#### `games` 🚧
+List available games with pagination. *Returns mock data - database integration in development*
 
 ```graphql
 query {
@@ -119,8 +138,8 @@ query {
 }
 ```
 
-#### `game`
-Get a specific game by ID.
+#### `game` 🚧
+Get a specific game by ID. *Returns mock data - database integration in development*
 
 ```graphql
 query {
@@ -188,10 +207,12 @@ query {
 
 ## Mutations
 
+> **Note**: All mutations currently return mock data. Real database integration is in development.
+
 ### Game Management
 
-#### `createGame`
-Create a new game.
+#### `createGame` 🚧
+Create a new game. *Returns mock data - database integration in development*
 
 ```graphql
 mutation {
@@ -211,8 +232,8 @@ mutation {
 
 ### Queue Management
 
-#### `joinQueue`
-Join a game queue.
+#### `joinQueue` 🚧
+Join a game queue. *Returns mock data - queue system in development*
 
 ```graphql
 mutation {

@@ -4,6 +4,7 @@ PlayHub is a gaming lobby platform built with a modern microservices architectur
 
 ## System Architecture
 
+### Development Environment
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   React Frontend │    │  Go GraphQL API │    │   PostgreSQL    │
@@ -18,24 +19,45 @@ PlayHub is a gaming lobby platform built with a modern microservices architectur
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
+### Production Environment (Kubernetes)
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   React Frontend │    │  Go GraphQL API │    │   PostgreSQL    │
+│   (Nginx)       │◄──►│   (Container)   │◄──►│   (Container)   │
+│   Port 80       │    │   Port 8080     │    │   Port 5432     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Environment   │    │   Kubernetes    │    │   Persistent    │
+│   ConfigMaps    │    │   Services      │    │   Volumes       │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
 ## Component Overview
 
-### Frontend (React + Vite)
+### Frontend (React + Vite) ✅
 - **Technology**: React 19, Vite, Vitest, Playwright
 - **Purpose**: User interface for gaming lobby
-- **Features**: Game queuing, user management, digital goods trading
-- **Port**: 5173 (development)
+- **Status**: Foundation implemented with testing infrastructure
+- **Features**: Basic UI, environment configuration, comprehensive testing
+- **Port**: 5173 (development), 80 (production)
 
-### Backend (Go + GraphQL)
+### Backend (Go + GraphQL) 🚧
 - **Technology**: Go 1.25, gqlgen, GraphQL
 - **Purpose**: API server and business logic
-- **Features**: User authentication, game management, trading system
+- **Status**: Schema and mock resolvers implemented
+- **Features**: GraphQL API with mock data, health checks, version endpoint
 - **Port**: 8080
+- **In Progress**: Database integration, authentication, real business logic
 
-### Database (PostgreSQL)
+### Database (PostgreSQL) 📋
 - **Technology**: PostgreSQL
 - **Purpose**: Data persistence
+- **Status**: Planned - not yet implemented
 - **Features**: User data, game sessions, trading history
+- **Next Steps**: Schema design, migration system, connection pooling
 
 ## Data Flow
 
@@ -122,6 +144,42 @@ Mutation {
 - `/healthz` endpoint
 - Database connectivity
 - External service status
+
+## Environment Configuration System
+
+PlayHub uses a Docker-based environment configuration system that allows the same Docker image to work across different environments.
+
+### How It Works
+
+1. **Docker Entrypoint Script**: The frontend Docker image includes a script that generates `env.js` at runtime
+2. **Kubernetes ConfigMaps**: Each environment has its own ConfigMap with environment-specific values
+3. **Runtime Injection**: When the container starts, it reads environment variables and creates the `env.js` file
+4. **Frontend Access**: The frontend loads `/env.js` and accesses variables via `window.env`
+
+### Environment Configurations
+
+#### Local Development
+- **API URL**: `http://localhost:8081`
+- **Environment**: `local`
+- **Deployment**: Kubernetes with port-forwarding
+
+#### Staging
+- **API URL**: `https://api-staging.playhub.com`
+- **Environment**: `staging`
+- **Deployment**: Kubernetes cluster with staging ConfigMaps
+
+#### Production
+- **API URL**: `https://api.playhub.com`
+- **Environment**: `production`
+- **Deployment**: Kubernetes cluster with production ConfigMaps
+
+### Benefits
+
+- **Single Docker Image**: Same image works in all environments
+- **Runtime Configuration**: No need to rebuild for different environments
+- **Kubernetes Native**: Uses ConfigMaps for environment-specific values
+- **Secure**: Sensitive values can be stored in Secrets
+- **Easy Deployment**: Simple scripts for each environment
 
 ## Scalability Considerations
 

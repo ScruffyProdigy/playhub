@@ -2,6 +2,25 @@
 
 This guide will help you set up and run PlayHub locally for development.
 
+## Current Development Status
+
+### ✅ Ready for Development
+- **Environment Configuration**: Docker-based runtime environment injection
+- **GraphQL API**: Complete schema with mock resolvers
+- **Frontend Foundation**: React app with testing infrastructure
+- **Kubernetes Deployment**: Multi-environment deployment scripts
+- **Testing Suite**: Comprehensive test coverage
+
+### 🚧 In Active Development
+- **Database Integration**: PostgreSQL setup and migrations
+- **Authentication**: JWT-based user authentication
+- **Business Logic**: Real game management and queuing
+
+### 📋 Next Steps
+- **Game Integration**: 3rd party game connections
+- **Trading System**: Digital goods and currency trading
+- **Real-time Features**: WebSocket subscriptions
+
 ## Prerequisites
 
 - **Go 1.25+** - [Download](https://golang.org/dl/)
@@ -118,15 +137,46 @@ go run github.com/99designs/gqlgen@v0.17.81 generate
 - **Backend**: `cd backend && go vet ./...`
 - **Frontend**: `cd frontend && npm run lint`
 
-## Environment Variables
+## Environment Configuration
 
-### Backend
+PlayHub uses a Docker-based environment configuration system that allows the same Docker image to work across different environments (local, staging, production).
+
+### Environment Variables
+
+#### Backend
 - `PORT` - Server port (default: 8080)
 - `DATABASE_URL` - PostgreSQL connection string
 - `JWT_SECRET` - JWT signing secret
 
-### Frontend
-- `VITE_API_URL` - Backend API URL (default: http://localhost:8080)
+#### Frontend (Runtime Injection)
+- `REACT_APP_ENV` - Environment identifier (local, staging, production)
+- `REACT_APP_API_BASE_URL` - Backend API URL for the current environment
+
+### Environment-Specific Configurations
+
+#### Local Development
+- **API URL**: `http://localhost:8081`
+- **Environment**: `local`
+- **Deployment**: `./scripts/deploy-local.sh`
+
+#### Staging
+- **API URL**: `https://api-staging.playhub.com`
+- **Environment**: `staging`
+- **Deployment**: `./scripts/deploy-staging.sh`
+
+#### Production
+- **API URL**: `https://api.playhub.com`
+- **Environment**: `production`
+- **Deployment**: `./scripts/deploy-production.sh`
+
+### How Environment Configuration Works
+
+1. **Docker Entrypoint**: The frontend Docker image includes a script that generates `env.js` at runtime
+2. **Kubernetes ConfigMaps**: Each environment has its own ConfigMap with environment-specific values
+3. **Runtime Injection**: When the container starts, it reads environment variables and creates the `env.js` file
+4. **Frontend Access**: The frontend loads `/env.js` and accesses variables via `window.env`
+
+For detailed information, see [Environment Configuration Guide](environment-configuration.md).
 
 ## Troubleshooting
 

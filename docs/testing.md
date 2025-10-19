@@ -2,6 +2,26 @@
 
 This guide covers the testing strategies and how to run tests for PlayHub.
 
+## Testing Status
+
+### ✅ Implemented
+- **Unit Tests**: Component and function testing with Vitest
+- **Integration Tests**: Component interaction testing
+- **E2E Tests**: Full user workflow testing with Playwright
+- **Environment Configuration Tests**: Runtime environment validation
+- **Backend Tests**: GraphQL resolver testing with mock data
+- **Drift Detection**: gqlgen code generation validation
+
+### 🚧 In Development
+- **Database Tests**: Integration tests with real database
+- **Authentication Tests**: JWT and user management testing
+- **Performance Tests**: Load testing and benchmarking
+
+### 📋 Planned
+- **API Contract Tests**: Schema validation and API testing
+- **Security Tests**: Vulnerability and penetration testing
+- **Chaos Engineering**: Failure scenario testing
+
 ## Testing Philosophy
 
 PlayHub uses a comprehensive testing strategy with multiple layers:
@@ -69,12 +89,15 @@ cd backend && go test -cover ./...
 frontend/
 ├── src/
 │   ├── App.test.jsx                    # Component unit tests
+│   ├── App.environment.test.jsx        # Environment integration tests
+│   ├── environment.test.js             # Environment configuration tests
 │   ├── main.test.jsx                   # Entry point tests
 │   └── integration/
 │       └── App.integration.test.jsx    # Integration tests
 └── tests/
     └── e2e/
-        └── app.spec.js                 # End-to-end tests
+        ├── app.spec.js                 # End-to-end tests
+        └── environment-config.spec.js  # Environment configuration E2E tests
 ```
 
 ### Running Frontend Tests
@@ -115,6 +138,21 @@ cd frontend && npm run test:all
    - Cross-browser testing
    - Accessibility testing
    - Performance testing
+
+4. **Environment Configuration Tests**
+   - **Unit Tests** (`environment.test.js`)
+     - Environment variable validation
+     - API URL construction
+     - Fallback behavior testing
+   - **Integration Tests** (`App.environment.test.jsx`)
+     - Component environment integration
+     - Runtime environment access
+     - Error handling
+   - **E2E Tests** (`environment-config.spec.js`)
+     - `window.env` loading verification
+     - API connectivity testing
+     - Runtime environment injection
+     - Cross-environment validation
 
 ## Test Configuration
 
