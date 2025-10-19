@@ -17,6 +17,12 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pg-dsn
+                  key: DATABASE_URL
           readinessProbe:
             httpGet: { path: /healthz, port: 8080 }
             initialDelaySeconds: 3

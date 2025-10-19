@@ -48,14 +48,26 @@ fi
 print_step "Creating namespace..."
 kubectl apply -f k8s/base/namespace.yaml
 
-# Apply base configurations (backend, ingress)
+# Apply base configurations (database, backend, frontend, ingress)
 print_step "Applying base configurations..."
+kubectl apply -f k8s/base/postgres.yaml
 kubectl apply -f k8s/base/backend.yaml
+kubectl apply -f k8s/base/frontend.yaml
 kubectl apply -f k8s/base/ingress.yaml
+
+# Apply database secrets and initialization
+print_step "Applying database secrets and initialization..."
+kubectl apply -f k8s/secrets/pg-auth.yaml
+kubectl apply -f k8s/secrets/pg-dsn.yaml
+kubectl apply -f k8s/init/db-init.yaml
 
 # Apply local environment configuration
 print_step "Applying local environment configuration..."
 kubectl apply -f k8s/env/local.yaml
+
+# Wait for database to be ready
+print_step "Waiting for database to be ready..."
+kubectl wait --for=condition=ready --timeout=300s pod -l app=pg -n $NAMESPACE
 
 # Wait for deployments to be ready
 print_step "Waiting for deployments to be ready..."

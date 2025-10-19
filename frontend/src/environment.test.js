@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 
 describe('Environment Configuration', () => {
   let originalWindowEnv
@@ -100,7 +100,7 @@ describe('Environment Configuration Integration', () => {
         const text = await response.text()
         expect(text).toBeDefined()
       }
-    } catch (error) {
+    } catch (_error) {
       // If the request fails (backend not available), that's okay for unit tests
       // We just want to ensure the URL is properly formed
       expect(apiBaseUrl).toMatch(/^https?:\/\//)
@@ -108,7 +108,7 @@ describe('Environment Configuration Integration', () => {
   })
 
   it('should handle different environment configurations', () => {
-    const environments = ['local', 'staging', 'production']
+    const environments = ['local', 'staging', 'production', 'test']
     const currentEnv = window.env.REACT_APP_ENV
     
     expect(environments).toContain(currentEnv)

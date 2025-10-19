@@ -74,7 +74,7 @@ test.describe('Environment Configuration E2E Tests', () => {
         // We just want to ensure the URL is properly formed
         expect(apiBaseUrl).toMatch(/^https?:\/\//)
       }
-    } catch (error) {
+    } catch (_error) {
       // If the request fails (backend not available), that's expected in CI
       // We just want to ensure the URL is properly formed
       expect(apiBaseUrl).toMatch(/^https?:\/\//)
@@ -136,7 +136,7 @@ test.describe('Environment Configuration Integration Tests', () => {
         // We just want to ensure the URL is properly formed
         expect(apiBaseUrl).toMatch(/^https?:\/\//)
       }
-    } catch (error) {
+    } catch (_error) {
       // If the request fails, that's expected in CI
       // We just want to ensure the URL is properly formed
       expect(apiBaseUrl).toMatch(/^https?:\/\//)

@@ -1,5 +1,15 @@
 import '@testing-library/jest-dom'
 
+// Mock window.env for testing
+Object.defineProperty(window, 'env', {
+  writable: true,
+  configurable: true,
+  value: {
+    REACT_APP_ENV: 'test',
+    REACT_APP_API_BASE_URL: 'http://localhost:8081'
+  }
+})
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

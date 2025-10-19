@@ -9,11 +9,20 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/scruffyprodigy/playhub/database"
 	"github.com/scruffyprodigy/playhub/graph"
 	"github.com/scruffyprodigy/playhub/graph/generated"
 )
 
 func main() {
+	// Initialize database connection
+	if err := database.Init(); err != nil {
+		log.Printf("Warning: Database connection failed: %v", err)
+		log.Println("Continuing with mock data...")
+	} else {
+		defer database.Close()
+	}
+
 	mux := http.NewServeMux()
 
 	gql := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))

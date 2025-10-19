@@ -11,10 +11,11 @@ PlayHub is a gaming lobby platform that connects players to games and enables tr
 - **Kubernetes Deployment**: Multi-environment deployment scripts
 - **Testing Suite**: Comprehensive unit, integration, and E2E tests
 - **CI/CD Pipeline**: GitHub Actions workflows for testing and deployment
+- **Database Integration**: PostgreSQL setup with connection management
+- **Linting & Code Quality**: ESLint configuration with proper test environment setup
 
 ### 🚧 In Development
 - **User Authentication**: JWT-based authentication system
-- **Database Integration**: PostgreSQL with migrations
 - **Game Management**: CRUD operations for games
 - **Queue System**: Player queuing and matchmaking
 
@@ -31,7 +32,7 @@ This project consists of:
 
 - **Backend**: Go-based GraphQL API with gqlgen
 - **Frontend**: React + Vite application
-- **Database**: (To be implemented)
+- **Database**: PostgreSQL with connection management
 
 ## Getting Started
 

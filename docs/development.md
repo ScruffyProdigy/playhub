@@ -10,9 +10,11 @@ This guide will help you set up and run PlayHub locally for development.
 - **Frontend Foundation**: React app with testing infrastructure
 - **Kubernetes Deployment**: Multi-environment deployment scripts
 - **Testing Suite**: Comprehensive test coverage
+- **Database Integration**: PostgreSQL connection management
+- **CI/CD Pipeline**: GitHub Actions workflows with proper linting and testing
 
 ### 🚧 In Active Development
-- **Database Integration**: PostgreSQL setup and migrations
+- **Database Migrations**: Schema migrations and data management
 - **Authentication**: JWT-based user authentication
 - **Business Logic**: Real game management and queuing
 
@@ -178,6 +180,22 @@ PlayHub uses a Docker-based environment configuration system that allows the sam
 
 For detailed information, see [Environment Configuration Guide](environment-configuration.md).
 
+## Recent Updates
+
+### GitHub Workflow Fixes (Latest)
+
+The CI/CD pipeline has been updated with the following improvements:
+
+- **ESLint Configuration**: Fixed linting issues with proper environment configuration
+- **Test Environment Setup**: Added proper mocking for `window.env` in test environment
+- **GraphQL Code Generation**: Ensured generated code is up to date with schema
+- **Database Integration**: Added PostgreSQL connection management
+
+All workflows now pass successfully:
+- ✅ Frontend Tests (linting, unit tests, E2E tests)
+- ✅ Environment Configuration Tests
+- ✅ GraphQL Drift Detection
+
 ## Troubleshooting
 
 ### Common Issues
@@ -185,12 +203,18 @@ For detailed information, see [Environment Configuration Guide](environment-conf
 1. **GraphQL generation fails**
    - Ensure you're in the backend directory
    - Check that all schema files are valid GraphQL
+   - Run `make generate` to regenerate code
 
 2. **Frontend tests fail**
    - Clear node_modules: `rm -rf node_modules && npm install`
    - Check that all dependencies are installed
+   - Ensure `window.env` is properly mocked in test setup
 
-3. **Port conflicts**
+3. **Linting errors**
+   - Run `npm run lint` to check for issues
+   - ESLint is configured for Node.js, browser, and test environments
+
+4. **Port conflicts**
    - Backend default: 8080
    - Frontend default: 5173
    - Change ports in respective config files if needed
