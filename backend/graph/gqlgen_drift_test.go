@@ -2,7 +2,9 @@ package graph
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,9 +27,10 @@ func TestGqlgenDrift(t *testing.T) {
 		filepath.Join(projectRoot, "backend/graph/core.resolvers.go"),
 	}
 
-	// Check if any schema file is newer than any generated file
+	// Check if any schema file is newer than any generated file using git commit timestamps
+	// This is more reliable than file system timestamps which can be affected by git checkout
 	for _, schemaFile := range schemaFiles {
-		schemaModTime := getModTime(t, schemaFile)
+		schemaCommitTime := getGitCommitTime(t, schemaFile)
 
 		for _, generatedFile := range generatedFiles {
 			if !fileExists(generatedFile) {
@@ -35,12 +38,12 @@ func TestGqlgenDrift(t *testing.T) {
 				continue
 			}
 
-			generatedModTime := getModTime(t, generatedFile)
+			generatedCommitTime := getGitCommitTime(t, generatedFile)
 
-			if schemaModTime.After(generatedModTime) {
-				t.Errorf("Schema file %s (modified %s) is newer than generated file %s (modified %s). Run 'go run github.com/99designs/gqlgen@v0.17.81 generate' to update generated code.",
-					schemaFile, schemaModTime.Format(time.RFC3339),
-					generatedFile, generatedModTime.Format(time.RFC3339))
+			if schemaCommitTime.After(generatedCommitTime) {
+				t.Errorf("Schema file %s (last committed %s) is newer than generated file %s (last committed %s). Run 'go run github.com/99designs/gqlgen@v0.17.81 generate' to update generated code.",
+					schemaFile, schemaCommitTime.Format(time.RFC3339),
+					generatedFile, generatedCommitTime.Format(time.RFC3339))
 			}
 		}
 	}
@@ -151,6 +154,24 @@ func getModTime(t *testing.T, filePath string) time.Time {
 		t.Fatalf("Failed to stat file %s: %v", filePath, err)
 	}
 	return info.ModTime()
+}
+
+func getGitCommitTime(t *testing.T, filePath string) time.Time {
+	// Get the last commit time for the file using git log
+	cmd := exec.Command("git", "log", "-1", "--format=%ci", "--", filePath)
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("Failed to get git commit time for %s: %v", filePath, err)
+	}
+
+	// Parse the git timestamp format: "2025-10-18 21:12:29 -0400"
+	timeStr := strings.TrimSpace(string(output))
+	commitTime, err := time.Parse("2006-01-02 15:04:05 -0700", timeStr)
+	if err != nil {
+		t.Fatalf("Failed to parse git commit time '%s' for %s: %v", timeStr, filePath, err)
+	}
+
+	return commitTime
 }
 
 func fileExists(filePath string) bool {
