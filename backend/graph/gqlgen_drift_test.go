@@ -21,8 +21,8 @@ func TestGqlgenDrift(t *testing.T) {
 	// Find the generated files
 	generatedFiles := []string{
 		filepath.Join(projectRoot, "backend/graph/generated/generated.go"),
-		filepath.Join(projectRoot, "backend/graph/generated.go"),
 		filepath.Join(projectRoot, "backend/graph/model/models_gen.go"),
+		filepath.Join(projectRoot, "backend/graph/core.resolvers.go"),
 	}
 
 	// Check if any schema file is newer than any generated file
@@ -87,7 +87,6 @@ func TestGeneratedFilesExist(t *testing.T) {
 
 	expectedFiles := []string{
 		"backend/graph/generated/generated.go",
-		"backend/graph/generated.go",
 		"backend/graph/model/models_gen.go",
 		"backend/graph/core.resolvers.go",
 	}
