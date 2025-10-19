@@ -72,14 +72,14 @@ jobs:
         cd frontend
         npm run build
     
-    - name: Run E2E tests (temporarily disabled)
+    - name: Run E2E tests
       run: |
         cd frontend
-        echo "E2E tests temporarily disabled for debugging"
+        echo "Starting E2E tests..."
         echo "Node version: $(node --version)"
         echo "NPM version: $(npm --version)"
         echo "Playwright version: $(npx playwright --version)"
-        echo "✅ E2E tests would run here once issues are resolved"
+        npm run test:e2e
     
     - name: Upload test results
       uses: actions/upload-artifact@v4

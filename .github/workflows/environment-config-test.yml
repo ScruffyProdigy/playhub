@@ -43,23 +43,12 @@ jobs:
         cd frontend
         npm run build
     
-    - name: Test environment configuration (temporarily disabled)
+    - name: Test environment configuration
       run: |
         cd frontend
-        echo "Environment config E2E tests temporarily disabled for debugging"
-        echo "✅ Environment config tests would run here once issues are resolved"
-    
-    - name: Test with different environment variables (temporarily disabled)
-      run: |
-        cd frontend
-        echo "Environment variable tests temporarily disabled for debugging"
-        echo "✅ Environment variable tests would run here once issues are resolved"
-    
-    - name: Test with production environment variables (temporarily disabled)
-      run: |
-        cd frontend
-        echo "Production environment tests temporarily disabled for debugging"
-        echo "✅ Production environment tests would run here once issues are resolved"
+        # Create a test env.js file with test environment variables
+        echo 'window.env = { REACT_APP_ENV: "test", REACT_APP_API_BASE_URL: "http://localhost:8081" };' > public/env.js
+        npm run test:e2e -- tests/e2e/basic.spec.js
     
     - name: Upload test results
       uses: actions/upload-artifact@v4
