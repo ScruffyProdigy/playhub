@@ -41,16 +41,14 @@ jobs:
     - name: Build application
       run: |
         cd frontend
+        # Create a test env.js file before building
+        echo 'window.env = { REACT_APP_ENV: "test", REACT_APP_API_BASE_URL: "http://localhost:8081" };' > public/env.js
         npm run build
     
     - name: Test environment configuration
       run: |
         cd frontend
-        # Create a test env.js file with test environment variables
-        echo 'window.env = { REACT_APP_ENV: "test", REACT_APP_API_BASE_URL: "http://localhost:8081" };' > public/env.js
-        
-        # Copy env.js to dist directory for the built application
-        cp public/env.js dist/env.js
+        echo "Testing environment configuration..."
         
         # Start vite preview server to serve the built application
         npm run preview &
@@ -72,26 +70,14 @@ jobs:
           fi
           if [ $i -eq 30 ]; then
             echo "Server failed to start after 30 seconds"
-            echo "Checking if process is still running..."
-            ps aux | grep "vite preview" || echo "No vite preview process found"
-            echo "Checking port 4173..."
-            netstat -tlnp | grep 4173 || echo "Port 4173 not listening"
             exit 1
           fi
           sleep 1
         done
         
-        # Additional debugging
-        echo "Server status check:"
-        curl -v http://localhost:4173 || echo "Curl failed"
-        echo "Checking if env.js exists in dist:"
-        ls -la dist/env.js || echo "env.js not found in dist"
-        echo "Checking if env.js exists in public:"
-        ls -la public/env.js || echo "env.js not found in public"
-        
         # Run the E2E tests with the custom config
         echo "Running E2E tests..."
-        BASE_URL=http://localhost:4173 npx playwright test --config=playwright.config.env.js tests/e2e/debug.spec.js
+        BASE_URL=http://localhost:4173 npx playwright test --config=playwright.config.env.js tests/e2e/basic.spec.js
     
     - name: Upload test results
       uses: actions/upload-artifact@v4
