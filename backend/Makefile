@@ -1,6 +1,6 @@
-# GraphQL Code Generation and Testing
+# GraphQL Code Generation, Testing, and Database Migrations
 
-.PHONY: generate test test-drift test-all
+.PHONY: generate test test-drift test-all migrate-up migrate-down migrate-version migrate-force
 
 # Generate GraphQL code
 generate:
@@ -38,6 +38,23 @@ clean-generated:
 regenerate: clean-generated generate
 	@echo "✅ Regenerated all GraphQL code from scratch."
 
+# Database Migration Commands
+migrate-up:
+	@echo "Running database migrations up..."
+	@go run ./cmd/migrate -action=up
+
+migrate-down:
+	@echo "Running database migrations down..."
+	@go run ./cmd/migrate -action=down
+
+migrate-version:
+	@echo "Checking migration version..."
+	@go run ./cmd/migrate -action=version
+
+migrate-force:
+	@echo "Forcing migration version..."
+	@go run ./cmd/migrate -action=force -version=$(VERSION)
+
 # Help
 help:
 	@echo "Available targets:"
@@ -48,4 +65,8 @@ help:
 	@echo "  check-drift    - Check if generation is needed (for CI)"
 	@echo "  clean-generated - Remove all generated files"
 	@echo "  regenerate     - Clean and regenerate all GraphQL code"
+	@echo "  migrate-up     - Run all pending database migrations"
+	@echo "  migrate-down   - Rollback the last database migration"
+	@echo "  migrate-version - Show current migration version"
+	@echo "  migrate-force  - Force migration version (use VERSION=n)"
 	@echo "  help           - Show this help message"

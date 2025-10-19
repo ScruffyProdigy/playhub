@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/scruffyprodigy/playhub/internal/migrate"
 	_ "github.com/lib/pq"
 )
 
@@ -30,6 +31,29 @@ func Init() error {
 	}
 
 	log.Println("Database connection established successfully")
+	return nil
+}
+
+// InitWithMigrations initializes the database connection and runs migrations
+func InitWithMigrations() error {
+	// Initialize database connection
+	if err := Init(); err != nil {
+		return err
+	}
+
+	// Run migrations
+	migrator, err := migrate.NewMigrator(DB)
+	if err != nil {
+		return fmt.Errorf("failed to create migrator: %w", err)
+	}
+	defer migrator.Close()
+
+	// Run all pending migrations
+	if err := migrator.Up(); err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	log.Println("Database migrations completed successfully")
 	return nil
 }
 

@@ -15,9 +15,9 @@ import (
 )
 
 func main() {
-	// Initialize database connection
-	if err := database.Init(); err != nil {
-		log.Printf("Warning: Database connection failed: %v", err)
+	// Initialize database connection with migrations
+	if err := database.InitWithMigrations(); err != nil {
+		log.Printf("Warning: Database connection or migrations failed: %v", err)
 		log.Println("Continuing with mock data...")
 	} else {
 		defer database.Close()

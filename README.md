@@ -12,10 +12,11 @@ PlayHub is a gaming lobby platform that connects players to games and enables tr
 - **Testing Suite**: Comprehensive unit, integration, and E2E tests
 - **CI/CD Pipeline**: GitHub Actions workflows for testing and deployment
 - **Database Integration**: PostgreSQL setup with connection management
+- **Database Migrations**: Complete migration system with CLI and programmatic support
 - **Linting & Code Quality**: ESLint configuration with proper test environment setup
 
 ### 🚧 In Development
-- **User Authentication**: JWT-based authentication system
+- **Magic Link Authentication**: Email-based authentication system
 - **Game Management**: CRUD operations for games
 - **Queue System**: Player queuing and matchmaking
 
@@ -88,6 +89,25 @@ The backend uses gqlgen for GraphQL code generation:
 cd backend
 go run github.com/99designs/gqlgen@v0.17.81 generate
 ```
+
+### Database Migrations
+
+The project includes a complete database migration system:
+
+```bash
+cd backend
+
+# Run all pending migrations
+make migrate-up
+
+# Check migration status
+make migrate-version
+
+# Rollback last migration
+make migrate-down
+```
+
+See [Database Migrations](docs/database-migrations.md) for detailed documentation.
 
 ### Deployment
 
