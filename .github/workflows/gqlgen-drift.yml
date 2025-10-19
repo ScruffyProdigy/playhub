@@ -23,11 +23,6 @@ jobs:
         cd backend
         go mod download
     
-    - name: Ensure generated code is up to date
-      run: |
-        cd backend
-        make generate
-    
     - name: Check for gqlgen drift
       run: |
         cd backend
