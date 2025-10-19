@@ -63,25 +63,24 @@ test.describe('Environment Configuration E2E Tests', () => {
       return window.env.REACT_APP_API_BASE_URL
     })
     
+    // Ensure the URL is properly formed
+    expect(apiBaseUrl).toMatch(/^https?:\/\//)
+    
     // Try to make a request to the backend health endpoint
     const healthUrl = `${apiBaseUrl}/healthz`
     
     try {
-      const response = await page.request.get(healthUrl)
+      const response = await page.request.get(healthUrl, { timeout: 5000 })
       
       // If the backend is available, it should return 200
       if (response.status() === 200) {
         const healthResponse = await response.text()
         expect(healthResponse).toContain('ok')
-      } else {
-        // If backend is not available, that's okay for E2E tests
-        // We just want to ensure the URL is properly formed
-        expect(apiBaseUrl).toMatch(/^https?:\/\//)
       }
+      // If backend is not available (non-200 status), that's okay for E2E tests
     } catch (_error) {
       // If the request fails (backend not available), that's expected in CI
-      // We just want to ensure the URL is properly formed
-      expect(apiBaseUrl).toMatch(/^https?:\/\//)
+      // The test passes as long as the URL is properly formed
     }
   })
 
@@ -118,6 +117,9 @@ test.describe('Environment Configuration Integration Tests', () => {
       return window.env.REACT_APP_API_BASE_URL
     })
     
+    // Ensure the URL is properly formed
+    expect(apiBaseUrl).toMatch(/^https?:\/\//)
+    
     // Test GraphQL endpoint
     const graphqlUrl = `${apiBaseUrl}/graphql`
     
@@ -129,21 +131,18 @@ test.describe('Environment Configuration Integration Tests', () => {
         },
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 5000
       })
       
       if (response.status() === 200) {
         const data = await response.json()
         expect(data).toHaveProperty('data')
-      } else {
-        // If GraphQL is not available, that's okay for E2E tests
-        // We just want to ensure the URL is properly formed
-        expect(apiBaseUrl).toMatch(/^https?:\/\//)
       }
+      // If GraphQL is not available (non-200 status), that's okay for E2E tests
     } catch (_error) {
       // If the request fails, that's expected in CI
-      // We just want to ensure the URL is properly formed
-      expect(apiBaseUrl).toMatch(/^https?:\/\//)
+      // The test passes as long as the URL is properly formed
     }
   })
 
