@@ -61,6 +61,8 @@ if command -v docker &> /dev/null; then
     "$ROOT/scripts/db.sh" up
     "$ROOT/scripts/db.sh" migrate
     export DATABASE_URL="${DATABASE_URL:-$("$ROOT/scripts/db.sh" url)}"
+    export MAGIC_LINK_BASE_URL="${MAGIC_LINK_BASE_URL:-http://localhost:5173/auth/complete?token=}"
+    export CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}"
 else
     print_warning "Docker not found. Set DATABASE_URL manually or the backend will use mock data."
 fi
@@ -122,7 +124,7 @@ echo "🎉 Development servers are running!"
 echo ""
 echo "📱 Frontend: http://localhost:5173"
 echo "🔧 Backend:  http://localhost:8080"
-echo "📊 GraphQL:  http://localhost:8080/query"
+echo "📊 GraphQL:  http://localhost:8080/graphql"
 echo ""
 echo "Press Ctrl+C to stop all servers"
 echo ""

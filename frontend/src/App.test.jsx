@@ -1,81 +1,59 @@
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, beforeEach } from 'vitest'
 import App from './App'
+import { mockAuthenticatedSession, mockUnauthenticatedSession } from './test/setup'
 
 describe('App Component', () => {
-  it('renders without crashing', () => {
-    render(<App />)
-    expect(screen.getByText('PlayHub')).toBeInTheDocument()
+  beforeEach(() => {
+    window.history.replaceState({}, '', '/')
   })
 
-  it('displays the main heading', () => {
+  it('renders branding and login when signed out', async () => {
+    mockUnauthenticatedSession()
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'PlayHub' })).toBeInTheDocument()
-  })
 
-  it('displays the tagline', () => {
-    render(<App />)
-    expect(screen.getByText('Your Gaming Hub - Queue, Play, Trade')).toBeInTheDocument()
-  })
-
-  it('has proper heading structure', () => {
-    render(<App />)
-    const heading = screen.getByRole('heading', { level: 1 })
-    expect(heading).toHaveTextContent('PlayHub')
-  })
-
-  it('renders all expected content', () => {
-    render(<App />)
-    
     expect(screen.getByText('PlayHub')).toBeInTheDocument()
     expect(screen.getByText('Your Gaming Hub - Queue, Play, Trade')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    })
   })
 
-  it('has accessible content structure', () => {
-    render(<App />)
-    
-    const heading = screen.getByRole('heading')
-    const paragraph = screen.getByText('Your Gaming Hub - Queue, Play, Trade')
-    
-    expect(heading).toBeInTheDocument()
-    expect(paragraph).toBeInTheDocument()
-  })
-
-  it('maintains content across re-renders', () => {
-    const { rerender } = render(<App />)
-    
-    expect(screen.getByText('PlayHub')).toBeInTheDocument()
-    expect(screen.getByText('Your Gaming Hub - Queue, Play, Trade')).toBeInTheDocument()
-    
-    // Re-render the component
-    rerender(<App />)
-    
-    expect(screen.getByText('PlayHub')).toBeInTheDocument()
-    expect(screen.getByText('Your Gaming Hub - Queue, Play, Trade')).toBeInTheDocument()
-  })
-})
-
-describe('App Component Integration', () => {
-  it('renders all expected elements in correct order', () => {
+  it('shows the signed-in user when authenticated', async () => {
+    mockAuthenticatedSession()
     render(<App />)
 
-    const heading = screen.getByRole('heading', { name: 'PlayHub' })
-    const tagline = screen.getByText('Your Gaming Hub - Queue, Play, Trade')
-
-    expect(heading).toBeInTheDocument()
-    expect(tagline).toBeInTheDocument()
-
-    // Basic order check
-    expect(heading.compareDocumentPosition(tagline)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    await waitFor(() => {
+      expect(screen.getByText('Welcome back')).toBeInTheDocument()
+      expect(screen.getByText('player@example.com')).toBeInTheDocument()
+    })
   })
 
-  it('has proper semantic structure', () => {
+  it('renders the magic-link completion page on /auth/complete', async () => {
+    window.history.replaceState({}, '', '/auth/complete?token=test-token')
+    const assign = vi.fn()
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, assign, pathname: '/auth/complete', search: '?token=test-token' },
+    })
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          completeMagic: {
+            id: 'user-1',
+            email: 'player@example.com',
+            displayName: 'player',
+            createdAt: '2026-01-01T00:00:00Z',
+          },
+        },
+      }),
+    })
+
     render(<App />)
-    
-    const heading = screen.getByRole('heading', { level: 1 })
-    const paragraph = screen.getByText('Your Gaming Hub - Queue, Play, Trade')
-    
-    expect(heading.tagName).toBe('H1')
-    expect(paragraph.tagName).toBe('P')
+
+    expect(await screen.findByText('Signing you in')).toBeInTheDocument()
   })
 })

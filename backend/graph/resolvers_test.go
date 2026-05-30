@@ -16,7 +16,7 @@ func TestMeResolver(t *testing.T) {
 	c := client.New(srv)
 
 	var resp struct {
-		Me struct {
+		Me *struct {
 			ID          string
 			Email       *string
 			DisplayName *string
@@ -36,18 +36,8 @@ func TestMeResolver(t *testing.T) {
 		t.Fatalf("GraphQL query failed: %v", err)
 	}
 
-	// Verify the response structure
-	if resp.Me.ID == "" {
-		t.Error("Expected me.id to be non-empty")
-	}
-	if resp.Me.Email == nil || *resp.Me.Email == "" {
-		t.Error("Expected me.email to be non-empty")
-	}
-	if resp.Me.DisplayName == nil || *resp.Me.DisplayName == "" {
-		t.Error("Expected me.displayName to be non-empty")
-	}
-	if resp.Me.CreatedAt == "" {
-		t.Error("Expected me.createdAt to be non-empty")
+	if resp.Me != nil {
+		t.Errorf("expected unauthenticated me to be null, got %+v", resp.Me)
 	}
 }
 

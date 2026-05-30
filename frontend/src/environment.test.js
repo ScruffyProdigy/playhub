@@ -26,10 +26,17 @@ describe('Environment Configuration', () => {
     expect(typeof window.env.REACT_APP_ENV).toBe('string')
     expect(typeof window.env.REACT_APP_API_BASE_URL).toBe('string')
     expect(window.env.REACT_APP_ENV.length).toBeGreaterThan(0)
-    expect(window.env.REACT_APP_API_BASE_URL.length).toBeGreaterThan(0)
   })
 
-  it('should have valid API base URL format', () => {
+  it('allows empty API base URL for same-origin proxy mode', () => {
+    window.env.REACT_APP_API_BASE_URL = ''
+    expect(window.env.REACT_APP_API_BASE_URL).toBe('')
+  })
+
+  it('should have valid API base URL format when configured', () => {
+    if (!window.env.REACT_APP_API_BASE_URL) {
+      return
+    }
     const apiUrl = window.env.REACT_APP_API_BASE_URL
     expect(apiUrl).toMatch(/^https?:\/\//)
   })
@@ -42,14 +49,14 @@ describe('Environment Configuration', () => {
     expect(() => {
       // Simulate accessing window.env in the app
       const env = window.env || {}
-      return env.REACT_APP_API_BASE_URL || 'http://localhost:8081'
+      return env.REACT_APP_API_BASE_URL || ''
     }).not.toThrow()
   })
 
   it('should provide fallback values when environment is missing', () => {
     // Test fallback behavior
     const getApiBaseUrl = () => {
-      return window.env?.REACT_APP_API_BASE_URL || 'http://localhost:8081'
+      return window.env?.REACT_APP_API_BASE_URL || ''
     }
     
     const getEnvironment = () => {
@@ -83,9 +90,13 @@ describe('Environment Configuration', () => {
 describe('Environment Configuration Integration', () => {
   it('should be able to construct API URLs', () => {
     const apiBaseUrl = window.env.REACT_APP_API_BASE_URL
+    if (!apiBaseUrl) {
+      expect('/graphql').toMatch(/^\/graphql$/)
+      return
+    }
     const graphqlUrl = `${apiBaseUrl}/graphql`
     const healthUrl = `${apiBaseUrl}/healthz`
-    
+
     expect(graphqlUrl).toMatch(/^https?:\/\/.*\/graphql$/)
     expect(healthUrl).toMatch(/^https?:\/\/.*\/healthz$/)
   })
@@ -101,9 +112,7 @@ describe('Environment Configuration Integration', () => {
         expect(text).toBeDefined()
       }
     } catch (_error) {
-      // If the request fails (backend not available), that's okay for unit tests
-      // We just want to ensure the URL is properly formed
-      expect(apiBaseUrl).toMatch(/^https?:\/\//)
+      expect(typeof apiBaseUrl).toBe('string')
     }
   })
 

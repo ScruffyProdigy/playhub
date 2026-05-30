@@ -10,27 +10,47 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/graph/model"
 )
 
 // LoginMagic is the resolver for the loginMagic field.
 func (r *mutationResolver) LoginMagic(ctx context.Context, email string) (bool, error) {
-	// TODO: Implement proper magic link authentication
-	// For now, just return true to simulate successful email send
+	authService, err := r.requireAuth()
+	if err != nil {
+		return false, err
+	}
+	if _, err := r.requireStore(); err != nil {
+		return false, err
+	}
+
+	if err := authService.RequestMagicLink(ctx, email); err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
 // CompleteMagic is the resolver for the completeMagic field.
 func (r *mutationResolver) CompleteMagic(ctx context.Context, token string) (*model.User, error) {
-	// TODO: Implement proper token validation and user creation/retrieval
-	// For now, return a mock user
-	return &model.User{
-		ID:          uuid.New().String(),
-		Email:       &[]string{"user@example.com"}[0],
-		DisplayName: &[]string{"Authenticated User"}[0],
-		CreatedAt:   time.Now(),
-	}, nil
+	authService, err := r.requireAuth()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := r.requireStore(); err != nil {
+		return nil, err
+	}
+
+	user, sessionToken, err := authService.CompleteMagicLogin(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	if writer, ok := auth.ResponseWriterFromContext(ctx); ok {
+		auth.SetSessionCookie(writer, sessionToken, authService.CookieConfig())
+	}
+
+	return ToGraphQLUser(user), nil
 }
 
 // CreateGame is the resolver for the createGame field.
@@ -98,14 +118,19 @@ func (r *queryResolver) Healthz(ctx context.Context) (string, error) {
 
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
-	// TODO: Implement proper authentication and user retrieval
-	// For now, return a mock user
-	return &model.User{
-		ID:          uuid.New().String(),
-		Email:       &[]string{"user@example.com"}[0],
-		DisplayName: &[]string{"Test User"}[0],
-		CreatedAt:   time.Now(),
-	}, nil
+	authService, err := r.requireAuth()
+	if err != nil {
+		return nil, nil
+	}
+	if _, err := r.requireStore(); err != nil {
+		return nil, err
+	}
+
+	user, err := authService.GetAuthenticatedUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return ToGraphQLUser(user), nil
 }
 
 // Games is the resolver for the games field.

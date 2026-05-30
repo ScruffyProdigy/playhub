@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { createRoot } from 'react-dom/client'
-import { StrictMode } from 'react'
 import App from './App'
+import { mockUnauthenticatedSession } from './test/setup'
 
 // Mock react-dom/client
 vi.mock('react-dom/client', () => ({
@@ -73,6 +73,11 @@ describe('main.jsx', () => {
 })
 
 describe('main.jsx Integration', () => {
+  beforeEach(() => {
+    window.history.replaceState({}, '', '/')
+    mockUnauthenticatedSession()
+  })
+
   it('renders the complete application structure', () => {
     // This test verifies that the main entry point works correctly
     // by actually rendering the app

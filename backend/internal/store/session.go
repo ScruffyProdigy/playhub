@@ -1,0 +1,111 @@
+package store
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+
+	"github.com/google/uuid"
+)
+
+func scanSession(row interface{ Scan(dest ...any) error }) (*Session, error) {
+	var session Session
+	var endedAt sql.NullTime
+	if err := row.Scan(&session.ID, &session.GameID, &session.Status, &session.StartedAt, &endedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if endedAt.Valid {
+		t := endedAt.Time
+		session.EndedAt = &t
+	}
+	return &session, nil
+}
+
+const sessionColumns = `id, game_id, status, started_at, ended_at`
+
+func (s *Store) GetSessionByID(ctx context.Context, id uuid.UUID) (*Session, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT `+sessionColumns+`
+		FROM game_sessions
+		WHERE id = $1
+	`, id)
+	return scanSession(row)
+}
+
+func (s *Store) ListActiveSessionsByGame(ctx context.Context, gameID uuid.UUID, limit int) ([]Session, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT `+sessionColumns+`
+		FROM game_sessions
+		WHERE game_id = $1 AND status = 'active'
+		ORDER BY started_at DESC
+		LIMIT $2
+	`, gameID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []Session
+	for rows.Next() {
+		var session Session
+		var endedAt sql.NullTime
+		if err := rows.Scan(&session.ID, &session.GameID, &session.Status, &session.StartedAt, &endedAt); err != nil {
+			return nil, err
+		}
+		if endedAt.Valid {
+			t := endedAt.Time
+			session.EndedAt = &t
+		}
+		sessions = append(sessions, session)
+	}
+	return sessions, rows.Err()
+}
+
+func (s *Store) CreateSession(ctx context.Context, gameID uuid.UUID) (*Session, error) {
+	row := s.db.QueryRowContext(ctx, `
+		INSERT INTO game_sessions (game_id, status)
+		VALUES ($1, 'active')
+		RETURNING `+sessionColumns+`
+	`, gameID)
+	return scanSession(row)
+}
+
+func (s *Store) AddSessionParticipant(ctx context.Context, sessionID, userID uuid.UUID, role string) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO game_session_participants (session_id, user_id, role)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (session_id, user_id) DO NOTHING
+	`, sessionID, userID, role)
+	return err
+}
+
+func (s *Store) ListSessionParticipants(ctx context.Context, sessionID uuid.UUID) ([]User, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT u.id, u.email, u.username, u.display_name, u.created_at
+		FROM game_session_participants p
+		JOIN users u ON u.id = p.user_id
+		WHERE p.session_id = $1 AND p.left_at IS NULL
+		ORDER BY p.joined_at ASC
+	`, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}

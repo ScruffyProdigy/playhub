@@ -6,6 +6,14 @@ export default defineConfig({
   plugins: [react()],
   publicDir: "public",
   base: "",
+  server: {
+    proxy: {
+      '/graphql': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

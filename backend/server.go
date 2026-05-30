@@ -1,10 +1,9 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -12,42 +11,45 @@ import (
 	"github.com/scruffyprodigy/playhub/database"
 	"github.com/scruffyprodigy/playhub/graph"
 	"github.com/scruffyprodigy/playhub/graph/generated"
+	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
 func main() {
-	// Initialize database connection with migrations
 	if err := database.InitWithMigrations(); err != nil {
-		log.Printf("Warning: Database connection or migrations failed: %v", err)
-		log.Println("Continuing with mock data...")
-	} else {
-		defer database.Close()
+		log.Fatalf("Database initialization failed: %v", err)
 	}
+	defer database.Close()
+
+	dataStore := store.New(database.GetDB())
+	if err := dataStore.Ping(context.Background()); err != nil {
+		log.Fatalf("Database connection failed: %v", err)
+	}
+
+	signer, err := auth.LoadSignerFromEnv()
+	if err != nil {
+		log.Fatalf("JWT signer initialization failed: %v", err)
+	}
+
+	authService, err := auth.NewService(dataStore, signer)
+	if err != nil {
+		log.Fatalf("Auth service initialization failed: %v", err)
+	}
+
+	resolver := graph.NewResolver(dataStore, authService)
 
 	mux := http.NewServeMux()
 
-	gql := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))
-	mux.Handle("/graphql", withAuth(gql))
+	gql := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
+	mux.Handle("/graphql", auth.Middleware(signer, gql))
 	mux.Handle("/", playground.Handler("GraphQL", "/graphql"))
 
-	mux.HandleFunc("/.well-known/jwks.json", jwksHandler)
+	mux.Handle("/.well-known/jwks.json", signer.JWKSHandler())
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
 
-	srv := &http.Server{Addr: ":8080", Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	handler := auth.CORSMiddleware(mux)
+
+	srv := &http.Server{Addr: ":8080", Handler: handler, ReadHeaderTimeout: 5 * time.Second}
 	log.Println("backend listening :8080")
 	log.Fatal(srv.ListenAndServe())
-}
-
-func withAuth(next http.Handler) http.Handler {
-	// TODO: read JWT from cookie, verify Ed25519 w/ env JWKS_PUB_X, set user in context
-	return next
-}
-
-func jwksHandler(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	jwk := map[string]string{
-		"kty": "OKP", "crv": "Ed25519", "alg": "EdDSA",
-		"kid": os.Getenv("JWKS_KID"),
-		"x":   os.Getenv("JWKS_PUB_X"),
-	}
-	json.NewEncoder(w).Encode(map[string]any{"keys": []any{jwk}})
 }

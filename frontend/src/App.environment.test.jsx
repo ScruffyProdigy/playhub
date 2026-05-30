@@ -1,13 +1,15 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import App from './App'
+import { mockUnauthenticatedSession } from './test/setup'
 
 describe('App Environment Integration', () => {
   let originalWindowEnv
 
   beforeEach(() => {
-    // Save original window.env
     originalWindowEnv = window.env
+    window.history.replaceState({}, '', '/')
+    mockUnauthenticatedSession()
   })
 
   afterEach(() => {
@@ -40,7 +42,7 @@ describe('App Environment Integration', () => {
   it('can access environment variables in component', () => {
     // Mock a component that uses environment variables
     const TestComponent = () => {
-      const apiUrl = window.env?.REACT_APP_API_BASE_URL || 'http://localhost:8081'
+      const apiUrl = window.env?.REACT_APP_API_BASE_URL || ''
       const environment = window.env?.REACT_APP_ENV || 'development'
       
       return (

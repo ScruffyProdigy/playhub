@@ -1,42 +1,105 @@
 #root {
-  max-width: 1280px;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem 1.5rem;
+}
+
+.app-shell,
+.auth-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.app-header,
+.auth-page h1 {
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
+.tagline {
+  margin: 0.5rem 0 0;
   color: #888;
+}
+
+.auth-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: left;
+}
+
+.auth-card h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.4rem;
+}
+
+.auth-copy {
+  margin: 0 0 1rem;
+  color: #aaa;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.auth-form label {
+  font-weight: 600;
+}
+
+.auth-form input {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.75rem 0.9rem;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+}
+
+.auth-message {
+  margin: 1rem 0 0;
+}
+
+.auth-message-error {
+  color: #ff8a8a;
+}
+
+.auth-link,
+.auth-link-button {
+  display: inline-block;
+  margin-top: 1rem;
+  background: none;
+  border: none;
+  padding: 0;
+  color: #646cff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.user-card .user-email {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.user-card .user-name {
+  margin: 0.35rem 0 1rem;
+  color: #aaa;
+}
+
+@media (prefers-color-scheme: light) {
+  .auth-card {
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .auth-form input {
+    border-color: rgba(0, 0, 0, 0.15);
+    background: #fff;
+  }
+
+  .tagline,
+  .auth-copy,
+  .user-card .user-name {
+    color: #666;
+  }
 }
