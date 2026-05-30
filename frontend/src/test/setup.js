@@ -46,6 +46,21 @@ export function mockGraphQLResponse(data) {
   })
 }
 
+export const mockDemoGames = [
+  {
+    id: 'game-1',
+    name: 'Quick Match',
+    createdAt: '2026-01-01T00:00:00Z',
+    activeSessions: [{ id: 'session-1' }],
+  },
+  {
+    id: 'game-2',
+    name: 'Party Lobby',
+    createdAt: '2026-01-02T00:00:00Z',
+    activeSessions: [],
+  },
+]
+
 export function mockUnauthenticatedSession() {
   mockGraphQLResponse({ me: null })
 }
@@ -56,5 +71,5 @@ export function mockAuthenticatedSession(user = {
   displayName: 'player',
   createdAt: '2026-01-01T00:00:00Z',
 }) {
-  mockGraphQLResponse({ me: user })
+  mockGraphQLResponse({ me: user, games: mockDemoGames })
 }

@@ -28,6 +28,14 @@ func scanGame(row interface{ Scan(dest ...any) error }) (*Game, error) {
 const gameColumns = `id, name, description, status, created_at`
 
 func (s *Store) ListGames(ctx context.Context, limit, offset int) ([]Game, error) {
+	return s.listGames(ctx, limit, offset, "")
+}
+
+func (s *Store) ListDemoGames(ctx context.Context, limit, offset int) ([]Game, error) {
+	return s.listGames(ctx, limit, offset, "demo")
+}
+
+func (s *Store) listGames(ctx context.Context, limit, offset int, category string) ([]Game, error) {
 	if limit <= 0 {
 		limit = 20
 	}
@@ -35,13 +43,23 @@ func (s *Store) ListGames(ctx context.Context, limit, offset int) ([]Game, error
 		offset = 0
 	}
 
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+gameColumns+`
+	query := `
+		SELECT ` + gameColumns + `
 		FROM games
-		WHERE status = 'active'
-		ORDER BY created_at DESC
-		LIMIT $1 OFFSET $2
-	`, limit, offset)
+		WHERE status = 'active'`
+	args := []any{}
+
+	if category != "" {
+		query += ` AND category = $1`
+		args = append(args, category)
+	}
+
+	limitArg := len(args) + 1
+	offsetArg := len(args) + 2
+	query += fmt.Sprintf(` ORDER BY created_at DESC LIMIT $%d OFFSET $%d`, limitArg, offsetArg)
+	args = append(args, limit, offset)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

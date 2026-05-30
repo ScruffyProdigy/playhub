@@ -24,9 +24,9 @@ export default function LoginForm() {
   }
 
   return (
-    <section className="auth-card" aria-labelledby="login-heading">
+    <section className="panel-card" aria-labelledby="login-heading">
       <h2 id="login-heading">Sign in</h2>
-      <p className="auth-copy">Enter your email and we&apos;ll send you a magic link.</p>
+      <p className="panel-copy">Enter your email and we&apos;ll send you a magic link.</p>
 
       <form className="auth-form" onSubmit={handleSubmit}>
         <label htmlFor="email">Email</label>
@@ -47,7 +47,7 @@ export default function LoginForm() {
       </form>
 
       {message ? (
-        <p className={status === 'error' ? 'auth-message auth-message-error' : 'auth-message'} role="status">
+        <p className={status === 'error' ? 'status-message status-message-error' : 'status-message'} role="status">
           {message}
         </p>
       ) : null}

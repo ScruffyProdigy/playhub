@@ -46,9 +46,12 @@ func openAuthTestService(t *testing.T) *Service {
 
 func TestMagicLinkLoginFlow(t *testing.T) {
 	service := openAuthTestService(t)
+	cleaner := service.store.NewTestCleaner(t)
 	ctx := context.Background()
 
 	email := "auth-" + uuid.NewString() + "@example.com"
+	cleaner.TrackEmail(email)
+
 	if err := service.RequestMagicLink(ctx, email); err != nil {
 		t.Fatalf("RequestMagicLink failed: %v", err)
 	}
@@ -65,6 +68,8 @@ func TestMagicLinkLoginFlow(t *testing.T) {
 	if user.Email != email {
 		t.Fatalf("expected email %q, got %q", email, user.Email)
 	}
+	cleaner.TrackUser(user.ID)
+
 	if sessionToken == "" {
 		t.Fatal("expected session token")
 	}

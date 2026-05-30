@@ -23,7 +23,7 @@ export default function UserSessionCard({ user }) {
   }
 
   return (
-    <section className="auth-card user-card" aria-labelledby="welcome-heading">
+    <section className="panel-card user-card" aria-labelledby="welcome-heading">
       <h2 id="welcome-heading">Welcome back</h2>
       <p className="user-email">{user.email}</p>
       {user.displayName ? <p className="user-name">{user.displayName}</p> : null}
@@ -31,7 +31,7 @@ export default function UserSessionCard({ user }) {
         {status === 'loading' ? 'Logging out…' : 'Log out'}
       </button>
       {error ? (
-        <p className="auth-message auth-message-error" role="status">
+        <p className="status-message status-message-error" role="status">
           {error}
         </p>
       ) : null}

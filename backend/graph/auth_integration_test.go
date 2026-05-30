@@ -94,9 +94,11 @@ func sessionCookieOptions(cookies []*http.Cookie) []client.Option {
 
 func TestAuthGraphQLFlow(t *testing.T) {
 	c, handlerWithAuth, st := newAuthGraphQLTestClient(t)
+	cleaner := st.NewTestCleaner(t)
 	ctx := context.Background()
 
 	email := "graphql-auth-" + uuid.NewString() + "@example.com"
+	cleaner.TrackEmail(email)
 
 	var loginResp struct {
 		LoginMagic bool `json:"loginMagic"`
@@ -143,6 +145,12 @@ func TestAuthGraphQLFlow(t *testing.T) {
 	if completeResp.Data.CompleteMagic.DisplayName == nil || *completeResp.Data.CompleteMagic.DisplayName != store.DefaultDisplayName(email) {
 		t.Fatalf("expected provisional display name, got %+v", completeResp.Data.CompleteMagic.DisplayName)
 	}
+
+	user, err := st.GetUserByEmail(ctx, email)
+	if err != nil {
+		t.Fatalf("GetUserByEmail failed: %v", err)
+	}
+	cleaner.TrackUser(user.ID)
 
 	var meResp struct {
 		Me *struct {

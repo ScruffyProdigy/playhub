@@ -85,11 +85,24 @@ case "${1:-}" in
     wait_for_postgres
     (cd backend && DATABASE_URL="$DATABASE_URL" make migrate-up)
     ;;
+  clean-test-data)
+    require_docker
+    wait_for_postgres
+    docker compose exec -T postgres psql -U app -d playhub <<'SQL'
+BEGIN;
+DELETE FROM magic_links WHERE email LIKE '%@example.com';
+DELETE FROM users WHERE email LIKE '%@example.com';
+DELETE FROM games WHERE category IS DISTINCT FROM 'demo';
+COMMIT;
+SQL
+    echo "Removed test games, @example.com users, and their magic links."
+    echo "Demo games and real user accounts were kept."
+    ;;
   url)
     echo "$DATABASE_URL"
     ;;
   *)
-    echo "Usage: $0 {up|down|wait|migrate|reset|url}"
+    echo "Usage: $0 {up|down|wait|migrate|reset|clean-test-data|url}"
     exit 1
     ;;
 esac

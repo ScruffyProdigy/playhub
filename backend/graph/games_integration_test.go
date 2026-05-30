@@ -126,12 +126,14 @@ func TestGameGraphQLReturnsNotFoundForMissingGame(t *testing.T) {
 
 func TestSessionGraphQLLoadsNestedGameAndPlayers(t *testing.T) {
 	c, st := newGamesGraphQLTestClient(t)
+	cleaner := st.NewTestCleaner(t)
 	ctx := context.Background()
 
 	game, err := st.CreateGame(ctx, "GraphQL Session Test "+uuid.NewString())
 	if err != nil {
 		t.Fatalf("CreateGame failed: %v", err)
 	}
+	cleaner.TrackGame(game.ID)
 
 	session, err := st.CreateSession(ctx, game.ID)
 	if err != nil {
@@ -144,6 +146,7 @@ func TestSessionGraphQLLoadsNestedGameAndPlayers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
+	cleaner.TrackUser(user.ID)
 
 	if err := st.AddSessionParticipant(ctx, session.ID, user.ID, "player"); err != nil {
 		t.Fatalf("AddSessionParticipant failed: %v", err)

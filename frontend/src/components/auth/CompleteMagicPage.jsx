@@ -46,9 +46,9 @@ export default function CompleteMagicPage() {
   return (
     <main className="auth-page">
       <h1>PlayHub</h1>
-      <section className="auth-card" aria-live="polite">
+      <section className="panel-card" aria-live="polite">
         <h2>Signing you in</h2>
-        <p className={status === 'error' ? 'auth-message auth-message-error' : 'auth-message'}>{message}</p>
+        <p className={status === 'error' ? 'status-message status-message-error' : 'status-message'}>{message}</p>
         {status === 'error' ? (
           <a className="auth-link" href="/">
             Back to home

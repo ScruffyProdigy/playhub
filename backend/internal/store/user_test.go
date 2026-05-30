@@ -17,6 +17,7 @@ func TestDefaultDisplayName(t *testing.T) {
 
 func TestCreateUserUsesProvisionalDisplayName(t *testing.T) {
 	st := openTestStore(t)
+	cleaner := st.NewTestCleaner(t)
 	ctx := t.Context()
 
 	email := "display-name-" + mustUUID(t) + "@example.com"
@@ -24,6 +25,7 @@ func TestCreateUserUsesProvisionalDisplayName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
+	cleaner.TrackUser(user.ID)
 
 	expectedPrefix := strings.Split(email, "@")[0]
 	if !strings.HasPrefix(user.DisplayName, expectedPrefix+" (new)") {
@@ -36,6 +38,7 @@ func TestCreateUserUsesProvisionalDisplayName(t *testing.T) {
 
 func TestCreateUserRespectsExplicitDisplayName(t *testing.T) {
 	st := openTestStore(t)
+	cleaner := st.NewTestCleaner(t)
 	ctx := t.Context()
 
 	email := "custom-name-" + mustUUID(t) + "@example.com"
@@ -46,6 +49,7 @@ func TestCreateUserRespectsExplicitDisplayName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
+	cleaner.TrackUser(user.ID)
 	if user.DisplayName != "Custom Name" {
 		t.Fatalf("expected explicit display name, got %q", user.DisplayName)
 	}
@@ -53,6 +57,7 @@ func TestCreateUserRespectsExplicitDisplayName(t *testing.T) {
 
 func TestCreateUserUsernameIncludesRandomSuffix(t *testing.T) {
 	st := openTestStore(t)
+	cleaner := st.NewTestCleaner(t)
 	ctx := t.Context()
 
 	email := "alice-" + mustUUID(t) + "@example.com"
@@ -60,6 +65,7 @@ func TestCreateUserUsernameIncludesRandomSuffix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
+	cleaner.TrackUser(user.ID)
 
 	base := strings.Split(strings.ToLower(email), "@")[0]
 	base = strings.Map(func(r rune) rune {

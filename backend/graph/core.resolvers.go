@@ -162,7 +162,7 @@ func (r *queryResolver) Games(ctx context.Context, limit *int, offset *int) ([]*
 		pageOffset = *offset
 	}
 
-	games, err := st.ListGames(ctx, pageSize, pageOffset)
+	games, err := st.ListDemoGames(ctx, pageSize, pageOffset)
 	if err != nil {
 		return nil, err
 	}

@@ -4,7 +4,7 @@ import { useAuth } from './AuthProvider'
 
 function SessionLoading() {
   return (
-    <p className="auth-message" role="status">
+    <p className="status-message" role="status">
       Loading session…
     </p>
   )
@@ -23,7 +23,7 @@ export default function AuthPanel() {
 
   return (
     <>
-      {error ? <p className="auth-message auth-message-error">{error}</p> : null}
+      {error ? <p className="status-message status-message-error">{error}</p> : null}
       <LoginForm />
     </>
   )

@@ -28,6 +28,7 @@ func openTestStore(t *testing.T) *Store {
 
 func TestStoreUserGameFlow(t *testing.T) {
 	st := openTestStore(t)
+	cleaner := st.NewTestCleaner(t)
 	ctx := context.Background()
 
 	email := "store-test-" + uuid.NewString() + "@example.com"
@@ -38,6 +39,7 @@ func TestStoreUserGameFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
+	cleaner.TrackUser(user.ID)
 
 	found, err := st.GetUserByEmail(ctx, email)
 	if err != nil {
@@ -51,6 +53,7 @@ func TestStoreUserGameFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateGame failed: %v", err)
 	}
+	cleaner.TrackGame(game.ID)
 
 	games, err := st.ListGames(ctx, 10, 0)
 	if err != nil {
@@ -75,11 +78,15 @@ func TestStoreUserGameFlow(t *testing.T) {
 
 func TestStoreMagicLinkFlow(t *testing.T) {
 	st := openTestStore(t)
+	cleaner := st.NewTestCleaner(t)
 	ctx := context.Background()
+
+	email := "magic-" + uuid.NewString() + "@example.com"
+	cleaner.TrackEmail(email)
 
 	token := uuid.NewString()
 	link, err := st.CreateMagicLink(ctx, CreateMagicLinkParams{
-		Email:     "magic-" + uuid.NewString() + "@example.com",
+		Email:     email,
 		Token:     token,
 		ExpiresAt: time.Now().Add(15 * time.Minute),
 	})
@@ -113,6 +120,7 @@ func TestStoreMagicLinkFlow(t *testing.T) {
 
 func TestStoreInventoryFlow(t *testing.T) {
 	st := openTestStore(t)
+	cleaner := st.NewTestCleaner(t)
 	ctx := context.Background()
 
 	user, err := st.CreateUser(ctx, CreateUserParams{
@@ -122,11 +130,13 @@ func TestStoreInventoryFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
+	cleaner.TrackUser(user.ID)
 
 	game, err := st.CreateGame(ctx, "Inventory Game")
 	if err != nil {
 		t.Fatalf("CreateGame failed: %v", err)
 	}
+	cleaner.TrackGame(game.ID)
 
 	description := "A test item"
 	good, err := st.CreateDigitalGood(ctx, "Test Good", &description, &game.ID)

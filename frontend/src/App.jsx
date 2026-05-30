@@ -1,5 +1,6 @@
 import CompleteMagicPage from './components/auth/CompleteMagicPage'
 import AuthPanel from './components/auth/AuthPanel'
+import GameLobby from './components/games/GameLobby'
 import { AuthProvider } from './components/auth/AuthProvider'
 import './App.css'
 
@@ -12,6 +13,7 @@ function HomePage() {
       </header>
 
       <AuthPanel />
+      <GameLobby />
     </main>
   )
 }
