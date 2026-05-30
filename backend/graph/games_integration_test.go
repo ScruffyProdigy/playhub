@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
 	_ "github.com/lib/pq"
 )
@@ -44,7 +45,7 @@ func newGamesGraphQLTestClient(t *testing.T) (*client.Client, *store.Store) {
 		t.Fatalf("new auth service: %v", err)
 	}
 
-	resolver := NewResolver(st, authService)
+	resolver := NewResolver(st, authService, pubsub.NewMemory(), "http://localhost:5174")
 	gql := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
 	return client.New(gql), st
 }
@@ -75,7 +76,7 @@ func TestGamesGraphQLListsDemoGames(t *testing.T) {
 	for _, game := range resp.Games {
 		names[game.Name] = true
 	}
-	for _, want := range []string{"Quick Match", "Party Lobby"} {
+	for _, want := range []string{"Rock Paper Scissors Lizard Spock", "Party Lobby"} {
 		if !names[want] {
 			t.Fatalf("expected demo game %q in results, got %+v", want, resp.Games)
 		}
@@ -106,8 +107,8 @@ func TestGameGraphQLReturnsDemoGameByID(t *testing.T) {
 		t.Fatalf("game query failed: %v", err)
 	}
 
-	if resp.Game.Name != "Quick Match" {
-		t.Fatalf("expected Quick Match, got %q", resp.Game.Name)
+	if resp.Game.Name != "Rock Paper Scissors Lizard Spock" {
+		t.Fatalf("expected Rock Paper Scissors Lizard Spock, got %q", resp.Game.Name)
 	}
 }
 

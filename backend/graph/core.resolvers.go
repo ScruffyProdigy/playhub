@@ -14,6 +14,7 @@ import (
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/graph/model"
 	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
@@ -79,19 +80,70 @@ func (r *mutationResolver) CreateGame(ctx context.Context, input model.CreateGam
 
 // JoinGame is the resolver for the joinGame field.
 func (r *mutationResolver) JoinGame(ctx context.Context, gameID string) (*model.JoinResult, error) {
-	// TODO: Implement proper game joining logic
-	// For now, return a mock join result
-	return &model.JoinResult{
-		Queued:    true,
-		SessionID: &[]string{uuid.New().String()}[0],
-		JoinURL:   &[]string{fmt.Sprintf("https://game.example.com/join/%s", gameID)}[0],
-	}, nil
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	gameUUID, err := parseUUID(gameID, "game id")
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := st.JoinGameQueue(ctx, gameUUID, userID)
+	if err != nil {
+		if errors.Is(err, store.ErrAlreadyMatched) {
+			return nil, fmt.Errorf("you are already in a match for this game")
+		}
+		return nil, err
+	}
+
+	var launchURLs map[uuid.UUID]string
+	if result.Status == store.QueueStatusMatched && result.SessionID != nil {
+		game, gErr := st.GetGameByID(ctx, gameUUID)
+		if gErr != nil {
+			return nil, gErr
+		}
+		launchURLs, err = r.finalizeMatchedSession(ctx, game, *result.SessionID, result.NotifyUserIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := r.publishQueueResult(ctx, gameUUID, result, launchURLs); err != nil {
+		return nil, err
+	}
+
+	return joinResultAfterJoin(result, userID, launchURLs), nil
 }
 
 // LeaveQueue is the resolver for the leaveQueue field.
 func (r *mutationResolver) LeaveQueue(ctx context.Context, gameID string) (bool, error) {
-	// TODO: Implement proper queue leaving logic
-	// For now, return true to simulate successful leave
+	st, err := r.requireStore()
+	if err != nil {
+		return false, err
+	}
+
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return false, err
+	}
+	gameUUID, err := parseUUID(gameID, "game id")
+	if err != nil {
+		return false, err
+	}
+
+	queuedCount, err := st.LeaveGameQueue(ctx, gameUUID, userID)
+	if err != nil {
+		return false, err
+	}
+	if err := r.publishQueueLeft(ctx, gameUUID, userID, queuedCount); err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
@@ -270,11 +322,143 @@ func (r *queryResolver) MyInventory(ctx context.Context, gameID *string) ([]*mod
 	return entitlements, nil
 }
 
+// MyQueueStatus is the resolver for the myQueueStatus field.
+func (r *queryResolver) MyQueueStatus(ctx context.Context, gameID string) (*model.JoinResult, error) {
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	gameUUID, err := parseUUID(gameID, "game id")
+	if err != nil {
+		return nil, err
+	}
+
+	view, err := st.GetUserQueueView(ctx, gameUUID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	launchURL := ""
+	if view.Matched && view.SessionID != nil {
+		game, gErr := st.GetGameByID(ctx, gameUUID)
+		if gErr != nil {
+			return nil, gErr
+		}
+		launchURL, err = r.signLaunchURL(ctx, game, *view.SessionID, userID)
+		if err != nil {
+			return nil, fmt.Errorf("launch url: %w", err)
+		}
+	}
+	return joinResultFromQueueView(view, launchURL), nil
+}
+
+// SubscriptionAuth is the resolver for the subscriptionAuth field.
+func (r *queryResolver) SubscriptionAuth(ctx context.Context) (*string, error) {
+	token, ok := auth.SessionTokenFromContext(ctx)
+	if !ok {
+		return nil, nil
+	}
+	header := "Bearer " + token
+	return &header, nil
+}
+
+// QueueUpdated is the resolver for the queueUpdated field.
+func (r *subscriptionResolver) QueueUpdated(ctx context.Context, gameID string) (<-chan *model.QueueUpdate, error) {
+	if r.PubSub == nil {
+		return nil, fmt.Errorf("pubsub is not configured")
+	}
+
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	gameUUID, err := parseUUID(gameID, "game id")
+	if err != nil {
+		return nil, err
+	}
+
+	game, err := st.GetGameByID(ctx, gameUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	view, err := st.GetUserQueueView(ctx, gameUUID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	initialLaunchURL := ""
+	if view.Matched && view.SessionID != nil {
+		initialLaunchURL, err = r.signLaunchURL(ctx, game, *view.SessionID, userID)
+		if err != nil {
+			return nil, fmt.Errorf("launch url: %w", err)
+		}
+	}
+	initial := queueUpdateFromView(view, gameUUID, initialLaunchURL)
+
+	messages, unsubscribe, err := r.PubSub.Subscribe(ctx, pubsub.UserQueueChannel(userID.String()))
+	if err != nil {
+		return nil, err
+	}
+
+	updates := make(chan *model.QueueUpdate, 2)
+	go func() {
+		defer close(updates)
+		defer unsubscribe()
+
+		if initial != nil {
+			select {
+			case updates <- initial:
+			case <-ctx.Done():
+				return
+			}
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case payload, ok := <-messages:
+				if !ok {
+					return
+				}
+				event, err := pubsub.UnmarshalQueueEvent(payload)
+				if err != nil || event.GameID != gameUUID.String() {
+					continue
+				}
+				update := toGraphQLQueueUpdate(event)
+				select {
+				case updates <- update:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+
+	return updates, nil
+}
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+// Subscription returns generated.SubscriptionResolver implementation.
+func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
+
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type subscriptionResolver struct{ *Resolver }

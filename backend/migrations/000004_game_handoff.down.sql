@@ -1,0 +1,5 @@
+ALTER TABLE games
+    DROP COLUMN IF EXISTS slug,
+    DROP COLUMN IF EXISTS play_url,
+    DROP COLUMN IF EXISTS api_base_url,
+    DROP COLUMN IF EXISTS game_mode;

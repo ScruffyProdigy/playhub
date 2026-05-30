@@ -1,0 +1,41 @@
+package graph
+
+import (
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/scruffyprodigy/playhub/graph/model"
+	"github.com/scruffyprodigy/playhub/internal/store"
+)
+
+func TestQueueUpdateFromViewMatched(t *testing.T) {
+	sessionID := uuid.New()
+	gameID := uuid.MustParse("a1000000-0000-4000-8000-000000000001")
+
+	launch := "http://localhost:5174/?match=" + sessionID.String() + "&token=eyJ.test"
+	update := queueUpdateFromView(&store.UserQueueView{
+		InQueue:   true,
+		Matched:   true,
+		SessionID: &sessionID,
+	}, gameID, launch)
+
+	if update == nil || update.Status != model.QueueStatusMatched {
+		t.Fatalf("expected matched update, got %+v", update)
+	}
+	if update.JoinURL == nil || *update.JoinURL == "" {
+		t.Fatalf("expected join URL on matched snapshot")
+	}
+}
+
+func TestQueueUpdateFromViewWaiting(t *testing.T) {
+	gameID := uuid.MustParse("a1000000-0000-4000-8000-000000000001")
+	update := queueUpdateFromView(&store.UserQueueView{
+		InQueue:     true,
+		Waiting:     true,
+		QueuedCount: 2,
+	}, gameID, "")
+
+	if update == nil || update.Status != model.QueueStatusWaiting || update.QueuedCount != 2 {
+		t.Fatalf("expected waiting update with count 2, got %+v", update)
+	}
+}

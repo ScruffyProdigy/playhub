@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { fetchCurrentUser } from '../../lib/auth'
+import { clearSubscriptionAuthCache, prefetchSubscriptionAuth } from '../../lib/queue'
 
 const AuthContext = createContext(null)
 
@@ -9,11 +10,15 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState('')
 
   const refreshSession = useCallback(async () => {
+    clearSubscriptionAuthCache()
     setLoading(true)
     setError('')
     try {
       const currentUser = await fetchCurrentUser()
       setUser(currentUser)
+      if (currentUser) {
+        void prefetchSubscriptionAuth().catch(() => {})
+      }
     } catch (err) {
       setError(err.message || 'Could not load session')
       setUser(null)
@@ -23,6 +28,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const clearSession = useCallback(() => {
+    clearSubscriptionAuthCache()
     setUser(null)
     setError('')
   }, [])

@@ -11,6 +11,7 @@ export default defineConfig({
       '/graphql': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        ws: true,
       },
     },
   },

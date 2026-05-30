@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
 	_ "github.com/lib/pq"
 )
@@ -48,7 +49,7 @@ func newAuthGraphQLTestClient(t *testing.T) (*client.Client, http.Handler, *stor
 		t.Fatalf("new auth service: %v", err)
 	}
 
-	resolver := NewResolver(st, authService)
+	resolver := NewResolver(st, authService, pubsub.NewMemory(), "http://localhost:5174")
 	gql := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
 	handlerWithAuth := auth.Middleware(signer, gql)
 	c := client.New(handlerWithAuth)

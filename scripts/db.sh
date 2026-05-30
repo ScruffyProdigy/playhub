@@ -62,7 +62,7 @@ wait_for_postgres() {
 case "${1:-}" in
   up)
     require_docker
-    docker compose up -d postgres
+    docker compose up -d postgres redis
     wait_for_postgres
     ;;
   down)
@@ -81,7 +81,7 @@ case "${1:-}" in
   reset)
     require_docker
     docker compose down -v
-    docker compose up -d postgres
+    docker compose up -d postgres redis
     wait_for_postgres
     (cd backend && DATABASE_URL="$DATABASE_URL" make migrate-up)
     ;;

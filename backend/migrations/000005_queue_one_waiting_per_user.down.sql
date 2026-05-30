@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_game_queues_one_waiting_per_user;

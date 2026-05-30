@@ -43,6 +43,7 @@ type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Session() SessionResolver
+	Subscription() SubscriptionResolver
 }
 
 type DirectiveRoot struct {
@@ -71,9 +72,10 @@ type ComplexityRoot struct {
 	}
 
 	JoinResult struct {
-		JoinURL   func(childComplexity int) int
-		Queued    func(childComplexity int) int
-		SessionID func(childComplexity int) int
+		JoinURL     func(childComplexity int) int
+		Queued      func(childComplexity int) int
+		QueuedCount func(childComplexity int) int
+		SessionID   func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -88,14 +90,24 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Game        func(childComplexity int, id string) int
-		Games       func(childComplexity int, limit *int, offset *int) int
-		Goods       func(childComplexity int, gameID *string) int
-		Healthz     func(childComplexity int) int
-		Me          func(childComplexity int) int
-		MyInventory func(childComplexity int, gameID *string) int
-		Session     func(childComplexity int, id string) int
-		Version     func(childComplexity int) int
+		Game             func(childComplexity int, id string) int
+		Games            func(childComplexity int, limit *int, offset *int) int
+		Goods            func(childComplexity int, gameID *string) int
+		Healthz          func(childComplexity int) int
+		Me               func(childComplexity int) int
+		MyInventory      func(childComplexity int, gameID *string) int
+		MyQueueStatus    func(childComplexity int, gameID string) int
+		Session          func(childComplexity int, id string) int
+		SubscriptionAuth func(childComplexity int) int
+		Version          func(childComplexity int) int
+	}
+
+	QueueUpdate struct {
+		GameID      func(childComplexity int) int
+		JoinURL     func(childComplexity int) int
+		QueuedCount func(childComplexity int) int
+		SessionID   func(childComplexity int) int
+		Status      func(childComplexity int) int
 	}
 
 	Session struct {
@@ -104,6 +116,10 @@ type ComplexityRoot struct {
 		ID        func(childComplexity int) int
 		Players   func(childComplexity int) int
 		Status    func(childComplexity int) int
+	}
+
+	Subscription struct {
+		QueueUpdated func(childComplexity int, gameID string) int
 	}
 
 	User struct {
@@ -136,11 +152,16 @@ type QueryResolver interface {
 	Session(ctx context.Context, id string) (*model.Session, error)
 	Goods(ctx context.Context, gameID *string) ([]*model.DigitalGood, error)
 	MyInventory(ctx context.Context, gameID *string) ([]*model.Entitlement, error)
+	MyQueueStatus(ctx context.Context, gameID string) (*model.JoinResult, error)
+	SubscriptionAuth(ctx context.Context) (*string, error)
 }
 type SessionResolver interface {
 	Game(ctx context.Context, obj *model.Session) (*model.Game, error)
 
 	Players(ctx context.Context, obj *model.Session) ([]*model.User, error)
+}
+type SubscriptionResolver interface {
+	QueueUpdated(ctx context.Context, gameID string) (<-chan *model.QueueUpdate, error)
 }
 
 type executableSchema struct {
@@ -254,6 +275,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.JoinResult.Queued(childComplexity), true
+	case "JoinResult.queuedCount":
+		if e.complexity.JoinResult.QueuedCount == nil {
+			break
+		}
+
+		return e.complexity.JoinResult.QueuedCount(childComplexity), true
 	case "JoinResult.sessionId":
 		if e.complexity.JoinResult.SessionID == nil {
 			break
@@ -401,6 +428,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.MyInventory(childComplexity, args["gameId"].(*string)), true
+	case "Query.myQueueStatus":
+		if e.complexity.Query.MyQueueStatus == nil {
+			break
+		}
+
+		args, err := ec.field_Query_myQueueStatus_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.MyQueueStatus(childComplexity, args["gameId"].(string)), true
 	case "Query.session":
 		if e.complexity.Query.Session == nil {
 			break
@@ -412,12 +450,49 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Session(childComplexity, args["id"].(string)), true
+	case "Query.subscriptionAuth":
+		if e.complexity.Query.SubscriptionAuth == nil {
+			break
+		}
+
+		return e.complexity.Query.SubscriptionAuth(childComplexity), true
 	case "Query.version":
 		if e.complexity.Query.Version == nil {
 			break
 		}
 
 		return e.complexity.Query.Version(childComplexity), true
+
+	case "QueueUpdate.gameId":
+		if e.complexity.QueueUpdate.GameID == nil {
+			break
+		}
+
+		return e.complexity.QueueUpdate.GameID(childComplexity), true
+	case "QueueUpdate.joinUrl":
+		if e.complexity.QueueUpdate.JoinURL == nil {
+			break
+		}
+
+		return e.complexity.QueueUpdate.JoinURL(childComplexity), true
+	case "QueueUpdate.queuedCount":
+		if e.complexity.QueueUpdate.QueuedCount == nil {
+			break
+		}
+
+		return e.complexity.QueueUpdate.QueuedCount(childComplexity), true
+	case "QueueUpdate.sessionId":
+		if e.complexity.QueueUpdate.SessionID == nil {
+			break
+		}
+
+		return e.complexity.QueueUpdate.SessionID(childComplexity), true
+	case "QueueUpdate.status":
+		if e.complexity.QueueUpdate.Status == nil {
+			break
+		}
+
+		return e.complexity.QueueUpdate.Status(childComplexity), true
 
 	case "Session.createdAt":
 		if e.complexity.Session.CreatedAt == nil {
@@ -449,6 +524,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Session.Status(childComplexity), true
+
+	case "Subscription.queueUpdated":
+		if e.complexity.Subscription.QueueUpdated == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_queueUpdated_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.QueueUpdated(childComplexity, args["gameId"].(string)), true
 
 	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
@@ -533,6 +620,23 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 				Data: buf.Bytes(),
 			}
 		}
+	case ast.Subscription:
+		next := ec._Subscription(ctx, opCtx.Operation.SelectionSet)
+
+		var buf bytes.Buffer
+		return func(ctx context.Context) *graphql.Response {
+			buf.Reset()
+			data := next(ctx)
+
+			if data == nil {
+				return nil
+			}
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
+		}
 
 	default:
 		return graphql.OneShot(graphql.ErrorResponse(ctx, "unsupported GraphQL operation"))
@@ -594,6 +698,13 @@ type Query {
   session(id: ID!): Session
   goods(gameId: ID): [DigitalGood!]!   # list goods globally or by game
   myInventory(gameId: ID): [Entitlement!]!
+  myQueueStatus(gameId: ID!): JoinResult!
+  # Bearer token for GraphQL websocket connection_init (httpOnly cookie is not always sent on WS upgrade).
+  subscriptionAuth: String
+}
+
+type Subscription {
+  queueUpdated(gameId: ID!): QueueUpdate!
 }
 
 type Mutation {
@@ -635,6 +746,21 @@ type JoinResult {
   queued: Boolean!
   sessionId: ID
   joinUrl: String
+  queuedCount: Int
+}
+
+enum QueueStatus {
+  WAITING
+  MATCHED
+  LEFT
+}
+
+type QueueUpdate {
+  gameId: ID!
+  status: QueueStatus!
+  sessionId: ID
+  joinUrl: String
+  queuedCount: Int!
 }
 `, BuiltIn: false},
 	{Name: "../schema/goods.graphqls", Input: `type DigitalGood {
@@ -833,6 +959,17 @@ func (ec *executionContext) field_Query_myInventory_args(ctx context.Context, ra
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_myQueueStatus_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "gameId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["gameId"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_session_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -841,6 +978,17 @@ func (ec *executionContext) field_Query_session_args(ctx context.Context, rawArg
 		return nil, err
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_queueUpdated_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "gameId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["gameId"] = arg0
 	return args, nil
 }
 
@@ -1377,6 +1525,35 @@ func (ec *executionContext) fieldContext_JoinResult_joinUrl(_ context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _JoinResult_queuedCount(ctx context.Context, field graphql.CollectedField, obj *model.JoinResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_JoinResult_queuedCount,
+		func(ctx context.Context) (any, error) {
+			return obj.QueuedCount, nil
+		},
+		nil,
+		ec.marshalOInt2ᚖint,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_JoinResult_queuedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "JoinResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_loginMagic(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1580,6 +1757,8 @@ func (ec *executionContext) fieldContext_Mutation_joinGame(ctx context.Context, 
 				return ec.fieldContext_JoinResult_sessionId(ctx, field)
 			case "joinUrl":
 				return ec.fieldContext_JoinResult_joinUrl(ctx, field)
+			case "queuedCount":
+				return ec.fieldContext_JoinResult_queuedCount(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type JoinResult", field.Name)
 		},
@@ -2075,6 +2254,86 @@ func (ec *executionContext) fieldContext_Query_myInventory(ctx context.Context, 
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_myQueueStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_myQueueStatus,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().MyQueueStatus(ctx, fc.Args["gameId"].(string))
+		},
+		nil,
+		ec.marshalNJoinResult2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐJoinResult,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_myQueueStatus(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "queued":
+				return ec.fieldContext_JoinResult_queued(ctx, field)
+			case "sessionId":
+				return ec.fieldContext_JoinResult_sessionId(ctx, field)
+			case "joinUrl":
+				return ec.fieldContext_JoinResult_joinUrl(ctx, field)
+			case "queuedCount":
+				return ec.fieldContext_JoinResult_queuedCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type JoinResult", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_myQueueStatus_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_subscriptionAuth(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_subscriptionAuth,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().SubscriptionAuth(ctx)
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_subscriptionAuth(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2178,6 +2437,151 @@ func (ec *executionContext) fieldContext_Query___schema(_ context.Context, field
 				return ec.fieldContext___Schema_directives(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type __Schema", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QueueUpdate_gameId(ctx context.Context, field graphql.CollectedField, obj *model.QueueUpdate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_QueueUpdate_gameId,
+		func(ctx context.Context) (any, error) {
+			return obj.GameID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_QueueUpdate_gameId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QueueUpdate",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QueueUpdate_status(ctx context.Context, field graphql.CollectedField, obj *model.QueueUpdate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_QueueUpdate_status,
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		ec.marshalNQueueStatus2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐQueueStatus,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_QueueUpdate_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QueueUpdate",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type QueueStatus does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QueueUpdate_sessionId(ctx context.Context, field graphql.CollectedField, obj *model.QueueUpdate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_QueueUpdate_sessionId,
+		func(ctx context.Context) (any, error) {
+			return obj.SessionID, nil
+		},
+		nil,
+		ec.marshalOID2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_QueueUpdate_sessionId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QueueUpdate",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QueueUpdate_joinUrl(ctx context.Context, field graphql.CollectedField, obj *model.QueueUpdate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_QueueUpdate_joinUrl,
+		func(ctx context.Context) (any, error) {
+			return obj.JoinURL, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_QueueUpdate_joinUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QueueUpdate",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _QueueUpdate_queuedCount(ctx context.Context, field graphql.CollectedField, obj *model.QueueUpdate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_QueueUpdate_queuedCount,
+		func(ctx context.Context) (any, error) {
+			return obj.QueuedCount, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_QueueUpdate_queuedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "QueueUpdate",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2344,6 +2748,59 @@ func (ec *executionContext) fieldContext_Session_players(_ context.Context, fiel
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Subscription_queueUpdated(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	return graphql.ResolveFieldStream(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Subscription_queueUpdated,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Subscription().QueueUpdated(ctx, fc.Args["gameId"].(string))
+		},
+		nil,
+		ec.marshalNQueueUpdate2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐQueueUpdate,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Subscription_queueUpdated(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "gameId":
+				return ec.fieldContext_QueueUpdate_gameId(ctx, field)
+			case "status":
+				return ec.fieldContext_QueueUpdate_status(ctx, field)
+			case "sessionId":
+				return ec.fieldContext_QueueUpdate_sessionId(ctx, field)
+			case "joinUrl":
+				return ec.fieldContext_QueueUpdate_joinUrl(ctx, field)
+			case "queuedCount":
+				return ec.fieldContext_QueueUpdate_queuedCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type QueueUpdate", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_queueUpdated_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4152,6 +4609,8 @@ func (ec *executionContext) _JoinResult(ctx context.Context, sel ast.SelectionSe
 			out.Values[i] = ec._JoinResult_sessionId(ctx, field, obj)
 		case "joinUrl":
 			out.Values[i] = ec._JoinResult_joinUrl(ctx, field, obj)
+		case "queuedCount":
+			out.Values[i] = ec._JoinResult_queuedCount(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4459,6 +4918,47 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "myQueueStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_myQueueStatus(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "subscriptionAuth":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_subscriptionAuth(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -4467,6 +4967,59 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___schema(ctx, field)
 			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var queueUpdateImplementors = []string{"QueueUpdate"}
+
+func (ec *executionContext) _QueueUpdate(ctx context.Context, sel ast.SelectionSet, obj *model.QueueUpdate) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, queueUpdateImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("QueueUpdate")
+		case "gameId":
+			out.Values[i] = ec._QueueUpdate_gameId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._QueueUpdate_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sessionId":
+			out.Values[i] = ec._QueueUpdate_sessionId(ctx, field, obj)
+		case "joinUrl":
+			out.Values[i] = ec._QueueUpdate_joinUrl(ctx, field, obj)
+		case "queuedCount":
+			out.Values[i] = ec._QueueUpdate_queuedCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4609,6 +5162,26 @@ func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, 
 	}
 
 	return out
+}
+
+var subscriptionImplementors = []string{"Subscription"}
+
+func (ec *executionContext) _Subscription(ctx context.Context, sel ast.SelectionSet) func(ctx context.Context) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, subscriptionImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Subscription",
+	})
+	if len(fields) != 1 {
+		ec.Errorf(ctx, "must subscribe to exactly one stream")
+		return nil
+	}
+
+	switch fields[0].Name {
+	case "queueUpdated":
+		return ec._Subscription_queueUpdated(ctx, fields[0])
+	default:
+		panic("unknown field " + strconv.Quote(fields[0].Name))
+	}
 }
 
 var userImplementors = []string{"User"}
@@ -5225,6 +5798,30 @@ func (ec *executionContext) marshalNJoinResult2ᚖgithubᚗcomᚋscruffyprodigy�
 		return graphql.Null
 	}
 	return ec._JoinResult(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNQueueStatus2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐQueueStatus(ctx context.Context, v any) (model.QueueStatus, error) {
+	var res model.QueueStatus
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNQueueStatus2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐQueueStatus(ctx context.Context, sel ast.SelectionSet, v model.QueueStatus) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNQueueUpdate2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐQueueUpdate(ctx context.Context, sel ast.SelectionSet, v model.QueueUpdate) graphql.Marshaler {
+	return ec._QueueUpdate(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNQueueUpdate2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐQueueUpdate(ctx context.Context, sel ast.SelectionSet, v *model.QueueUpdate) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._QueueUpdate(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNSession2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSessionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Session) graphql.Marshaler {

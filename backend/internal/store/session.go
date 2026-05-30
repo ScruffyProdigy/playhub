@@ -86,6 +86,27 @@ func (s *Store) AddSessionParticipant(ctx context.Context, sessionID, userID uui
 	return err
 }
 
+// GetMatchedSessionForUserAndGame returns an active session only when the user has a
+// matched queue entry for the game (used to recover after a missed queue notification).
+func (s *Store) GetMatchedSessionForUserAndGame(ctx context.Context, gameID, userID uuid.UUID) (*Session, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT gs.id, gs.game_id, gs.status, gs.started_at, gs.ended_at
+		FROM game_queues q
+		INNER JOIN game_session_participants p
+			ON p.user_id = q.user_id AND p.left_at IS NULL
+		INNER JOIN game_sessions gs
+			ON gs.id = p.session_id
+			AND gs.game_id = q.game_id
+			AND gs.status = 'active'
+		WHERE q.game_id = $1
+		  AND q.user_id = $2
+		  AND q.status = 'matched'
+		ORDER BY q.matched_at DESC NULLS LAST, q.joined_at DESC
+		LIMIT 1
+	`, gameID, userID)
+	return scanSession(row)
+}
+
 func (s *Store) ListSessionParticipants(ctx context.Context, sessionID uuid.UUID) ([]User, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT u.id, u.email, u.username, u.display_name, u.created_at

@@ -1,14 +1,25 @@
+import GameListItemInfo from './GameListItemInfo'
+import GameQueueActions from './GameQueueActions'
+import { useGameQueue } from './useGameQueue'
+
 export default function GameListItem({ game }) {
-  const sessionCount = game.activeSessions?.length ?? 0
+  const queue = useGameQueue(game.id)
 
   return (
     <li className="game-list-item">
-      <div className="game-list-copy">
-        <h3>{game.name}</h3>
-        <p className="game-list-meta">
-          {sessionCount} active session{sessionCount === 1 ? '' : 's'}
-        </p>
-      </div>
+      <GameListItemInfo
+        game={game}
+        queueState={queue.queueState}
+        queuedCount={queue.queuedCount}
+        error={queue.error}
+      />
+      <GameQueueActions
+        queueState={queue.queueState}
+        joinUrl={queue.joinUrl}
+        busy={queue.busy}
+        onJoin={queue.handleJoin}
+        onLeave={queue.handleLeave}
+      />
     </li>
   )
 }

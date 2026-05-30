@@ -36,15 +36,24 @@ type Game struct {
 }
 
 type JoinResult struct {
-	Queued    bool    `json:"queued"`
-	SessionID *string `json:"sessionId,omitempty"`
-	JoinURL   *string `json:"joinUrl,omitempty"`
+	Queued      bool    `json:"queued"`
+	SessionID   *string `json:"sessionId,omitempty"`
+	JoinURL     *string `json:"joinUrl,omitempty"`
+	QueuedCount *int    `json:"queuedCount,omitempty"`
 }
 
 type Mutation struct {
 }
 
 type Query struct {
+}
+
+type QueueUpdate struct {
+	GameID      string      `json:"gameId"`
+	Status      QueueStatus `json:"status"`
+	SessionID   *string     `json:"sessionId,omitempty"`
+	JoinURL     *string     `json:"joinUrl,omitempty"`
+	QueuedCount int         `json:"queuedCount"`
 }
 
 type Session struct {
@@ -55,11 +64,71 @@ type Session struct {
 	Players   []*User       `json:"players"`
 }
 
+type Subscription struct {
+}
+
 type User struct {
 	ID          string    `json:"id"`
 	Email       *string   `json:"email,omitempty"`
 	DisplayName *string   `json:"displayName,omitempty"`
 	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type QueueStatus string
+
+const (
+	QueueStatusWaiting QueueStatus = "WAITING"
+	QueueStatusMatched QueueStatus = "MATCHED"
+	QueueStatusLeft    QueueStatus = "LEFT"
+)
+
+var AllQueueStatus = []QueueStatus{
+	QueueStatusWaiting,
+	QueueStatusMatched,
+	QueueStatusLeft,
+}
+
+func (e QueueStatus) IsValid() bool {
+	switch e {
+	case QueueStatusWaiting, QueueStatusMatched, QueueStatusLeft:
+		return true
+	}
+	return false
+}
+
+func (e QueueStatus) String() string {
+	return string(e)
+}
+
+func (e *QueueStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = QueueStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid QueueStatus", str)
+	}
+	return nil
+}
+
+func (e QueueStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *QueueStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e QueueStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type SessionStatus string

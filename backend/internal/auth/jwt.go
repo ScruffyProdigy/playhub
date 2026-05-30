@@ -18,7 +18,11 @@ import (
 	"github.com/google/uuid"
 )
 
-const defaultJWTKID = "lobby-dev"
+const (
+	defaultJWTKID   = "lobby-dev"
+	devJWTKeyFile   = ".dev-jwt-key.pem"
+	devJWTKeyPerms  = 0o600
+)
 
 // Signer creates and verifies session JWTs.
 type Signer struct {
@@ -39,20 +43,56 @@ func LoadSignerFromEnv() (*Signer, error) {
 		return newSignerFromPEM(kid, pemData)
 	}
 
+	return loadOrCreateDevSigner(kid)
+}
+
+func devJWTKeyPath() string {
+	if p := strings.TrimSpace(os.Getenv("JWT_DEV_KEY_FILE")); p != "" {
+		return p
+	}
+	return devJWTKeyFile
+}
+
+// loadOrCreateDevSigner reuses a PEM file in the backend working directory so
+// local restarts keep the same kid/JWKS and game servers can verify seat tokens.
+func loadOrCreateDevSigner(kid string) (*Signer, error) {
+	path := devJWTKeyPath()
+	if data, err := os.ReadFile(path); err == nil {
+		pemData := strings.TrimSpace(string(data))
+		if pemData != "" {
+			signer, err := newSignerFromPEM(kid, pemData)
+			if err != nil {
+				return nil, fmt.Errorf("auth: dev key file %s: %w", path, err)
+			}
+			fmt.Fprintf(os.Stderr, "auth: loaded development JWT signing key from %s (kid=%s)\n", path, kid)
+			return signer, nil
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("auth: read dev key file %s: %w", path, err)
+	}
+
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("auth: generate dev signing key: %w", err)
 	}
 
-	signer := &Signer{
+	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		return nil, fmt.Errorf("auth: marshal dev signing key: %w", err)
+	}
+	pemData := string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privBytes}))
+	if err := os.WriteFile(path, []byte(pemData), devJWTKeyPerms); err != nil {
+		fmt.Fprintf(os.Stderr, "auth: warning: could not persist dev JWT key to %s: %v\n", path, err)
+	} else {
+		fmt.Fprintf(os.Stderr, "auth: generated and persisted development JWT signing key to %s (kid=%s)\n", path, kid)
+	}
+
+	return &Signer{
 		kid:        kid,
 		privateKey: priv,
 		publicKey:  pub,
 		publicX:    base64.RawURLEncoding.EncodeToString(pub),
-	}
-
-	fmt.Fprintf(os.Stderr, "auth: generated development JWT signing key (kid=%s)\n", kid)
-	return signer, nil
+	}, nil
 }
 
 func newSignerFromPEM(kid, pemData string) (*Signer, error) {
@@ -85,6 +125,7 @@ func (s *Signer) PublicJWK() map[string]string {
 	return map[string]string{
 		"kty": "OKP",
 		"crv": "Ed25519",
+		"use": "sig",
 		"alg": "EdDSA",
 		"kid": s.kid,
 		"x":   s.publicX,

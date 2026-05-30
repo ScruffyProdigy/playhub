@@ -4,14 +4,15 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
-	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/scruffyprodigy/playhub/database"
 	"github.com/scruffyprodigy/playhub/graph"
-	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
@@ -36,11 +37,29 @@ func main() {
 		log.Fatalf("Auth service initialization failed: %v", err)
 	}
 
-	resolver := graph.NewResolver(dataStore, authService)
+	broker, err := pubsub.NewFromEnv()
+	if err != nil {
+		log.Fatalf("PubSub initialization failed: %v", err)
+	}
+	defer broker.Close()
+
+	if strings.TrimSpace(os.Getenv("REDIS_URL")) == "" {
+		log.Println("pubsub: REDIS_URL not set, using in-memory broker (single instance only)")
+	} else {
+		log.Println("pubsub: connected to Redis")
+	}
+
+	gameClientBaseURL := strings.TrimSpace(os.Getenv("GAME_CLIENT_BASE_URL"))
+	if gameClientBaseURL == "" {
+		gameClientBaseURL = "http://localhost:5174"
+	}
+
+	resolver := graph.NewResolver(dataStore, authService, broker, gameClientBaseURL)
 
 	mux := http.NewServeMux()
 
-	gql := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
+	gql := graph.NewGraphQLServer(signer, resolver)
+
 	mux.Handle("/graphql", auth.Middleware(signer, gql))
 	mux.Handle("/", playground.Handler("GraphQL", "/graphql"))
 

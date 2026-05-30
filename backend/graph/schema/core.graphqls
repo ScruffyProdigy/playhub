@@ -11,6 +11,13 @@ type Query {
   session(id: ID!): Session
   goods(gameId: ID): [DigitalGood!]!   # list goods globally or by game
   myInventory(gameId: ID): [Entitlement!]!
+  myQueueStatus(gameId: ID!): JoinResult!
+  # Bearer token for GraphQL websocket connection_init (httpOnly cookie is not always sent on WS upgrade).
+  subscriptionAuth: String
+}
+
+type Subscription {
+  queueUpdated(gameId: ID!): QueueUpdate!
 }
 
 type Mutation {

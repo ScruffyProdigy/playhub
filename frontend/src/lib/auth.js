@@ -1,4 +1,5 @@
 import { graphqlRequest } from './graphql'
+import { clearSubscriptionAuthCache } from './queue'
 
 const ME_QUERY = `
   query Me {
@@ -46,11 +47,13 @@ export async function requestMagicLink(email) {
 
 export async function logout() {
   const data = await graphqlRequest(LOGOUT_MUTATION)
+  clearSubscriptionAuthCache()
   return data.logout === true
 }
 
 export async function completeMagicLogin(token) {
   const data = await graphqlRequest(COMPLETE_MAGIC_MUTATION, { token })
+  clearSubscriptionAuthCache()
   return data.completeMagic
 }
 

@@ -27,6 +27,29 @@ func TestCORSMiddlewareAllowsDevOrigin(t *testing.T) {
 	}
 }
 
+func TestWebSocketOriginAllowedLoopback(t *testing.T) {
+	t.Setenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
+
+	if !loopbackOriginsEquivalent("http://localhost:5173", "http://127.0.0.1:5173") {
+		t.Fatal("expected localhost and 127.0.0.1 origins to be equivalent")
+	}
+
+	for _, origin := range []string{
+		"http://localhost:5173",
+		"http://127.0.0.1:5173",
+		"http://[::1]:5173",
+		"",
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/graphql", nil)
+		if origin != "" {
+			req.Header.Set("Origin", origin)
+		}
+		if !WebSocketOriginAllowed(req) {
+			t.Fatalf("expected websocket origin %q to be allowed", origin)
+		}
+	}
+}
+
 func TestCORSMiddlewarePreflight(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Fatal("next handler should not run for preflight")

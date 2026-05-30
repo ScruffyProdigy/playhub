@@ -40,8 +40,23 @@ type Game struct {
 	ID          uuid.UUID
 	Name        string
 	Description *string
+	Slug        *string
+	PlayURL     *string
+	APIBaseURL  *string
+	GameMode    *string
 	Status      string
+	MinPlayers  int
+	MaxPlayers  int
 	CreatedAt   time.Time
+}
+
+// QueueJoinResult is returned when a user joins a game queue.
+type QueueJoinResult struct {
+	Status         string
+	SessionID      *uuid.UUID
+	QueuedCount    int
+	NotifyUserIDs  []uuid.UUID
+	AlreadyInQueue bool
 }
 
 type QueueEntry struct {

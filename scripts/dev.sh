@@ -66,6 +66,10 @@ if command -v docker &> /dev/null; then
     fi
     export MAGIC_LINK_BASE_URL="${MAGIC_LINK_BASE_URL:-http://localhost:5173/auth/complete?token=}"
     export CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}"
+    export REDIS_URL="${REDIS_URL:-redis://127.0.0.1:6379/0}"
+    export GAME_CLIENT_BASE_URL="${GAME_CLIENT_BASE_URL:-http://localhost:5174}"
+    export GAME_API_BASE_URL="${GAME_API_BASE_URL:-http://localhost:3001}"
+    export LOBBY_STALE_MATCH_MINUTES="${LOBBY_STALE_MATCH_MINUTES:-5}"
 else
     print_warning "Docker not found. Set DATABASE_URL manually or the backend will use mock data."
 fi
@@ -86,6 +90,10 @@ if [ ! -d "vendor" ] && [ ! -f "go.sum" ]; then
     go mod download
     go run github.com/99designs/gqlgen@v0.17.81 generate
 fi
+
+# Stable JWT signing key for game handoff (see backend/.dev-jwt-key.pem).
+# Restart the game API after deleting that file so LOBBY_JWKS_URL cache refreshes.
+print_info "JWT dev key: backend/.dev-jwt-key.pem (auto-created; gitignored)"
 
 # Start backend in background
 go run server.go &

@@ -83,6 +83,7 @@ func Middleware(signer *Signer, next http.Handler) http.Handler {
 		if token := TokenFromRequest(r); token != "" {
 			if userID, err := signer.VerifyUserToken(token); err == nil {
 				ctx = WithUserID(ctx, userID.String())
+				ctx = WithSessionToken(ctx, token)
 			}
 		}
 

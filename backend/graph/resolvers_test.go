@@ -118,39 +118,18 @@ func TestCreateGameMutation(t *testing.T) {
 	}
 }
 
-func TestJoinGameMutation(t *testing.T) {
+func TestJoinGameMutationRequiresAuthAndStore(t *testing.T) {
 	resolver := &Resolver{}
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
 	c := client.New(srv)
 
-	var resp struct {
-		JoinGame struct {
-			Queued    bool
-			SessionID *string
-			JoinURL   *string
-		}
-	}
-
 	err := c.Post(`mutation { 
 		joinGame(gameId: "test-game-id") { 
 			queued 
-			sessionId 
-			joinUrl 
 		} 
-	}`, &resp)
-	if err != nil {
-		t.Fatalf("GraphQL mutation failed: %v", err)
-	}
-
-	// Verify the response
-	if !resp.JoinGame.Queued {
-		t.Error("Expected joinGame.queued to be true")
-	}
-	if resp.JoinGame.SessionID == nil || *resp.JoinGame.SessionID == "" {
-		t.Error("Expected joinGame.sessionId to be non-empty")
-	}
-	if resp.JoinGame.JoinURL == nil || *resp.JoinGame.JoinURL == "" {
-		t.Error("Expected joinGame.joinUrl to be non-empty")
+	}`, &struct{}{})
+	if err == nil {
+		t.Fatal("expected joinGame to fail without auth and store")
 	}
 }
 

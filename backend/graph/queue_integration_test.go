@@ -1,0 +1,461 @@
+package graph
+
+import (
+	"bytes"
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/99designs/gqlgen/client"
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
+	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/pubsub"
+	"github.com/scruffyprodigy/playhub/internal/store"
+	_ "github.com/lib/pq"
+)
+
+const (
+	demoQuickMatchGameID = "a1000000-0000-4000-8000-000000000001"
+	// Must match gqlgen default and frontend graphql-ws client (not graphql-transport-ws).
+	graphqlWSSubprotocol = "graphql-ws"
+)
+
+type queueIntegrationEnv struct {
+	Server  *httptest.Server
+	Client  *client.Client
+	Handler http.Handler
+	Store   *store.Store
+	Signer  *auth.Signer
+}
+
+func newQueueIntegrationEnv(t *testing.T) *queueIntegrationEnv {
+	t.Helper()
+
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("DATABASE_URL not set, skipping queue GraphQL integration test")
+	}
+
+	db, err := sql.Open("postgres", databaseURL)
+	if err != nil {
+		t.Fatalf("connect database: %v", err)
+	}
+	if err := db.Ping(); err != nil {
+		_ = db.Close()
+		t.Fatalf("ping database: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	st := store.New(db)
+	signer, err := auth.LoadSignerFromEnv()
+	if err != nil {
+		t.Fatalf("load signer: %v", err)
+	}
+
+	authService, err := auth.NewService(st, signer)
+	if err != nil {
+		t.Fatalf("new auth service: %v", err)
+	}
+
+	mockGame := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && r.URL.Path == "/api/v1/matches" {
+			w.WriteHeader(http.StatusCreated)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(mockGame.Close)
+
+	gameID, _ := uuid.Parse(demoQuickMatchGameID)
+	if err := st.SetGameHandoffURLsForTest(context.Background(), gameID, "http://localhost:5174", mockGame.URL); err != nil {
+		t.Fatalf("set game handoff urls: %v", err)
+	}
+
+	resolver := NewResolver(st, authService, pubsub.NewMemory(), "http://localhost:5174")
+	gql := NewGraphQLServer(signer, resolver)
+
+	gqlHandler := auth.Middleware(signer, gql)
+	mux := http.NewServeMux()
+	mux.Handle("/", gqlHandler)
+	mux.Handle("/graphql", gqlHandler)
+	handler := auth.CORSMiddleware(mux)
+
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+
+	return &queueIntegrationEnv{
+		Server:  srv,
+		Client:  client.New(gqlHandler),
+		Handler: gqlHandler,
+		Store:   st,
+		Signer:  signer,
+	}
+}
+
+func (env *queueIntegrationEnv) newCleaner(t *testing.T) *store.TestCleaner {
+	return env.Store.NewTestCleaner(t)
+}
+
+func createTestUserSession(t *testing.T, ctx context.Context, env *queueIntegrationEnv, cleaner *store.TestCleaner) (bearer string, cookie *http.Cookie) {
+	t.Helper()
+
+	user, err := env.Store.CreateUser(ctx, store.CreateUserParams{
+		Email: "queue-ws-" + uuid.NewString() + "@example.com",
+	})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	cleaner.TrackUser(user.ID)
+
+	token, err := env.Signer.SignUserToken(user.ID, time.Hour)
+	if err != nil {
+		t.Fatalf("SignUserToken: %v", err)
+	}
+
+	cfg := auth.CookieConfigFromEnv()
+	return "Bearer " + token, &http.Cookie{Name: cfg.Name, Value: token}
+}
+
+func graphQLWSURL(httpURL string) string {
+	u, _ := url.Parse(httpURL)
+	u.Scheme = "ws"
+	u.Path = "/graphql"
+	return u.String()
+}
+
+func writeGraphQLWS(conn *websocket.Conn, payload any) error {
+	return conn.WriteJSON(payload)
+}
+
+func readGraphQLWS(conn *websocket.Conn) (map[string]any, error) {
+	var msg map[string]any
+	if err := conn.ReadJSON(&msg); err != nil {
+		return nil, err
+	}
+	return msg, nil
+}
+
+func waitForGraphQLWSType(conn *websocket.Conn, wantType string, timeout time.Duration) (map[string]any, error) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		msg, err := readGraphQLWS(conn)
+		if err != nil {
+			return nil, err
+		}
+		typ, _ := msg["type"].(string)
+		switch typ {
+		case "ping":
+			if err := writeGraphQLWS(conn, map[string]any{"type": "pong"}); err != nil {
+				return nil, err
+			}
+		case "ka":
+			// graphql-ws keep-alive; no response required
+		case wantType:
+			return msg, nil
+		case "connection_error", "error":
+			return nil, fmt.Errorf("graphql websocket error: %v", msg)
+		}
+	}
+	return nil, fmt.Errorf("timed out waiting for websocket message type %q", wantType)
+}
+
+func connectGraphQLWS(t *testing.T, wsURL, origin, bearer string) *websocket.Conn {
+	t.Helper()
+
+	header := http.Header{}
+	header.Set("Sec-WebSocket-Protocol", graphqlWSSubprotocol)
+	if origin != "" {
+		header.Set("Origin", origin)
+	}
+
+	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
+	if err != nil {
+		if resp != nil {
+			t.Fatalf("websocket dial failed: %v (HTTP %d)", err, resp.StatusCode)
+		}
+		t.Fatalf("websocket dial failed: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+
+	initPayload := map[string]any{}
+	if bearer != "" {
+		initPayload["Authorization"] = bearer
+	}
+	if err := writeGraphQLWS(conn, map[string]any{
+		"type":    "connection_init",
+		"payload": initPayload,
+	}); err != nil {
+		t.Fatalf("connection_init: %v", err)
+	}
+
+	if _, err := waitForGraphQLWSType(conn, "connection_ack", 5*time.Second); err != nil {
+		t.Fatalf("connection_ack: %v", err)
+	}
+
+	return conn
+}
+
+func subscribeQueueUpdated(t *testing.T, conn *websocket.Conn, gameID string) string {
+	t.Helper()
+
+	subID := "sub-" + uuid.NewString()
+	query := fmt.Sprintf(`subscription { queueUpdated(gameId: %q) { status joinUrl queuedCount } }`, gameID)
+	if err := writeGraphQLWS(conn, map[string]any{
+		"id":   subID,
+		"type": "start",
+		"payload": map[string]any{
+			"query": query,
+		},
+	}); err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	return subID
+}
+
+func nextQueueUpdatePayload(t *testing.T, conn *websocket.Conn, subID string, timeout time.Duration) map[string]any {
+	t.Helper()
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		msg, err := readGraphQLWS(conn)
+		if err != nil {
+			t.Fatalf("read websocket: %v", err)
+		}
+		typ, _ := msg["type"].(string)
+		if typ == "ping" {
+			_ = writeGraphQLWS(conn, map[string]any{"type": "pong"})
+			continue
+		}
+		if typ == "ka" {
+			continue
+		}
+		if typ == "error" || typ == "complete" {
+			t.Fatalf("subscription ended: %v", msg)
+		}
+		if typ != "data" || msg["id"] != subID {
+			continue
+		}
+		payload, _ := msg["payload"].(map[string]any)
+		data, _ := payload["data"].(map[string]any)
+		update, _ := data["queueUpdated"].(map[string]any)
+		if update != nil {
+			return update
+		}
+	}
+	t.Fatalf("timed out waiting for queueUpdated event")
+	return nil
+}
+
+func postGraphQL(t *testing.T, handler http.Handler, query string, variables map[string]any, cookies ...*http.Cookie) []byte {
+	t.Helper()
+
+	payload := map[string]any{"query": query}
+	if variables != nil {
+		payload["variables"] = variables
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code >= http.StatusBadRequest {
+		t.Fatalf("HTTP %d: %s", rec.Code, rec.Body.String())
+	}
+	return rec.Body.Bytes()
+}
+
+func TestWebSocketUpgradeAllowsLoopbackOrigin(t *testing.T) {
+	env := newQueueIntegrationEnv(t)
+	cleaner := env.newCleaner(t)
+	bearer, _ := createTestUserSession(t, context.Background(), env, cleaner)
+
+	connectGraphQLWS(t, graphQLWSURL(env.Server.URL), "http://127.0.0.1:5173", bearer)
+}
+
+func TestWebSocketUpgradeRejectsForeignOrigin(t *testing.T) {
+	env := newQueueIntegrationEnv(t)
+
+	header := http.Header{}
+	header.Set("Origin", "https://not-lobby.example")
+	_, _, err := websocket.DefaultDialer.Dial(graphQLWSURL(env.Server.URL), header)
+	if err == nil {
+		t.Fatal("expected websocket upgrade to fail for foreign origin")
+	}
+}
+
+func TestWebSocketRequiresAuthentication(t *testing.T) {
+	env := newQueueIntegrationEnv(t)
+
+	header := http.Header{}
+	header.Set("Sec-WebSocket-Protocol", graphqlWSSubprotocol)
+	header.Set("Origin", "http://localhost:5173")
+	conn, _, err := websocket.DefaultDialer.Dial(graphQLWSURL(env.Server.URL), header)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	_ = writeGraphQLWS(conn, map[string]any{"type": "connection_init", "payload": map[string]any{}})
+	_, err = waitForGraphQLWSType(conn, "connection_ack", 3*time.Second)
+	if err == nil {
+		t.Fatal("expected connection_init without auth to fail")
+	}
+}
+
+func TestJoinGameGraphQLAlwaysReturnsQueued(t *testing.T) {
+	env := newQueueIntegrationEnv(t)
+	cleaner := env.newCleaner(t)
+	clearDemoGameWaitingQueue(t, env.Store)
+	_, cookie := createTestUserSession(t, context.Background(), env, cleaner)
+
+	var resp struct {
+		JoinGame struct {
+			Queued      bool    `json:"queued"`
+			JoinURL     *string `json:"joinUrl"`
+			SessionID   *string `json:"sessionId"`
+			QueuedCount *int    `json:"queuedCount"`
+		} `json:"joinGame"`
+	}
+	if err := env.Client.Post(`mutation Join($id: ID!) {
+		joinGame(gameId: $id) { queued joinUrl sessionId queuedCount }
+	}`, &resp, client.AddCookie(cookie), client.Var("id", demoQuickMatchGameID)); err != nil {
+		t.Fatalf("joinGame: %v", err)
+	}
+	if !resp.JoinGame.Queued {
+		t.Fatalf("expected queued=true for solo join, got %+v", resp.JoinGame)
+	}
+	if resp.JoinGame.JoinURL != nil || resp.JoinGame.SessionID != nil {
+		t.Fatalf("solo join must not return match fields, got %+v", resp.JoinGame)
+	}
+}
+
+func TestJoinGameGraphQLReturnsMatchForPlayerWhoCompletesQueue(t *testing.T) {
+	env := newQueueIntegrationEnv(t)
+	cleaner := env.newCleaner(t)
+	ctx := context.Background()
+	clearDemoGameWaitingQueue(t, env.Store)
+
+	provisioner := &syncProvisioner{}
+	env.resolverWithProvisioner(provisioner)
+
+	_, cookieA := createTestUserSession(t, ctx, env, cleaner)
+	_, cookieB := createTestUserSession(t, ctx, env, cleaner)
+
+	joinMutation := `mutation Join($id: ID!) {
+		joinGame(gameId: $id) { queued joinUrl sessionId queuedCount }
+	}`
+	vars := client.Var("id", demoQuickMatchGameID)
+
+	var waitResp struct {
+		JoinGame struct {
+			Queued      bool    `json:"queued"`
+			JoinURL     *string `json:"joinUrl"`
+			SessionID   *string `json:"sessionId"`
+			QueuedCount *int    `json:"queuedCount"`
+		} `json:"joinGame"`
+	}
+	if err := env.Client.Post(joinMutation, &waitResp, client.AddCookie(cookieA), vars); err != nil {
+		t.Fatalf("join A: %v", err)
+	}
+	if !waitResp.JoinGame.Queued || waitResp.JoinGame.JoinURL != nil {
+		t.Fatalf("expected A waiting only, got %+v", waitResp.JoinGame)
+	}
+
+	var matchResp struct {
+		JoinGame struct {
+			Queued      bool    `json:"queued"`
+			JoinURL     *string `json:"joinUrl"`
+			SessionID   *string `json:"sessionId"`
+			QueuedCount *int    `json:"queuedCount"`
+		} `json:"joinGame"`
+	}
+	if err := env.Client.Post(joinMutation, &matchResp, client.AddCookie(cookieB), vars); err != nil {
+		t.Fatalf("join B: %v", err)
+	}
+	if matchResp.JoinGame.Queued {
+		t.Fatalf("expected B not queued after match, got %+v", matchResp.JoinGame)
+	}
+	if matchResp.JoinGame.JoinURL == nil || *matchResp.JoinGame.JoinURL == "" {
+		t.Fatalf("expected B joinUrl on match, got %+v", matchResp.JoinGame)
+	}
+}
+
+func clearDemoGameWaitingQueue(t *testing.T, st *store.Store) {
+	t.Helper()
+	gameID, err := uuid.Parse(demoQuickMatchGameID)
+	if err != nil {
+		t.Fatalf("parse demo game id: %v", err)
+	}
+	if err := st.ClearWaitingQueueForGame(context.Background(), gameID); err != nil {
+		t.Fatalf("clear waiting queue: %v", err)
+	}
+}
+
+func TestQueueSubscriptionNotifiesWaitingPlayerOnMatch(t *testing.T) {
+	env := newQueueIntegrationEnv(t)
+	cleaner := env.newCleaner(t)
+	ctx := context.Background()
+	clearDemoGameWaitingQueue(t, env.Store)
+
+	bearerA, cookieA := createTestUserSession(t, ctx, env, cleaner)
+	_, cookieB := createTestUserSession(t, ctx, env, cleaner)
+
+	joinQuery := `mutation Join($id: ID!) { joinGame(gameId: $id) { queued queuedCount } }`
+	vars := map[string]any{"id": demoQuickMatchGameID}
+
+	conn := connectGraphQLWS(t, graphQLWSURL(env.Server.URL), "http://localhost:5173", bearerA)
+	subID := subscribeQueueUpdated(t, conn, demoQuickMatchGameID)
+
+	postGraphQL(t, env.Handler, joinQuery, vars, cookieA)
+
+	first := nextQueueUpdatePayload(t, conn, subID, 5*time.Second)
+	if first["status"] != "WAITING" {
+		t.Fatalf("expected WAITING after A joined, got %+v (stale queue rows? run db.sh clean-test-data)", first)
+	}
+
+	postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
+
+	matched := nextQueueUpdatePayload(t, conn, subID, 5*time.Second)
+	if matched["status"] != "MATCHED" {
+		t.Fatalf("expected MATCHED over websocket, got %+v", matched)
+	}
+	joinURL, _ := matched["joinUrl"].(string)
+	if joinURL == "" {
+		t.Fatalf("expected joinUrl on MATCHED event, got %+v", matched)
+	}
+	if !strings.Contains(joinURL, "match=") || !strings.Contains(joinURL, "token=") {
+		t.Fatalf("expected protocol handoff launch URL (?match=&token=), got %q", joinURL)
+	}
+}
+
+func TestSubscriptionAuthReturnsBearerToken(t *testing.T) {
+	env := newQueueIntegrationEnv(t)
+	cleaner := env.newCleaner(t)
+	bearer, cookie := createTestUserSession(t, context.Background(), env, cleaner)
+
+	var resp struct {
+		SubscriptionAuth *string `json:"subscriptionAuth"`
+	}
+	if err := env.Client.Post(`query { subscriptionAuth }`, &resp, client.AddCookie(cookie)); err != nil {
+		t.Fatalf("subscriptionAuth: %v", err)
+	}
+	if resp.SubscriptionAuth == nil || *resp.SubscriptionAuth != bearer {
+		t.Fatalf("expected subscriptionAuth %q, got %+v", bearer, resp.SubscriptionAuth)
+	}
+}
