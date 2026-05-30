@@ -23,6 +23,16 @@ spec:
                 secretKeyRef:
                   name: pg-dsn
                   key: DATABASE_URL
+            - name: JWKS_KID
+              valueFrom:
+                secretKeyRef:
+                  name: jwks
+                  key: KID
+            - name: JWT_PRIVATE_KEY_PEM
+              valueFrom:
+                secretKeyRef:
+                  name: jwks
+                  key: PRIV_PEM
           readinessProbe:
             httpGet: { path: /healthz, port: 8080 }
             initialDelaySeconds: 3

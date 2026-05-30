@@ -173,6 +173,10 @@ jobs:
           grep -q "REACT_APP_ENV" "$env_file" || (echo "Missing REACT_APP_ENV in $env_file" && exit 1)
           grep -q "REACT_APP_API_BASE_URL" "$env_file" || (echo "Missing REACT_APP_API_BASE_URL in $env_file" && exit 1)
         done
+        grep -q "lobby-frontend-config" k8s/base/frontend.yaml || (echo "Missing frontend ConfigMap in base" && exit 1)
+        grep -q "configMapRef" k8s/base/frontend.yaml || (echo "Frontend base must load env from ConfigMap" && exit 1)
+        grep -A2 'path: /.well-known' k8s/base/ingress.yaml | grep -q 'pathType: Prefix' || (echo "JWKS ingress path must use Prefix" && exit 1)
+        grep -q "secretKeyRef" k8s/base/backend.yaml || (echo "Backend must load JWKS secret" && exit 1)
     
     - name: Test deployment scripts
       run: |

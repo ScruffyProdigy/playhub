@@ -1,3 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lobby-frontend-config
+  namespace: playhub
+  labels: { app: lobby-frontend }
+data:
+  REACT_APP_ENV: local
+  REACT_APP_API_BASE_URL: "http://localhost:8081"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,12 +27,9 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
-          # This feeds your nginx /docker-entrypoint.d script to write env.js
-          env:
-            - name: REACT_APP_ENV
-              value: "minikube"
-            - name: REACT_APP_API_BASE_URL
-              value: "http://lobby-backend.playhub.svc.cluster.local"
+          envFrom:
+            - configMapRef:
+                name: lobby-frontend-config
           readinessProbe:
             httpGet: { path: /, port: 80 }
             initialDelaySeconds: 3

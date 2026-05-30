@@ -59,6 +59,7 @@ kubectl apply -f k8s/base/ingress.yaml
 print_step "Applying database secrets..."
 kubectl apply -f k8s/secrets/pg-auth.yaml
 kubectl apply -f k8s/secrets/pg-dsn.yaml
+kubectl apply -f k8s/secrets/jwks-secret.yaml
 
 # Apply local environment configuration
 print_step "Applying local environment configuration..."
