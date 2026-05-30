@@ -23,9 +23,18 @@ func findMigrationsPath() string {
 		return customPath
 	}
 
-	candidates := []string{
-		"migrations",
-		filepath.Join("backend", "migrations"),
+	var candidates []string
+
+	if cwd, err := os.Getwd(); err == nil {
+		dir := cwd
+		for {
+			candidates = append(candidates, filepath.Join(dir, "migrations"))
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
 	}
 
 	if exe, err := os.Executable(); err == nil {
@@ -33,12 +42,32 @@ func findMigrationsPath() string {
 	}
 
 	for _, candidate := range candidates {
-		if _, err := os.Stat(candidate); err == nil {
+		if hasMigrationFiles(candidate) {
 			return candidate
 		}
 	}
 
 	return "migrations"
+}
+
+func hasMigrationFiles(dir string) bool {
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".sql" {
+			return true
+		}
+	}
+
+	return false
 }
 
 // NewMigrator creates a new migrator instance

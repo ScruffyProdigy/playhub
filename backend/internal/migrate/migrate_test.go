@@ -3,10 +3,23 @@ package migrate
 import (
 	"database/sql"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "github.com/lib/pq"
 )
+
+func TestFindMigrationsPathFromTestPackage(t *testing.T) {
+	path := findMigrationsPath()
+	if !hasMigrationFiles(path) {
+		t.Fatalf("expected migrations directory with SQL files, got %q", path)
+	}
+
+	if !strings.Contains(path, filepath.Join("backend", "migrations")) {
+		t.Fatalf("expected backend migrations path, got %q", path)
+	}
+}
 
 func TestMigrator(t *testing.T) {
 	// Skip if no database URL is provided

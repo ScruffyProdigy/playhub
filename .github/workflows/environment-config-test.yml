@@ -25,21 +25,22 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up kubectl
-      uses: azure/setup-kubectl@v4
-      with:
-        version: 'v1.30.0'
+    - name: Install kubeconform
+      run: |
+        curl -sfL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz \
+          | tar xz kubeconform
 
     - name: Validate docker compose configuration
       run: docker compose config --quiet
 
     - name: Validate Kubernetes manifests
       run: |
-        kubectl apply --dry-run=client -f k8s/base/
-        kubectl apply --dry-run=client -f k8s/env/
-        kubectl apply --dry-run=client -f k8s/jobs/
-        kubectl apply --dry-run=client -f k8s/secrets/pg-auth.example.yaml
-        kubectl apply --dry-run=client -f k8s/secrets/pg-dsn.example.yaml
+        for dir in k8s/base k8s/jobs; do
+          ./kubeconform -summary -kubernetes-version 1.30.0 -ignore-missing-schemas "$dir"
+        done
+        for file in k8s/env/*.yaml k8s/secrets/pg-auth.example.yaml k8s/secrets/pg-dsn.example.yaml; do
+          ./kubeconform -summary -kubernetes-version 1.30.0 -ignore-missing-schemas "$file"
+        done
 
   test-environment-config:
     runs-on: ubuntu-latest
