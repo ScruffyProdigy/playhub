@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { latestMagicLinkToken, setUserDisplayName, completeMagicSignIn } from './helpers/auth.js'
+import { setUserDisplayName, completeMagicSignIn } from './helpers/auth.js'
 
 test.describe('Auth flow', () => {
   test('signs in with a magic link and logs out', async ({ page }) => {
