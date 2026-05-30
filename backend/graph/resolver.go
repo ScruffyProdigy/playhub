@@ -3,9 +3,18 @@ package graph
 import (
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
+
+func parseUUID(id, label string) (uuid.UUID, error) {
+	parsed, err := uuid.Parse(id)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid %s", label)
+	}
+	return parsed, nil
+}
 
 type Resolver struct {
 	Store *store.Store

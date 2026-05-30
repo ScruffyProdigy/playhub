@@ -46,12 +46,15 @@ func ToGraphQLSession(session *store.Session, game *store.Game) *model.Session {
 	if session == nil {
 		return nil
 	}
-	return &model.Session{
+	result := &model.Session{
 		ID:        session.ID.String(),
-		Game:      ToGraphQLGame(game),
 		Status:    ToGraphQLSessionStatus(session.Status),
 		CreatedAt: session.StartedAt,
 	}
+	if game != nil {
+		result.Game = ToGraphQLGame(game)
+	}
+	return result
 }
 
 // ToGraphQLSessionStatus maps database session status values to GraphQL enums.

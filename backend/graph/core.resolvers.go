@@ -6,6 +6,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/graph/model"
 	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
 // LoginMagic is the resolver for the loginMagic field.
@@ -146,66 +148,72 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 
 // Games is the resolver for the games field.
 func (r *queryResolver) Games(ctx context.Context, limit *int, offset *int) ([]*model.Game, error) {
-	// TODO: Implement proper database query with pagination
-	// For now, return mock games
-	games := []*model.Game{
-		{
-			ID:        uuid.New().String(),
-			Name:      "Sample Game 1",
-			CreatedAt: time.Now().Add(-24 * time.Hour),
-		},
-		{
-			ID:        uuid.New().String(),
-			Name:      "Sample Game 2",
-			CreatedAt: time.Now().Add(-12 * time.Hour),
-		},
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
 	}
 
-	// Apply pagination
-	start := 0
+	pageSize := 20
+	if limit != nil {
+		pageSize = *limit
+	}
+	pageOffset := 0
 	if offset != nil {
-		start = *offset
+		pageOffset = *offset
 	}
 
-	end := len(games)
-	if limit != nil && start+*limit < len(games) {
-		end = start + *limit
+	games, err := st.ListGames(ctx, pageSize, pageOffset)
+	if err != nil {
+		return nil, err
 	}
 
-	if start >= len(games) {
-		return []*model.Game{}, nil
-	}
-
-	return games[start:end], nil
+	return ToGraphQLGames(games), nil
 }
 
 // Game is the resolver for the game field.
 func (r *queryResolver) Game(ctx context.Context, id string) (*model.Game, error) {
-	// TODO: Implement proper database query
-	// For now, return a mock game if ID matches
-	if id == "test-game-id" {
-		return &model.Game{
-			ID:        id,
-			Name:      "Test Game",
-			CreatedAt: time.Now().Add(-1 * time.Hour),
-		}, nil
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("game not found")
+
+	gameID, err := parseUUID(id, "game id")
+	if err != nil {
+		return nil, err
+	}
+
+	game, err := st.GetGameByID(ctx, gameID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, fmt.Errorf("game not found")
+		}
+		return nil, err
+	}
+
+	return ToGraphQLGame(game), nil
 }
 
 // Session is the resolver for the session field.
 func (r *queryResolver) Session(ctx context.Context, id string) (*model.Session, error) {
-	// TODO: Implement proper database query
-	// For now, return a mock session if ID matches
-	if id == "test-session-id" {
-		return &model.Session{
-			ID:        id,
-			Game:      &model.Game{ID: "test-game-id", Name: "Test Game", CreatedAt: time.Now()},
-			Status:    model.SessionStatusActive,
-			CreatedAt: time.Now().Add(-30 * time.Minute),
-		}, nil
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("session not found")
+
+	sessionID, err := parseUUID(id, "session id")
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := st.GetSessionByID(ctx, sessionID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, fmt.Errorf("session not found")
+		}
+		return nil, err
+	}
+
+	return ToGraphQLSession(session, nil), nil
 }
 
 // Goods is the resolver for the goods field.

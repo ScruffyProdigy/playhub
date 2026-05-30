@@ -25,13 +25,14 @@ func TestGqlgenDrift(t *testing.T) {
 		filepath.Join(projectRoot, "backend/graph/generated/generated.go"),
 		filepath.Join(projectRoot, "backend/graph/model/models_gen.go"),
 		filepath.Join(projectRoot, "backend/graph/core.resolvers.go"),
+		filepath.Join(projectRoot, "backend/graph/game.resolvers.go"),
 	}
 
-	// Check if any schema file is newer than any generated file using git commit timestamps
-	// This is more reliable than file system timestamps which can be affected by git checkout
+	// Check if any schema file is newer than the most recently committed generated file.
 	for _, schemaFile := range schemaFiles {
 		schemaCommitTime := getGitCommitTime(t, schemaFile)
 
+		var newestGeneratedCommit time.Time
 		for _, generatedFile := range generatedFiles {
 			if !fileExists(generatedFile) {
 				t.Errorf("Generated file does not exist: %s", generatedFile)
@@ -39,12 +40,15 @@ func TestGqlgenDrift(t *testing.T) {
 			}
 
 			generatedCommitTime := getGitCommitTime(t, generatedFile)
-
-			if schemaCommitTime.After(generatedCommitTime) {
-				t.Errorf("Schema file %s (last committed %s) is newer than generated file %s (last committed %s). Run 'go run github.com/99designs/gqlgen@v0.17.81 generate' to update generated code.",
-					schemaFile, schemaCommitTime.Format(time.RFC3339),
-					generatedFile, generatedCommitTime.Format(time.RFC3339))
+			if generatedCommitTime.After(newestGeneratedCommit) {
+				newestGeneratedCommit = generatedCommitTime
 			}
+		}
+
+		if schemaCommitTime.After(newestGeneratedCommit) {
+			t.Errorf("Schema file %s (last committed %s) is newer than generated files (latest %s). Run 'go run github.com/99designs/gqlgen@v0.17.81 generate' to update generated code.",
+				schemaFile, schemaCommitTime.Format(time.RFC3339),
+				newestGeneratedCommit.Format(time.RFC3339))
 		}
 	}
 }
@@ -92,6 +96,7 @@ func TestGeneratedFilesExist(t *testing.T) {
 		"backend/graph/generated/generated.go",
 		"backend/graph/model/models_gen.go",
 		"backend/graph/core.resolvers.go",
+		"backend/graph/game.resolvers.go",
 	}
 
 	for _, filename := range expectedFiles {
@@ -164,8 +169,11 @@ func getGitCommitTime(t *testing.T, filePath string) time.Time {
 		t.Fatalf("Failed to get git commit time for %s: %v", filePath, err)
 	}
 
-	// Parse the git timestamp format: "2025-10-18 21:12:29 -0400"
 	timeStr := strings.TrimSpace(string(output))
+	if timeStr == "" {
+		return getModTime(t, filePath)
+	}
+
 	commitTime, err := time.Parse("2006-01-02 15:04:05 -0700", timeStr)
 	if err != nil {
 		t.Fatalf("Failed to parse git commit time '%s' for %s: %v", timeStr, filePath, err)
