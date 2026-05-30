@@ -1,14 +1,13 @@
 package database
 
 import (
-	"os"
 	"testing"
+
+	"github.com/scruffyprodigy/playhub/internal/testdb"
 )
 
 func TestInitWithMigrationsKeepsConnectionOpen(t *testing.T) {
-	if os.Getenv("DATABASE_URL") == "" {
-		t.Skip("DATABASE_URL not set")
-	}
+	_ = testdb.RequireURL(t)
 
 	if err := InitWithMigrations(); err != nil {
 		t.Fatalf("InitWithMigrations() error: %v", err)

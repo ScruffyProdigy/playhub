@@ -6,6 +6,23 @@ import (
 	"github.com/google/uuid"
 )
 
+// DemoQuickMatchGameIDStr is the seeded RPS demo game (migrations 000003 / 000004).
+// Integration tests must not leave api_base_url pointing at ephemeral httptest ports.
+const DemoQuickMatchGameIDStr = "a1000000-0000-4000-8000-000000000001"
+
+// DemoQuickMatchGameID is the parsed form of DemoQuickMatchGameIDStr.
+var DemoQuickMatchGameID = uuid.MustParse(DemoQuickMatchGameIDStr)
+
+const (
+	DemoGamePlayURL    = "http://localhost:5174"
+	DemoGameAPIBaseURL = "http://localhost:3001"
+)
+
+// RestoreDemoGameHandoffURLs resets the seeded demo game to local RPS defaults.
+func (s *Store) RestoreDemoGameHandoffURLs(ctx context.Context) error {
+	return s.SetGameHandoffURLsForTest(ctx, DemoQuickMatchGameID, DemoGamePlayURL, DemoGameAPIBaseURL)
+}
+
 // SetGameHandoffURLsForTest updates play/api URLs on a game row (integration tests only).
 func (s *Store) SetGameHandoffURLsForTest(ctx context.Context, gameID uuid.UUID, playURL, apiBaseURL string) error {
 	_, err := s.db.ExecContext(ctx, `

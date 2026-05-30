@@ -44,8 +44,9 @@ cd backend
 if command -v docker &> /dev/null; then
     print_info "Starting PostgreSQL for tests..."
     ../scripts/db.sh up
-    ../scripts/db.sh migrate
-    export DATABASE_URL="${DATABASE_URL:-$(../scripts/db.sh url)}"
+    ../scripts/db.sh test-migrate
+    export DATABASE_URL="$(../scripts/db.sh test-url)"
+    print_info "Integration tests use DATABASE_URL=$DATABASE_URL"
 else
     print_warning "Docker not found. Migration integration tests will be skipped without DATABASE_URL."
 fi

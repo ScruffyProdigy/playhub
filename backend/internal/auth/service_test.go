@@ -5,21 +5,18 @@ import (
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	_ "github.com/lib/pq"
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/internal/store"
+	"github.com/scruffyprodigy/playhub/internal/testdb"
 )
 
 func openAuthTestService(t *testing.T) *Service {
 	t.Helper()
 
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("DATABASE_URL not set, skipping auth integration test")
-	}
+	databaseURL := testdb.RequireURL(t)
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {

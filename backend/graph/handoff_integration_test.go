@@ -5,11 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	gqlclient "github.com/99designs/gqlgen/client"
-	"github.com/google/uuid"
-	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/gameclient"
-	"github.com/scruffyprodigy/playhub/internal/pubsub"
 )
 
 type syncProvisioner struct {
@@ -40,12 +36,7 @@ func TestJoinGameQueueProvisionsMatchOnGameServer(t *testing.T) {
 	clearDemoGameWaitingQueue(t, env.Store)
 
 	provisioner := &syncProvisioner{}
-	env.resolverWithProvisioner(provisioner)
-
-	gameID, _ := uuid.Parse(demoQuickMatchGameID)
-	if err := env.Store.SetGameHandoffURLsForTest(ctx, gameID, "http://localhost:5174", "http://127.0.0.1:1"); err != nil {
-		t.Fatalf("set urls: %v", err)
-	}
+	env.resolverWithProvisioner(t, provisioner)
 
 	_, cookieA := createTestUserSession(t, ctx, env, cleaner)
 	_, cookieB := createTestUserSession(t, ctx, env, cleaner)
@@ -68,14 +59,8 @@ func TestJoinGameQueueProvisionsMatchOnGameServer(t *testing.T) {
 	}
 }
 
-func (env *queueIntegrationEnv) resolverWithProvisioner(p MatchProvisioner) {
-	authService, err := auth.NewService(env.Store, env.Signer)
-	if err != nil {
-		panic(err)
-	}
-	resolver := NewResolver(env.Store, authService, pubsub.NewMemory(), "http://localhost:5174")
-	resolver.GameProvisioner = p
-	gqlHandler := auth.Middleware(env.Signer, NewGraphQLServer(env.Signer, resolver))
-	env.Handler = gqlHandler
-	env.Client = gqlclient.New(gqlHandler)
+func (env *queueIntegrationEnv) resolverWithProvisioner(t *testing.T, p MatchProvisioner) {
+	t.Helper()
+	env.resolver.GameProvisioner = p
+	env.rebuildHTTPServer(t)
 }

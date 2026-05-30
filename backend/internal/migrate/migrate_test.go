@@ -2,10 +2,11 @@ package migrate
 
 import (
 	"database/sql"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/scruffyprodigy/playhub/internal/testdb"
 
 	_ "github.com/lib/pq"
 )
@@ -23,10 +24,7 @@ func TestFindMigrationsPathFromTestPackage(t *testing.T) {
 
 func TestMigrator(t *testing.T) {
 	// Skip if no database URL is provided
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("DATABASE_URL not set, skipping migration test")
-	}
+	databaseURL := testdb.RequireURL(t)
 
 	// Connect to test database
 	db, err := sql.Open("postgres", databaseURL)

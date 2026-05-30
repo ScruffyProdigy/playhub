@@ -179,7 +179,17 @@ Migration tests are located in `backend/internal/migrate/migrate_test.go` and ca
 go test ./internal/migrate -v
 ```
 
-Note: Tests require a `DATABASE_URL` environment variable to be set.
+Integration tests use a separate database (`playhub_test`) so they never touch dev data:
+
+```bash
+./scripts/db.sh test-migrate          # create DB + run migrations
+export DATABASE_URL="$(./scripts/db.sh test-url)"
+cd backend && go test ./...
+```
+
+Or run `./scripts/test-backend.sh` / `./scripts/test.sh`, which set this automatically.
+
+`go test` against `playhub` is blocked unless `ALLOW_TESTS_ON_DEV_DB=1` is set.
 
 ## Best Practices
 

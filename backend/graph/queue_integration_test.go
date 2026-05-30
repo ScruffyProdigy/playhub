@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -20,30 +19,29 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
+	"github.com/scruffyprodigy/playhub/internal/testdb"
 	_ "github.com/lib/pq"
 )
 
 const (
-	demoQuickMatchGameID = "a1000000-0000-4000-8000-000000000001"
+	demoQuickMatchGameID = store.DemoQuickMatchGameIDStr
 	// Must match gqlgen default and frontend graphql-ws client (not graphql-transport-ws).
 	graphqlWSSubprotocol = "graphql-ws"
 )
 
 type queueIntegrationEnv struct {
-	Server  *httptest.Server
-	Client  *client.Client
-	Handler http.Handler
-	Store   *store.Store
-	Signer  *auth.Signer
+	Server   *httptest.Server
+	Client   *client.Client
+	Handler  http.Handler
+	Store    *store.Store
+	Signer   *auth.Signer
+	resolver *Resolver
 }
 
 func newQueueIntegrationEnv(t *testing.T) *queueIntegrationEnv {
 	t.Helper()
 
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("DATABASE_URL not set, skipping queue GraphQL integration test")
-	}
+	databaseURL := testdb.RequireURL(t)
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
@@ -66,39 +64,40 @@ func newQueueIntegrationEnv(t *testing.T) *queueIntegrationEnv {
 		t.Fatalf("new auth service: %v", err)
 	}
 
-	mockGame := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost && r.URL.Path == "/api/v1/matches" {
-			w.WriteHeader(http.StatusCreated)
-			return
-		}
-		http.NotFound(w, r)
-	}))
-	t.Cleanup(mockGame.Close)
-
-	gameID, _ := uuid.Parse(demoQuickMatchGameID)
-	if err := st.SetGameHandoffURLsForTest(context.Background(), gameID, "http://localhost:5174", mockGame.URL); err != nil {
-		t.Fatalf("set game handoff urls: %v", err)
+	// Integration tests share the seeded demo game row; restore handoff URLs so we never
+	// persist httptest ports (e.g. :50624) into api_base_url for local dev.
+	ctx := context.Background()
+	if err := st.RestoreDemoGameHandoffURLs(ctx); err != nil {
+		t.Fatalf("restore demo game handoff urls: %v", err)
 	}
+	t.Cleanup(func() { _ = st.RestoreDemoGameHandoffURLs(context.Background()) })
 
-	resolver := NewResolver(st, authService, pubsub.NewMemory(), "http://localhost:5174")
-	gql := NewGraphQLServer(signer, resolver)
+	resolver := NewResolver(st, authService, pubsub.NewMemory(), store.DemoGamePlayURL)
+	env := &queueIntegrationEnv{
+		Store:    st,
+		Signer:   signer,
+		resolver: resolver,
+	}
+	env.rebuildHTTPServer(t)
+	return env
+}
 
-	gqlHandler := auth.Middleware(signer, gql)
+func (env *queueIntegrationEnv) rebuildHTTPServer(t *testing.T) {
+	t.Helper()
+	gql := NewGraphQLServer(env.Signer, env.resolver)
+	gqlHandler := auth.Middleware(env.Signer, gql)
 	mux := http.NewServeMux()
 	mux.Handle("/", gqlHandler)
 	mux.Handle("/graphql", gqlHandler)
 	handler := auth.CORSMiddleware(mux)
 
-	srv := httptest.NewServer(handler)
-	t.Cleanup(srv.Close)
-
-	return &queueIntegrationEnv{
-		Server:  srv,
-		Client:  client.New(gqlHandler),
-		Handler: gqlHandler,
-		Store:   st,
-		Signer:  signer,
+	if env.Server != nil {
+		env.Server.Close()
 	}
+	env.Server = httptest.NewServer(handler)
+	t.Cleanup(env.Server.Close)
+	env.Handler = gqlHandler
+	env.Client = client.New(gqlHandler)
 }
 
 func (env *queueIntegrationEnv) newCleaner(t *testing.T) *store.TestCleaner {
@@ -352,7 +351,7 @@ func TestJoinGameGraphQLReturnsMatchForPlayerWhoCompletesQueue(t *testing.T) {
 	clearDemoGameWaitingQueue(t, env.Store)
 
 	provisioner := &syncProvisioner{}
-	env.resolverWithProvisioner(provisioner)
+	env.resolverWithProvisioner(t, provisioner)
 
 	_, cookieA := createTestUserSession(t, ctx, env, cleaner)
 	_, cookieB := createTestUserSession(t, ctx, env, cleaner)
@@ -412,6 +411,8 @@ func TestQueueSubscriptionNotifiesWaitingPlayerOnMatch(t *testing.T) {
 	cleaner := env.newCleaner(t)
 	ctx := context.Background()
 	clearDemoGameWaitingQueue(t, env.Store)
+
+	env.resolverWithProvisioner(t, &syncProvisioner{})
 
 	bearerA, cookieA := createTestUserSession(t, ctx, env, cleaner)
 	_, cookieB := createTestUserSession(t, ctx, env, cleaner)

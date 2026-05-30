@@ -6,10 +6,21 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 export DATABASE_URL="${DATABASE_URL:-postgres://app:app-pass@127.0.0.1:5432/playhub?sslmode=disable}"
+export TEST_DATABASE_URL="${TEST_DATABASE_URL:-postgres://app:app-pass@127.0.0.1:5432/playhub_test?sslmode=disable}"
 # macOS often resolves localhost to ::1 while Docker publishes Postgres on IPv4.
 if [[ "$DATABASE_URL" == *"@localhost:"* ]]; then
   export DATABASE_URL="${DATABASE_URL/@localhost:/@127.0.0.1:}"
 fi
+if [[ "$TEST_DATABASE_URL" == *"@localhost:"* ]]; then
+  export TEST_DATABASE_URL="${TEST_DATABASE_URL/@localhost:/@127.0.0.1:}"
+fi
+
+ensure_test_database() {
+  docker compose exec -T postgres psql -U app -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+SELECT 'CREATE DATABASE playhub_test OWNER app'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'playhub_test')\gexec
+SQL
+}
 
 require_docker() {
   if ! command -v docker &> /dev/null; then
@@ -78,6 +89,26 @@ case "${1:-}" in
     wait_for_postgres
     (cd backend && DATABASE_URL="$DATABASE_URL" make migrate-up)
     ;;
+  test-url)
+    echo "$TEST_DATABASE_URL"
+    ;;
+  test-migrate)
+    require_docker
+    wait_for_postgres
+    ensure_test_database
+    (cd backend && DATABASE_URL="$TEST_DATABASE_URL" make migrate-up)
+    echo "Migrations applied to playhub_test (dev database playhub unchanged)."
+    ;;
+  test-reset)
+    require_docker
+    wait_for_postgres
+    docker compose exec -T postgres psql -U app -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+DROP DATABASE IF EXISTS playhub_test WITH (FORCE);
+CREATE DATABASE playhub_test OWNER app;
+SQL
+    (cd backend && DATABASE_URL="$TEST_DATABASE_URL" make migrate-up)
+    echo "Reset and migrated playhub_test."
+    ;;
   reset)
     require_docker
     docker compose down -v
@@ -98,11 +129,28 @@ SQL
     echo "Removed test games, @example.com users, and their magic links."
     echo "Demo games and real user accounts were kept."
     ;;
+  reset-demo-handoff)
+    # Dev database only (playhub). Integration tests use playhub_test and restore URLs in cleanup.
+    require_docker
+    wait_for_postgres
+    docker compose exec -T postgres psql -U app -d playhub <<'SQL'
+UPDATE games
+SET play_url = 'http://localhost:5174',
+    api_base_url = 'http://localhost:3001'
+WHERE id = 'a1000000-0000-4000-8000-000000000001';
+SQL
+    echo "Restored demo quick-match handoff URLs (play :5174, API :3001)."
+    ;;
   url)
     echo "$DATABASE_URL"
     ;;
   *)
-    echo "Usage: $0 {up|down|wait|migrate|reset|clean-test-data|url}"
+    echo "Usage: $0 {up|down|wait|migrate|reset|test-url|test-migrate|test-reset|clean-test-data|reset-demo-handoff|url}"
+    echo ""
+    echo "  url / migrate     — development database (playhub)"
+    echo "  test-url          — integration test database URL (playhub_test)"
+    echo "  test-migrate      — migrate playhub_test only"
+    echo "  test-reset        — drop and recreate playhub_test, then migrate"
     exit 1
     ;;
 esac

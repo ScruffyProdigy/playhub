@@ -3,7 +3,6 @@ package graph
 import (
 	"context"
 	"database/sql"
-	"os"
 	"testing"
 
 	"github.com/99designs/gqlgen/client"
@@ -13,16 +12,14 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
+	"github.com/scruffyprodigy/playhub/internal/testdb"
 	_ "github.com/lib/pq"
 )
 
 func newGamesGraphQLTestClient(t *testing.T) (*client.Client, *store.Store) {
 	t.Helper()
 
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("DATABASE_URL not set, skipping games GraphQL integration test")
-	}
+	databaseURL := testdb.RequireURL(t)
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/99designs/gqlgen/client"
@@ -17,16 +16,14 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
+	"github.com/scruffyprodigy/playhub/internal/testdb"
 	_ "github.com/lib/pq"
 )
 
 func newAuthGraphQLTestClient(t *testing.T) (*client.Client, http.Handler, *store.Store) {
 	t.Helper()
 
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("DATABASE_URL not set, skipping GraphQL auth integration test")
-	}
+	databaseURL := testdb.RequireURL(t)
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {

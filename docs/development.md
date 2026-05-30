@@ -129,10 +129,11 @@ go run github.com/99designs/gqlgen@v0.17.81 generate
 
 ### Testing
 
-- **Backend tests**: `cd backend && go test ./...`
+- **Backend tests**: `./scripts/test-backend.sh` (uses isolated `playhub_test` DB; does not touch dev `playhub`)
 - **Frontend unit tests**: `cd frontend && npm run test:run`
-- **Frontend E2E tests**: `cd frontend && npm run test:e2e`
+- **Frontend E2E tests**: `cd frontend && npm run test:e2e` (uses dev `playhub` via running backend)
 - **All tests**: `./scripts/test.sh`
+- **Test DB only**: `./scripts/db.sh test-migrate` then `export DATABASE_URL="$(./scripts/db.sh test-url)"`
 
 ### Linting
 

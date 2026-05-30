@@ -2,20 +2,17 @@ package store
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/scruffyprodigy/playhub/internal/testdb"
 )
 
 func openTestStore(t *testing.T) *Store {
 	t.Helper()
 
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("DATABASE_URL not set, skipping store integration test")
-	}
+	databaseURL := testdb.RequireURL(t)
 
 	db, err := openDB(databaseURL)
 	if err != nil {
