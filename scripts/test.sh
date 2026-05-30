@@ -62,6 +62,16 @@ fi
 # Track overall test results
 OVERALL_RESULT=0
 
+# Start shared PostgreSQL for backend integration tests
+if command -v docker &> /dev/null; then
+    print_info "Starting PostgreSQL for tests..."
+    ./scripts/db.sh up
+    ./scripts/db.sh migrate
+    export DATABASE_URL="${DATABASE_URL:-$(./scripts/db.sh url)}"
+else
+    print_warning "Docker not found. Backend migration tests will be skipped without DATABASE_URL."
+fi
+
 # Run backend tests
 echo "🔧 Backend Tests"
 echo "=================="

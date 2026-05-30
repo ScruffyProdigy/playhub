@@ -10,8 +10,8 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: playhub-backend:latest
-          command: ["go", "run", "./cmd/migrate", "-action=up"]
+          image: docker.io/scruffyprodigy/playhub-backend:latest
+          command: ["./migrate", "-action=up"]
           env:
             - name: DATABASE_URL
               valueFrom:

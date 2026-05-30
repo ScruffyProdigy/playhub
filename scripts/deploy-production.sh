@@ -55,11 +55,10 @@ kubectl apply -f k8s/base/backend.yaml -n $NAMESPACE
 kubectl apply -f k8s/base/frontend.yaml -n $NAMESPACE
 kubectl apply -f k8s/base/ingress.yaml -n $NAMESPACE
 
-# Apply database secrets and initialization
-print_step "Applying database secrets and initialization..."
+# Apply database secrets (copy from k8s/secrets/*.example.yaml if needed)
+print_step "Applying database secrets..."
 kubectl apply -f k8s/secrets/pg-auth.yaml -n $NAMESPACE
 kubectl apply -f k8s/secrets/pg-dsn.yaml -n $NAMESPACE
-kubectl apply -f k8s/init/db-init.yaml -n $NAMESPACE
 
 # Apply production environment configuration
 print_step "Applying production environment configuration..."

@@ -18,6 +18,29 @@ type Migrator struct {
 	migrator *migrate.Migrate
 }
 
+func findMigrationsPath() string {
+	if customPath := os.Getenv("MIGRATIONS_PATH"); customPath != "" {
+		return customPath
+	}
+
+	candidates := []string{
+		"migrations",
+		filepath.Join("backend", "migrations"),
+	}
+
+	if exe, err := os.Executable(); err == nil {
+		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "migrations"))
+	}
+
+	for _, candidate := range candidates {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+
+	return "migrations"
+}
+
 // NewMigrator creates a new migrator instance
 func NewMigrator(db *sql.DB) (*Migrator, error) {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
@@ -25,12 +48,7 @@ func NewMigrator(db *sql.DB) (*Migrator, error) {
 		return nil, fmt.Errorf("failed to create postgres driver: %w", err)
 	}
 
-	// Get the migrations directory path
-	migrationsPath := filepath.Join("migrations")
-	if _, err := os.Stat(migrationsPath); os.IsNotExist(err) {
-		// Try relative to the current working directory
-		migrationsPath = filepath.Join("backend", "migrations")
-	}
+	migrationsPath := findMigrationsPath()
 
 	m, err := migrate.NewWithDatabaseInstance(
 		fmt.Sprintf("file://%s", migrationsPath),

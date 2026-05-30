@@ -55,11 +55,10 @@ kubectl apply -f k8s/base/backend.yaml
 kubectl apply -f k8s/base/frontend.yaml
 kubectl apply -f k8s/base/ingress.yaml
 
-# Apply database secrets and initialization
-print_step "Applying database secrets and initialization..."
+# Apply database secrets (copy from k8s/secrets/*.example.yaml if needed)
+print_step "Applying database secrets..."
 kubectl apply -f k8s/secrets/pg-auth.yaml
 kubectl apply -f k8s/secrets/pg-dsn.yaml
-kubectl apply -f k8s/init/db-init.yaml
 
 # Apply local environment configuration
 print_step "Applying local environment configuration..."

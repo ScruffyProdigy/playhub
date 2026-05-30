@@ -65,7 +65,7 @@ make test-all          # Run all tests including drift detection
 
 ### GitHub Actions
 
-The `.github/workflows/gqlgen-drift.yml` workflow automatically runs drift detection on:
+The `.github/workflows/backend-tests.yml` workflow automatically runs drift detection on:
 - Push to main/develop branches
 - Pull requests to main/develop branches
 

@@ -53,6 +53,18 @@ if [ ! -f "README.md" ] || [ ! -d "backend" ] || [ ! -d "frontend" ]; then
     exit 1
 fi
 
+ROOT="$(pwd)"
+
+# Start shared PostgreSQL for local development
+if command -v docker &> /dev/null; then
+    print_info "Starting PostgreSQL..."
+    "$ROOT/scripts/db.sh" up
+    "$ROOT/scripts/db.sh" migrate
+    export DATABASE_URL="${DATABASE_URL:-$("$ROOT/scripts/db.sh" url)}"
+else
+    print_warning "Docker not found. Set DATABASE_URL manually or the backend will use mock data."
+fi
+
 # Start backend server
 print_info "Starting backend server..."
 cd backend

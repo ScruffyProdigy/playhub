@@ -40,6 +40,16 @@ fi
 
 cd backend
 
+# Start shared PostgreSQL for integration tests
+if command -v docker &> /dev/null; then
+    print_info "Starting PostgreSQL for tests..."
+    ../scripts/db.sh up
+    ../scripts/db.sh migrate
+    export DATABASE_URL="${DATABASE_URL:-$(../scripts/db.sh url)}"
+else
+    print_warning "Docker not found. Migration integration tests will be skipped without DATABASE_URL."
+fi
+
 # Check if Go is available
 if ! command -v go &> /dev/null; then
     print_error "Go not found. Please install Go 1.25+ from https://golang.org/dl/"

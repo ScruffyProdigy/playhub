@@ -6,15 +6,41 @@ on:
     paths:
       - 'frontend/**'
       - 'k8s/**'
+      - 'docker-compose.yml'
+      - 'scripts/db.sh'
       - 'docs/environment-configuration.md'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'frontend/**'
       - 'k8s/**'
+      - 'docker-compose.yml'
+      - 'scripts/db.sh'
       - 'docs/environment-configuration.md'
 
 jobs:
+  validate-infrastructure:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v4
+      with:
+        version: 'v1.30.0'
+
+    - name: Validate docker compose configuration
+      run: docker compose config --quiet
+
+    - name: Validate Kubernetes manifests
+      run: |
+        kubectl apply --dry-run=client -f k8s/base/
+        kubectl apply --dry-run=client -f k8s/env/
+        kubectl apply --dry-run=client -f k8s/jobs/
+        kubectl apply --dry-run=client -f k8s/secrets/pg-auth.example.yaml
+        kubectl apply --dry-run=client -f k8s/secrets/pg-dsn.example.yaml
+
   test-environment-config:
     runs-on: ubuntu-latest
     env:
