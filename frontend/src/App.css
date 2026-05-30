@@ -87,6 +87,10 @@
   color: #aaa;
 }
 
+.user-card button {
+  margin-top: 0.5rem;
+}
+
 @media (prefers-color-scheme: light) {
   .auth-card {
     border-color: rgba(0, 0, 0, 0.08);

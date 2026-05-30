@@ -1,32 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
-import CompleteMagicPage from './components/CompleteMagicPage'
-import LoginForm from './components/LoginForm'
-import { fetchCurrentUser } from './lib/auth'
+import CompleteMagicPage from './components/auth/CompleteMagicPage'
+import AuthPanel from './components/auth/AuthPanel'
+import { AuthProvider } from './components/auth/AuthProvider'
 import './App.css'
 
 function HomePage() {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  const loadUser = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const currentUser = await fetchCurrentUser()
-      setUser(currentUser)
-    } catch (err) {
-      setError(err.message || 'Could not load session')
-      setUser(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadUser()
-  }, [loadUser])
-
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -34,35 +11,21 @@ function HomePage() {
         <p className="tagline">Your Gaming Hub - Queue, Play, Trade</p>
       </header>
 
-      {loading ? (
-        <p className="auth-message" role="status">
-          Loading session…
-        </p>
-      ) : user ? (
-        <section className="auth-card user-card" aria-labelledby="welcome-heading">
-          <h2 id="welcome-heading">Welcome back</h2>
-          <p className="user-email">{user.email}</p>
-          {user.displayName ? <p className="user-name">{user.displayName}</p> : null}
-          <button type="button" onClick={loadUser}>
-            Refresh session
-          </button>
-        </section>
-      ) : (
-        <>
-          {error ? <p className="auth-message auth-message-error">{error}</p> : null}
-          <LoginForm onSignedIn={loadUser} />
-        </>
-      )}
+      <AuthPanel />
     </main>
   )
 }
 
 function App() {
-  if (window.location.pathname.startsWith('/auth/complete')) {
-    return <CompleteMagicPage />
-  }
-
-  return <HomePage />
+  return (
+    <AuthProvider>
+      {window.location.pathname.startsWith('/auth/complete') ? (
+        <CompleteMagicPage />
+      ) : (
+        <HomePage />
+      )}
+    </AuthProvider>
+  )
 }
 
 export default App

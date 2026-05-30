@@ -101,7 +101,12 @@ func TestStoreMagicLinkFlow(t *testing.T) {
 	if err := st.MarkMagicLinkUsed(ctx, link.ID); err != nil {
 		t.Fatalf("MarkMagicLinkUsed failed: %v", err)
 	}
-	if st.IsMagicLinkValid(link, time.Now()) {
+
+	found, err = st.GetMagicLinkByToken(ctx, token)
+	if err != nil {
+		t.Fatalf("GetMagicLinkByToken after use failed: %v", err)
+	}
+	if st.IsMagicLinkValid(found, time.Now()) {
 		t.Fatal("expected magic link to be invalid after use")
 	}
 }

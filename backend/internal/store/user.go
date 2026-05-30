@@ -24,6 +24,18 @@ func scanUser(row interface{ Scan(dest ...any) error }) (*User, error) {
 
 const userColumns = `id, email, username, display_name, created_at`
 
+// ProvisionalDisplayNameSuffix marks auto-generated display names until the user picks one.
+const ProvisionalDisplayNameSuffix = " (new)"
+
+// DefaultDisplayName builds the initial visible name for a new player.
+func DefaultDisplayName(email string) string {
+	local := strings.Split(strings.ToLower(strings.TrimSpace(email)), "@")[0]
+	if local == "" {
+		local = "player"
+	}
+	return local + ProvisionalDisplayNameSuffix
+}
+
 func (s *Store) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT `+userColumns+`
@@ -44,14 +56,15 @@ func (s *Store) GetUserByEmail(ctx context.Context, email string) (*User, error)
 
 func (s *Store) CreateUser(ctx context.Context, params CreateUserParams) (*User, error) {
 	email := strings.ToLower(strings.TrimSpace(params.Email))
-	displayName := strings.TrimSpace(params.DisplayName)
-	if displayName == "" {
-		displayName = strings.Split(email, "@")[0]
-	}
 
 	username, err := s.uniqueUsername(ctx, email)
 	if err != nil {
 		return nil, err
+	}
+
+	displayName := strings.TrimSpace(params.DisplayName)
+	if displayName == "" {
+		displayName = DefaultDisplayName(email)
 	}
 
 	row := s.db.QueryRowContext(ctx, `
@@ -90,11 +103,8 @@ func (s *Store) uniqueUsername(ctx context.Context, email string) (string, error
 	}
 
 	for i := 0; i < 5; i++ {
-		candidate := base
-		if i > 0 {
-			suffix := strings.ReplaceAll(uuid.NewString(), "-", "")[:8]
-			candidate = fmt.Sprintf("%s_%s", base, suffix)
-		}
+		suffix := strings.ReplaceAll(uuid.NewString(), "-", "")[:8]
+		candidate := fmt.Sprintf("%s_%s", base, suffix)
 
 		var exists bool
 		if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)`, candidate).Scan(&exists); err != nil {

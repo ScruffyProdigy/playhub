@@ -27,6 +27,7 @@ describe('App Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Welcome back')).toBeInTheDocument()
       expect(screen.getByText('player@example.com')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
     })
   })
 

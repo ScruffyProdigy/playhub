@@ -81,6 +81,7 @@ type ComplexityRoot struct {
 		JoinGame      func(childComplexity int, gameID string) int
 		LeaveQueue    func(childComplexity int, gameID string) int
 		LoginMagic    func(childComplexity int, email string) int
+		Logout        func(childComplexity int) int
 		RevokeGood    func(childComplexity int, userID string, goodID string, quantity *int) int
 	}
 
@@ -114,6 +115,7 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	LoginMagic(ctx context.Context, email string) (bool, error)
 	CompleteMagic(ctx context.Context, token string) (*model.User, error)
+	Logout(ctx context.Context) (bool, error)
 	CreateGame(ctx context.Context, input model.CreateGameInput) (*model.Game, error)
 	JoinGame(ctx context.Context, gameID string) (*model.JoinResult, error)
 	LeaveQueue(ctx context.Context, gameID string) (bool, error)
@@ -315,6 +317,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.LoginMagic(childComplexity, args["email"].(string)), true
+	case "Mutation.logout":
+		if e.complexity.Mutation.Logout == nil {
+			break
+		}
+
+		return e.complexity.Mutation.Logout(childComplexity), true
 	case "Mutation.revokeGood":
 		if e.complexity.Mutation.RevokeGood == nil {
 			break
@@ -582,6 +590,7 @@ type Mutation {
   # Auth (magic link)
   loginMagic(email: String!): Boolean!
   completeMagic(token: ID!): User!
+  logout: Boolean!
 
   # Games & sessions
   createGame(input: CreateGameInput!): Game!
@@ -1445,6 +1454,35 @@ func (ec *executionContext) fieldContext_Mutation_completeMagic(ctx context.Cont
 	if fc.Args, err = ec.field_Mutation_completeMagic_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_logout(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_logout,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Mutation().Logout(ctx)
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_logout(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
 	}
 	return fc, nil
 }
@@ -4124,6 +4162,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "completeMagic":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_completeMagic(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "logout":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_logout(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

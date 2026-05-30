@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/graph/model"
+	"github.com/scruffyprodigy/playhub/internal/auth"
 )
 
 // LoginMagic is the resolver for the loginMagic field.
@@ -51,6 +51,17 @@ func (r *mutationResolver) CompleteMagic(ctx context.Context, token string) (*mo
 	}
 
 	return ToGraphQLUser(user), nil
+}
+
+// Logout is the resolver for the logout field.
+func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
+	authService, err := r.requireAuth()
+	if err != nil {
+		return false, err
+	}
+
+	authService.Logout(ctx)
+	return true, nil
 }
 
 // CreateGame is the resolver for the createGame field.

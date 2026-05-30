@@ -17,6 +17,7 @@ type Mutation {
   # Auth (magic link)
   loginMagic(email: String!): Boolean!
   completeMagic(token: ID!): User!
+  logout: Boolean!
 
   # Games & sessions
   createGame(input: CreateGameInput!): Game!

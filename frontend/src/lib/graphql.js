@@ -11,7 +11,14 @@ export async function graphqlRequest(query, variables = {}) {
   })
 
   if (!response.ok) {
-    throw new Error(`API request failed (${response.status})`)
+    let detail = ''
+    try {
+      const payload = await response.clone().json()
+      detail = payload.errors?.[0]?.message || payload.error || ''
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(detail || `API request failed (${response.status})`)
   }
 
   const payload = await response.json()

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { completeMagicLogin } from '../lib/auth'
+import { completeMagicLoginOnce } from '../../lib/auth'
 
 function getTokenFromLocation() {
   const params = new URLSearchParams(window.location.search)
@@ -20,7 +20,7 @@ export default function CompleteMagicPage() {
 
     let cancelled = false
 
-    completeMagicLogin(token)
+    completeMagicLoginOnce(token)
       .then(() => {
         if (cancelled) {
           return

@@ -36,21 +36,33 @@ func Init() error {
 
 // InitWithMigrations initializes the database connection and runs migrations
 func InitWithMigrations() error {
-	// Initialize database connection
 	if err := Init(); err != nil {
 		return err
 	}
 
-	// Run migrations
-	migrator, err := migrate.NewMigrator(DB)
+	// Run migrations on a separate connection. golang-migrate closes the *sql.DB
+	// passed to WithInstance when the migrator is closed.
+	migrationDB, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
+		return fmt.Errorf("failed to open migration database connection: %w", err)
+	}
+
+	migrator, err := migrate.NewMigrator(migrationDB)
+	if err != nil {
+		migrationDB.Close()
 		return fmt.Errorf("failed to create migrator: %w", err)
 	}
-	defer migrator.Close()
+	defer func() {
+		migrator.Close()
+		migrationDB.Close()
+	}()
 
-	// Run all pending migrations
 	if err := migrator.Up(); err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	if err := DB.Ping(); err != nil {
+		return fmt.Errorf("database connection unavailable after migrations: %w", err)
 	}
 
 	log.Println("Database migrations completed successfully")

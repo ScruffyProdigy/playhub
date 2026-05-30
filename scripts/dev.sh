@@ -61,6 +61,9 @@ if command -v docker &> /dev/null; then
     "$ROOT/scripts/db.sh" up
     "$ROOT/scripts/db.sh" migrate
     export DATABASE_URL="${DATABASE_URL:-$("$ROOT/scripts/db.sh" url)}"
+    if [[ "$DATABASE_URL" == *"@localhost:"* ]]; then
+        export DATABASE_URL="${DATABASE_URL/@localhost:/@127.0.0.1:}"
+    fi
     export MAGIC_LINK_BASE_URL="${MAGIC_LINK_BASE_URL:-http://localhost:5173/auth/complete?token=}"
     export CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}"
 else
@@ -70,6 +73,12 @@ fi
 # Start backend server
 print_info "Starting backend server..."
 cd backend
+
+if lsof -ti :8080 >/dev/null 2>&1; then
+    print_error "Port 8080 is already in use by another backend process."
+    print_info "Stop it and retry, e.g.: kill \$(lsof -ti :8080)"
+    exit 1
+fi
 
 # Check if backend dependencies are installed
 if [ ! -d "vendor" ] && [ ! -f "go.sum" ]; then

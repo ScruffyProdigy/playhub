@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/scruffyprodigy/playhub/internal/email"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
@@ -23,6 +24,7 @@ var (
 type Service struct {
 	store            *store.Store
 	signer           *Signer
+	mailer           email.Sender
 	cookie           CookieConfig
 	magicLinkTTL     time.Duration
 	sessionTTL       time.Duration
@@ -38,9 +40,15 @@ func NewService(st *store.Store, signer *Signer) (*Service, error) {
 		return nil, errors.New("auth: signer is required")
 	}
 
+	mailer, err := email.SenderFromEnv()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Service{
 		store:            st,
 		signer:           signer,
+		mailer:           mailer,
 		cookie:           CookieConfigFromEnv(),
 		magicLinkTTL:     durationFromEnv("MAGIC_LINK_TTL", 15*time.Minute),
 		sessionTTL:       durationFromEnv("SESSION_TTL", 7*24*time.Hour),
@@ -75,7 +83,7 @@ func (s *Service) RequestMagicLink(ctx context.Context, email string) error {
 		return err
 	}
 
-	s.logMagicLink(normalized, token)
+	s.deliverMagicLink(ctx, normalized, token)
 	return nil
 }
 
@@ -146,20 +154,27 @@ func (s *Service) findOrCreateUser(ctx context.Context, email string) (*store.Us
 		return nil, err
 	}
 
-	displayName := strings.Split(email, "@")[0]
 	return s.store.CreateUser(ctx, store.CreateUserParams{
-		Email:       email,
-		DisplayName: displayName,
+		Email: email,
 	})
 }
 
-func (s *Service) logMagicLink(email, token string) {
-	link := s.magicLinkURL(token)
-	if link == "" {
-		log.Printf("auth: magic link for %s token=%s", email, token)
-		return
+// Logout clears the session cookie.
+func (s *Service) Logout(ctx context.Context) {
+	if writer, ok := ResponseWriterFromContext(ctx); ok {
+		ClearSessionCookie(writer, s.cookie)
 	}
-	log.Printf("auth: magic link for %s -> %s", email, link)
+}
+
+func (s *Service) deliverMagicLink(ctx context.Context, recipient, token string) {
+	link := s.magicLinkURL(token)
+	if err := s.mailer.SendMagicLink(ctx, email.MagicLinkEmail{
+		To:   recipient,
+		Link: link,
+		TTL:  s.magicLinkTTL,
+	}); err != nil {
+		log.Printf("auth: failed to send magic link email to %s: %v", recipient, err)
+	}
 }
 
 func (s *Service) magicLinkURL(token string) string {

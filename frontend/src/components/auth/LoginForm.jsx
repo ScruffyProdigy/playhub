@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { requestMagicLink } from '../lib/auth'
+import { requestMagicLink } from '../../lib/auth'
+import { useAuth } from './AuthProvider'
 
-export default function LoginForm({ onSignedIn }) {
+export default function LoginForm() {
+  const { refreshSession } = useAuth()
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState('idle')
   const [message, setMessage] = useState('')
@@ -14,7 +16,7 @@ export default function LoginForm({ onSignedIn }) {
     try {
       await requestMagicLink(email.trim())
       setStatus('sent')
-      setMessage('Check your email — or the backend logs in dev — for your sign-in link.')
+      setMessage('Check your email for your sign-in link.')
     } catch (error) {
       setStatus('error')
       setMessage(error.message || 'Could not send magic link')
@@ -50,11 +52,9 @@ export default function LoginForm({ onSignedIn }) {
         </p>
       ) : null}
 
-      {onSignedIn ? (
-        <button type="button" className="auth-link-button" onClick={onSignedIn}>
-          I already signed in
-        </button>
-      ) : null}
+      <button type="button" className="auth-link-button" onClick={refreshSession}>
+        I already signed in
+      </button>
     </section>
   )
 }

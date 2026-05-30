@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -94,5 +96,34 @@ func TestRequestMagicLinkRejectsInvalidEmail(t *testing.T) {
 	err := service.RequestMagicLink(context.Background(), "not-an-email")
 	if err != ErrInvalidEmail {
 		t.Fatalf("expected ErrInvalidEmail, got %v", err)
+	}
+}
+
+func TestLogoutClearsSessionCookie(t *testing.T) {
+	service := openAuthTestService(t)
+
+	recorder := httptest.NewRecorder()
+	ctx := WithResponseWriter(context.Background(), recorder)
+	service.Logout(ctx)
+
+	cookies := recorder.Result().Cookies()
+	cfg := service.CookieConfig()
+
+	var sessionCookie *http.Cookie
+	for _, cookie := range cookies {
+		if cookie.Name == cfg.Name {
+			sessionCookie = cookie
+			break
+		}
+	}
+
+	if sessionCookie == nil {
+		t.Fatalf("expected %q cookie to be cleared", cfg.Name)
+	}
+	if sessionCookie.Value != "" {
+		t.Fatalf("expected empty session cookie value, got %q", sessionCookie.Value)
+	}
+	if sessionCookie.MaxAge >= 0 {
+		t.Fatalf("expected session cookie MaxAge < 0, got %d", sessionCookie.MaxAge)
 	}
 }
