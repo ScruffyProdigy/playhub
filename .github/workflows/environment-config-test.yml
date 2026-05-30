@@ -9,6 +9,7 @@ on:
       - 'docker-compose.yml'
       - 'scripts/db.sh'
       - 'docs/environment-configuration.md'
+      - '.github/workflows/environment-config-test.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
@@ -17,6 +18,7 @@ on:
       - 'docker-compose.yml'
       - 'scripts/db.sh'
       - 'docs/environment-configuration.md'
+      - '.github/workflows/environment-config-test.yml'
 
 jobs:
   validate-infrastructure:
