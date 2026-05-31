@@ -149,7 +149,10 @@ PlayHub uses a Docker-based environment configuration system that allows the sam
 #### Backend
 - `PORT` - Server port (default: 8080)
 - `DATABASE_URL` - PostgreSQL connection string
-- `JWT_SECRET` - JWT signing secret
+- `MAGIC_LINK_BASE_URL` - Prefix for email sign-in links (see `.env.example`)
+- `SESSION_COOKIE_NAME` / `SESSION_COOKIE_SECURE` - Session cookie settings
+- `CORS_ALLOWED_ORIGINS` - Allowed browser origins for GraphQL
+- `JWT_PRIVATE_KEY_PEM` / `JWKS_KID` - JWT signing for session cookies and seat tokens (see `.env.example`)
 
 #### Frontend (Runtime Injection)
 - `REACT_APP_ENV` - Environment identifier (local, staging, production)

@@ -79,14 +79,15 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CompleteMagic func(childComplexity int, token string) int
-		CreateGame    func(childComplexity int, input model.CreateGameInput) int
-		GrantGood     func(childComplexity int, userID string, goodID string, quantity *int) int
-		JoinGame      func(childComplexity int, gameID string) int
-		LeaveQueue    func(childComplexity int, gameID string) int
-		LoginMagic    func(childComplexity int, email string) int
-		Logout        func(childComplexity int) int
-		RevokeGood    func(childComplexity int, userID string, goodID string, quantity *int) int
+		CompleteSignInWithCode func(childComplexity int, email string, code string) int
+		CompleteSignInWithLink func(childComplexity int, token string) int
+		CreateGame             func(childComplexity int, input model.CreateGameInput) int
+		GrantGood              func(childComplexity int, userID string, goodID string, quantity *int) int
+		JoinGame               func(childComplexity int, gameID string) int
+		LeaveQueue             func(childComplexity int, gameID string) int
+		Logout                 func(childComplexity int) int
+		RequestSignIn          func(childComplexity int, email string) int
+		RevokeGood             func(childComplexity int, userID string, goodID string, quantity *int) int
 	}
 
 	Query struct {
@@ -134,25 +135,26 @@ type GameResolver interface {
 	ActiveSessions(ctx context.Context, obj *model.Game, limit *int) ([]*model.Session, error)
 }
 type MutationResolver interface {
-	LoginMagic(ctx context.Context, email string) (bool, error)
-	CompleteMagic(ctx context.Context, token string) (*model.User, error)
-	Logout(ctx context.Context) (bool, error)
 	CreateGame(ctx context.Context, input model.CreateGameInput) (*model.Game, error)
 	JoinGame(ctx context.Context, gameID string) (*model.JoinResult, error)
 	LeaveQueue(ctx context.Context, gameID string) (bool, error)
 	GrantGood(ctx context.Context, userID string, goodID string, quantity *int) (bool, error)
 	RevokeGood(ctx context.Context, userID string, goodID string, quantity *int) (bool, error)
+	RequestSignIn(ctx context.Context, email string) (bool, error)
+	CompleteSignInWithLink(ctx context.Context, token string) (*model.User, error)
+	CompleteSignInWithCode(ctx context.Context, email string, code string) (*model.User, error)
+	Logout(ctx context.Context) (bool, error)
 }
 type QueryResolver interface {
 	Version(ctx context.Context) (string, error)
 	Healthz(ctx context.Context) (string, error)
-	Me(ctx context.Context) (*model.User, error)
 	Games(ctx context.Context, limit *int, offset *int) ([]*model.Game, error)
 	Game(ctx context.Context, id string) (*model.Game, error)
 	Session(ctx context.Context, id string) (*model.Session, error)
 	Goods(ctx context.Context, gameID *string) ([]*model.DigitalGood, error)
 	MyInventory(ctx context.Context, gameID *string) ([]*model.Entitlement, error)
 	MyQueueStatus(ctx context.Context, gameID string) (*model.JoinResult, error)
+	Me(ctx context.Context) (*model.User, error)
 	SubscriptionAuth(ctx context.Context) (*string, error)
 }
 type SessionResolver interface {
@@ -288,17 +290,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.JoinResult.SessionID(childComplexity), true
 
-	case "Mutation.completeMagic":
-		if e.complexity.Mutation.CompleteMagic == nil {
+	case "Mutation.completeSignInWithCode":
+		if e.complexity.Mutation.CompleteSignInWithCode == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_completeMagic_args(ctx, rawArgs)
+		args, err := ec.field_Mutation_completeSignInWithCode_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CompleteMagic(childComplexity, args["token"].(string)), true
+		return e.complexity.Mutation.CompleteSignInWithCode(childComplexity, args["email"].(string), args["code"].(string)), true
+	case "Mutation.completeSignInWithLink":
+		if e.complexity.Mutation.CompleteSignInWithLink == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_completeSignInWithLink_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CompleteSignInWithLink(childComplexity, args["token"].(string)), true
 	case "Mutation.createGame":
 		if e.complexity.Mutation.CreateGame == nil {
 			break
@@ -343,23 +356,23 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.LeaveQueue(childComplexity, args["gameId"].(string)), true
-	case "Mutation.loginMagic":
-		if e.complexity.Mutation.LoginMagic == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_loginMagic_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.LoginMagic(childComplexity, args["email"].(string)), true
 	case "Mutation.logout":
 		if e.complexity.Mutation.Logout == nil {
 			break
 		}
 
 		return e.complexity.Mutation.Logout(childComplexity), true
+	case "Mutation.requestSignIn":
+		if e.complexity.Mutation.RequestSignIn == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_requestSignIn_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RequestSignIn(childComplexity, args["email"].(string)), true
 	case "Mutation.revokeGood":
 		if e.complexity.Mutation.RevokeGood == nil {
 			break
@@ -685,6 +698,19 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
+	{Name: "../schema/auth.graphqls", Input: `extend type Query {
+  me: User
+  # Bearer token for GraphQL websocket connection_init (httpOnly cookie is not always sent on WS upgrade).
+  subscriptionAuth: String
+}
+
+extend type Mutation {
+  requestSignIn(email: String!): Boolean!
+  completeSignInWithLink(token: ID!): User!
+  completeSignInWithCode(email: String!, code: String!): User!
+  logout: Boolean!
+}
+`, BuiltIn: false},
 	{Name: "../schema/core.graphqls", Input: `scalar Time
 scalar UUID
 scalar JSON
@@ -692,15 +718,12 @@ scalar JSON
 type Query {
   version: String!
   healthz: String!
-  me: User
   games(limit: Int = 20, offset: Int = 0): [Game!]!
   game(id: ID!): Game
   session(id: ID!): Session
   goods(gameId: ID): [DigitalGood!]!   # list goods globally or by game
   myInventory(gameId: ID): [Entitlement!]!
   myQueueStatus(gameId: ID!): JoinResult!
-  # Bearer token for GraphQL websocket connection_init (httpOnly cookie is not always sent on WS upgrade).
-  subscriptionAuth: String
 }
 
 type Subscription {
@@ -708,11 +731,6 @@ type Subscription {
 }
 
 type Mutation {
-  # Auth (magic link)
-  loginMagic(email: String!): Boolean!
-  completeMagic(token: ID!): User!
-  logout: Boolean!
-
   # Games & sessions
   createGame(input: CreateGameInput!): Game!
   joinGame(gameId: ID!): JoinResult!
@@ -742,6 +760,8 @@ type Session {
 
 input CreateGameInput { name: String! }
 
+# joinGame returns queued + queuedCount for waiters; the player who completes the match
+# also gets sessionId/joinUrl. Others receive joinUrl via queueUpdated / myQueueStatus.
 type JoinResult {
   queued: Boolean!
   sessionId: ID
@@ -802,7 +822,23 @@ func (ec *executionContext) field_Game_activeSessions_args(ctx context.Context, 
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_completeMagic_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+func (ec *executionContext) field_Mutation_completeSignInWithCode_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "email", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["email"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "code", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["code"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_completeSignInWithLink_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "token", ec.unmarshalNID2string)
@@ -867,7 +903,7 @@ func (ec *executionContext) field_Mutation_leaveQueue_args(ctx context.Context, 
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_loginMagic_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+func (ec *executionContext) field_Mutation_requestSignIn_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "email", ec.unmarshalNString2string)
@@ -1554,127 +1590,6 @@ func (ec *executionContext) fieldContext_JoinResult_queuedCount(_ context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_loginMagic(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_loginMagic,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().LoginMagic(ctx, fc.Args["email"].(string))
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_loginMagic(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_loginMagic_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_completeMagic(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_completeMagic,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().CompleteMagic(ctx, fc.Args["token"].(string))
-		},
-		nil,
-		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_completeMagic(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "displayName":
-				return ec.fieldContext_User_displayName(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_completeMagic_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_logout(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_logout,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Mutation().Logout(ctx)
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_logout(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_createGame(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1900,6 +1815,178 @@ func (ec *executionContext) fieldContext_Mutation_revokeGood(ctx context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_requestSignIn(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_requestSignIn,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().RequestSignIn(ctx, fc.Args["email"].(string))
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_requestSignIn(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_requestSignIn_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_completeSignInWithLink(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_completeSignInWithLink,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().CompleteSignInWithLink(ctx, fc.Args["token"].(string))
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_completeSignInWithLink(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_completeSignInWithLink_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_completeSignInWithCode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_completeSignInWithCode,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().CompleteSignInWithCode(ctx, fc.Args["email"].(string), fc.Args["code"].(string))
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_completeSignInWithCode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_completeSignInWithCode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_logout(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_logout,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Mutation().Logout(ctx)
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_logout(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_version(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1953,45 +2040,6 @@ func (ec *executionContext) fieldContext_Query_healthz(_ context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_me(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Query_me,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Query().Me(ctx)
-		},
-		nil,
-		ec.marshalOUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_Query_me(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "displayName":
-				return ec.fieldContext_User_displayName(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
 	}
 	return fc, nil
@@ -2301,6 +2349,45 @@ func (ec *executionContext) fieldContext_Query_myQueueStatus(ctx context.Context
 	if fc.Args, err = ec.field_Query_myQueueStatus_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_me(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_me,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().Me(ctx)
+		},
+		nil,
+		ec.marshalOUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_me(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -4653,27 +4740,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
-		case "loginMagic":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_loginMagic(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "completeMagic":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_completeMagic(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "logout":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_logout(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "createGame":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createGame(ctx, field)
@@ -4705,6 +4771,34 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "revokeGood":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_revokeGood(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requestSignIn":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_requestSignIn(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "completeSignInWithLink":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_completeSignInWithLink(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "completeSignInWithCode":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_completeSignInWithCode(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "logout":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_logout(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -4786,25 +4880,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "me":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_me(ctx, field)
 				return res
 			}
 
@@ -4931,6 +5006,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "me":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_me(ctx, field)
 				return res
 			}
 

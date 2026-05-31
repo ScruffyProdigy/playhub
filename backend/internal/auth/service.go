@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	ErrInvalidEmail    = errors.New("auth: invalid email address")
-	ErrInvalidMagicLink = errors.New("auth: invalid or expired magic link")
+	ErrInvalidEmail     = errors.New("auth: invalid email address")
+	ErrInvalidMagicLink = errors.New("Invalid or expired sign-in link. Request a new sign-in email.")
+	ErrInvalidLoginCode = errors.New("Invalid or expired code. Try again or use the sign-in link in your email.")
 )
 
 // Service handles authentication workflows.
@@ -45,6 +46,25 @@ func NewService(st *store.Store, signer *Signer) (*Service, error) {
 		return nil, err
 	}
 
+	return NewServiceWithMailer(st, signer, mailer)
+}
+
+// NewServiceWithMailer creates an authentication service with an explicit mailer.
+func NewServiceWithMailer(st *store.Store, signer *Signer, mailer email.Sender) (*Service, error) {
+	if st == nil {
+		return nil, errors.New("auth: store is required")
+	}
+	if signer == nil {
+		return nil, errors.New("auth: signer is required")
+	}
+	if mailer == nil {
+		return nil, errors.New("auth: mailer is required")
+	}
+
+	return newService(st, signer, mailer), nil
+}
+
+func newService(st *store.Store, signer *Signer, mailer email.Sender) *Service {
 	return &Service{
 		store:            st,
 		signer:           signer,
@@ -53,7 +73,7 @@ func NewService(st *store.Store, signer *Signer) (*Service, error) {
 		magicLinkTTL:     durationFromEnv("MAGIC_LINK_TTL", 15*time.Minute),
 		sessionTTL:       durationFromEnv("SESSION_TTL", 7*24*time.Hour),
 		magicLinkBaseURL: strings.TrimSpace(os.Getenv("MAGIC_LINK_BASE_URL")),
-	}, nil
+	}
 }
 
 // Signer returns the JWT signer used by the service.
@@ -66,9 +86,14 @@ func (s *Service) CookieConfig() CookieConfig {
 	return s.cookie
 }
 
-// RequestMagicLink creates a magic link for the given email address.
-func (s *Service) RequestMagicLink(ctx context.Context, email string) error {
-	normalized, err := normalizeEmail(email)
+// RequestMagicLink creates a sign-in email with a magic link and 6-digit code.
+func (s *Service) RequestMagicLink(ctx context.Context, emailAddr string) error {
+	normalized, err := normalizeEmail(emailAddr)
+	if err != nil {
+		return err
+	}
+
+	code, err := generateLoginCode()
 	if err != nil {
 		return err
 	}
@@ -77,13 +102,14 @@ func (s *Service) RequestMagicLink(ctx context.Context, email string) error {
 	_, err = s.store.CreateMagicLink(ctx, store.CreateMagicLinkParams{
 		Email:     normalized,
 		Token:     token,
+		CodeHash:  hashLoginCode(code),
 		ExpiresAt: time.Now().Add(s.magicLinkTTL),
 	})
 	if err != nil {
 		return err
 	}
 
-	s.deliverMagicLink(ctx, normalized, token)
+	s.deliverLoginEmail(ctx, normalized, token, code)
 	return nil
 }
 
@@ -101,6 +127,32 @@ func (s *Service) CompleteMagicLogin(ctx context.Context, token string) (*store.
 		return nil, "", ErrInvalidMagicLink
 	}
 
+	return s.completeMagicLink(ctx, link)
+}
+
+// CompleteLoginCode validates a 6-digit code for the given email.
+func (s *Service) CompleteLoginCode(ctx context.Context, emailAddr, code string) (*store.User, string, error) {
+	normalized, err := normalizeEmail(emailAddr)
+	if err != nil {
+		return nil, "", err
+	}
+
+	link, err := s.store.GetLatestValidMagicLinkByEmail(ctx, normalized, time.Now())
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, "", ErrInvalidLoginCode
+		}
+		return nil, "", err
+	}
+
+	if !verifyLoginCode(strings.TrimSpace(code), link.CodeHash) {
+		return nil, "", ErrInvalidLoginCode
+	}
+
+	return s.completeMagicLink(ctx, link)
+}
+
+func (s *Service) completeMagicLink(ctx context.Context, link *store.MagicLink) (*store.User, string, error) {
 	user, err := s.findOrCreateUser(ctx, link.Email)
 	if err != nil {
 		return nil, "", err
@@ -166,14 +218,15 @@ func (s *Service) Logout(ctx context.Context) {
 	}
 }
 
-func (s *Service) deliverMagicLink(ctx context.Context, recipient, token string) {
+func (s *Service) deliverLoginEmail(ctx context.Context, recipient, token, code string) {
 	link := s.magicLinkURL(token)
 	if err := s.mailer.SendMagicLink(ctx, email.MagicLinkEmail{
 		To:   recipient,
 		Link: link,
+		Code: code,
 		TTL:  s.magicLinkTTL,
 	}); err != nil {
-		log.Printf("auth: failed to send magic link email to %s: %v", recipient, err)
+		log.Printf("auth: failed to send sign-in email to %s: %v", recipient, err)
 	}
 }
 

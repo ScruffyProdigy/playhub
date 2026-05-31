@@ -13,59 +13,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/graph/model"
-	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
-
-// LoginMagic is the resolver for the loginMagic field.
-func (r *mutationResolver) LoginMagic(ctx context.Context, email string) (bool, error) {
-	authService, err := r.requireAuth()
-	if err != nil {
-		return false, err
-	}
-	if _, err := r.requireStore(); err != nil {
-		return false, err
-	}
-
-	if err := authService.RequestMagicLink(ctx, email); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-// CompleteMagic is the resolver for the completeMagic field.
-func (r *mutationResolver) CompleteMagic(ctx context.Context, token string) (*model.User, error) {
-	authService, err := r.requireAuth()
-	if err != nil {
-		return nil, err
-	}
-	if _, err := r.requireStore(); err != nil {
-		return nil, err
-	}
-
-	user, sessionToken, err := authService.CompleteMagicLogin(ctx, token)
-	if err != nil {
-		return nil, err
-	}
-
-	if writer, ok := auth.ResponseWriterFromContext(ctx); ok {
-		auth.SetSessionCookie(writer, sessionToken, authService.CookieConfig())
-	}
-
-	return ToGraphQLUser(user), nil
-}
-
-// Logout is the resolver for the logout field.
-func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
-	authService, err := r.requireAuth()
-	if err != nil {
-		return false, err
-	}
-
-	authService.Logout(ctx)
-	return true, nil
-}
 
 // CreateGame is the resolver for the createGame field.
 func (r *mutationResolver) CreateGame(ctx context.Context, input model.CreateGameInput) (*model.Game, error) {
@@ -179,23 +129,6 @@ func (r *queryResolver) Version(ctx context.Context) (string, error) {
 // Healthz is the resolver for the healthz field.
 func (r *queryResolver) Healthz(ctx context.Context) (string, error) {
 	return "ok", nil
-}
-
-// Me is the resolver for the me field.
-func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
-	authService, err := r.requireAuth()
-	if err != nil {
-		return nil, nil
-	}
-	if _, err := r.requireStore(); err != nil {
-		return nil, err
-	}
-
-	user, err := authService.GetAuthenticatedUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return ToGraphQLUser(user), nil
 }
 
 // Games is the resolver for the games field.
@@ -355,16 +288,6 @@ func (r *queryResolver) MyQueueStatus(ctx context.Context, gameID string) (*mode
 		}
 	}
 	return joinResultFromQueueView(view, launchURL), nil
-}
-
-// SubscriptionAuth is the resolver for the subscriptionAuth field.
-func (r *queryResolver) SubscriptionAuth(ctx context.Context) (*string, error) {
-	token, ok := auth.SessionTokenFromContext(ctx)
-	if !ok {
-		return nil, nil
-	}
-	header := "Bearer " + token
-	return &header, nil
 }
 
 // QueueUpdated is the resolver for the queueUpdated field.

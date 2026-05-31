@@ -57,6 +57,13 @@
   color: inherit;
 }
 
+.auth-code-input {
+  font-size: 1.5rem;
+  letter-spacing: 0.35em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .status-message {
   margin: 1rem 0 0;
 }

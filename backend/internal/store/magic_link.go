@@ -14,8 +14,9 @@ import (
 func scanMagicLink(row interface{ Scan(dest ...any) error }) (*MagicLink, error) {
 	var link MagicLink
 	var userID sql.NullString
+	var codeHash sql.NullString
 	var usedAt sql.NullTime
-	if err := row.Scan(&link.ID, &userID, &link.Email, &link.Token, &link.ExpiresAt, &usedAt, &link.CreatedAt); err != nil {
+	if err := row.Scan(&link.ID, &userID, &link.Email, &link.Token, &codeHash, &link.ExpiresAt, &usedAt, &link.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -28,6 +29,9 @@ func scanMagicLink(row interface{ Scan(dest ...any) error }) (*MagicLink, error)
 		}
 		link.UserID = &id
 	}
+	if codeHash.Valid {
+		link.CodeHash = codeHash.String
+	}
 	if usedAt.Valid {
 		t := usedAt.Time
 		link.UsedAt = &t
@@ -35,7 +39,7 @@ func scanMagicLink(row interface{ Scan(dest ...any) error }) (*MagicLink, error)
 	return &link, nil
 }
 
-const magicLinkColumns = `id, user_id, email, token, expires_at, used_at, created_at`
+const magicLinkColumns = `id, user_id, email, token, code_hash, expires_at, used_at, created_at`
 
 func (s *Store) CreateMagicLink(ctx context.Context, params CreateMagicLinkParams) (*MagicLink, error) {
 	email := strings.ToLower(strings.TrimSpace(params.Email))
@@ -52,11 +56,16 @@ func (s *Store) CreateMagicLink(ctx context.Context, params CreateMagicLinkParam
 		userID = *params.UserID
 	}
 
+	var codeHash any
+	if strings.TrimSpace(params.CodeHash) != "" {
+		codeHash = params.CodeHash
+	}
+
 	row := s.db.QueryRowContext(ctx, `
-		INSERT INTO magic_links (user_id, email, token, expires_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO magic_links (user_id, email, token, code_hash, expires_at)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING `+magicLinkColumns+`
-	`, userID, email, token, params.ExpiresAt)
+	`, userID, email, token, codeHash, params.ExpiresAt)
 	return scanMagicLink(row)
 }
 
@@ -77,6 +86,19 @@ func (s *Store) GetLatestMagicLinkByEmail(ctx context.Context, email string) (*M
 		ORDER BY created_at DESC
 		LIMIT 1
 	`, strings.ToLower(strings.TrimSpace(email)))
+	return scanMagicLink(row)
+}
+
+func (s *Store) GetLatestValidMagicLinkByEmail(ctx context.Context, email string, now time.Time) (*MagicLink, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT `+magicLinkColumns+`
+		FROM magic_links
+		WHERE email = $1
+		  AND used_at IS NULL
+		  AND expires_at > $2
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, strings.ToLower(strings.TrimSpace(email)), now)
 	return scanMagicLink(row)
 }
 

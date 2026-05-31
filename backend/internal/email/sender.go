@@ -13,11 +13,25 @@ import (
 type LogSender struct{}
 
 func (LogSender) SendMagicLink(_ context.Context, msg MagicLinkEmail) error {
-	if msg.Link == "" {
-		log.Printf("email: magic link for %s (URL not configured)", msg.To)
+	if msg.Code != "" {
+		log.Printf("email: sign-in for %s code=%s link=%s", msg.To, msg.Code, msg.Link)
 		return nil
 	}
-	log.Printf("email: magic link for %s -> %s", msg.To, msg.Link)
+	if msg.Link == "" {
+		log.Printf("email: sign-in for %s (URL not configured)", msg.To)
+		return nil
+	}
+	log.Printf("email: sign-in for %s -> %s", msg.To, msg.Link)
+	return nil
+}
+
+// CaptureSender records the last sign-in email for tests.
+type CaptureSender struct {
+	Last MagicLinkEmail
+}
+
+func (c *CaptureSender) SendMagicLink(_ context.Context, msg MagicLinkEmail) error {
+	c.Last = msg
 	return nil
 }
 

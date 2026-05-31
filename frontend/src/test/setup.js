@@ -69,10 +69,12 @@ function createFetchMock(handlers) {
     const query = body.query ?? ''
     let data = {}
 
-    if (query.includes('loginMagic')) {
-      data = { loginMagic: true }
-    } else if (query.includes('completeMagic')) {
-      data = { completeMagic: handlers.me ?? null }
+    if (query.includes('requestSignIn')) {
+      data = { requestSignIn: true }
+    } else if (query.includes('completeSignInWithCode')) {
+      data = { completeSignInWithCode: handlers.me ?? null }
+    } else if (query.includes('completeSignInWithLink')) {
+      data = { completeSignInWithLink: handlers.me ?? null }
     } else if (query.includes('logout')) {
       data = { logout: true }
     } else if (query.includes('subscriptionAuth')) {

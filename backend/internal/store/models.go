@@ -24,6 +24,7 @@ type MagicLink struct {
 	UserID    *uuid.UUID
 	Email     string
 	Token     string
+	CodeHash  string
 	ExpiresAt time.Time
 	UsedAt    *time.Time
 	CreatedAt time.Time
@@ -33,6 +34,7 @@ type CreateMagicLinkParams struct {
 	Email     string
 	UserID    *uuid.UUID
 	Token     string
+	CodeHash  string
 	ExpiresAt time.Time
 }
 

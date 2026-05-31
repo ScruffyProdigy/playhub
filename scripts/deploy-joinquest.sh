@@ -76,6 +76,12 @@ apply_lobby_smtp_secret
 echo "Waiting for Postgres..."
 kubectl wait --for=condition=ready --timeout=300s pod -l app=pg -n "$NAMESPACE"
 
+echo "Running database migrations..."
+kubectl delete job playhub-db-migrate -n "$NAMESPACE" --ignore-not-found
+sed 's/namespace: playhub/namespace: joinquest/g' k8s/jobs/migration.yaml | kubectl apply -f -
+kubectl wait --for=condition=complete --timeout=120s job/playhub-db-migrate -n "$NAMESPACE"
+kubectl logs job/playhub-db-migrate -n "$NAMESPACE"
+
 echo "Waiting for app deployments..."
 kubectl wait --for=condition=available --timeout=300s deployment/lobby-backend -n "$NAMESPACE"
 kubectl wait --for=condition=available --timeout=300s deployment/lobby-frontend -n "$NAMESPACE"

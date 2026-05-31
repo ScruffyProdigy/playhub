@@ -12,15 +12,26 @@ const ME_QUERY = `
   }
 `
 
-const LOGIN_MAGIC_MUTATION = `
-  mutation LoginMagic($email: String!) {
-    loginMagic(email: $email)
+const REQUEST_SIGN_IN_MUTATION = `
+  mutation RequestSignIn($email: String!) {
+    requestSignIn(email: $email)
   }
 `
 
-const COMPLETE_MAGIC_MUTATION = `
-  mutation CompleteMagic($token: ID!) {
-    completeMagic(token: $token) {
+const COMPLETE_SIGN_IN_WITH_LINK_MUTATION = `
+  mutation CompleteSignInWithLink($token: ID!) {
+    completeSignInWithLink(token: $token) {
+      id
+      email
+      displayName
+      createdAt
+    }
+  }
+`
+
+const COMPLETE_SIGN_IN_WITH_CODE_MUTATION = `
+  mutation CompleteSignInWithCode($email: String!, $code: String!) {
+    completeSignInWithCode(email: $email, code: $code) {
       id
       email
       displayName
@@ -40,9 +51,15 @@ export async function fetchCurrentUser() {
   return data.me
 }
 
-export async function requestMagicLink(email) {
-  const data = await graphqlRequest(LOGIN_MAGIC_MUTATION, { email })
-  return data.loginMagic === true
+export async function requestSignIn(email) {
+  const data = await graphqlRequest(REQUEST_SIGN_IN_MUTATION, { email })
+  return data.requestSignIn === true
+}
+
+export async function completeSignInWithCode(email, code) {
+  const data = await graphqlRequest(COMPLETE_SIGN_IN_WITH_CODE_MUTATION, { email, code })
+  clearSubscriptionAuthCache()
+  return data.completeSignInWithCode
 }
 
 export async function logout() {
@@ -51,16 +68,16 @@ export async function logout() {
   return data.logout === true
 }
 
-export async function completeMagicLogin(token) {
-  const data = await graphqlRequest(COMPLETE_MAGIC_MUTATION, { token })
+export async function completeSignInWithLink(token) {
+  const data = await graphqlRequest(COMPLETE_SIGN_IN_WITH_LINK_MUTATION, { token })
   clearSubscriptionAuthCache()
-  return data.completeMagic
+  return data.completeSignInWithLink
 }
 
 const pendingCompletions = new Map()
 
 // React StrictMode mounts twice in dev; share one in-flight completion per token.
-export async function completeMagicLoginOnce(token) {
+export async function completeSignInWithLinkOnce(token) {
   const key = token.trim()
   if (!key) {
     throw new Error('Missing sign-in token')
@@ -70,7 +87,7 @@ export async function completeMagicLoginOnce(token) {
     return pendingCompletions.get(key)
   }
 
-  const promise = completeMagicLogin(key).catch((error) => {
+  const promise = completeSignInWithLink(key).catch((error) => {
     pendingCompletions.delete(key)
     throw error
   })

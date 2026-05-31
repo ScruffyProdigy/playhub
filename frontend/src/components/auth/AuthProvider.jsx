@@ -9,9 +9,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const refreshSession = useCallback(async () => {
+  const refreshSession = useCallback(async (options = {}) => {
+    const { silent = false } = options
     clearSubscriptionAuthCache()
-    setLoading(true)
+    if (!silent) {
+      setLoading(true)
+    }
     setError('')
     try {
       const currentUser = await fetchCurrentUser()
@@ -23,7 +26,9 @@ export function AuthProvider({ children }) {
       setError(err.message || 'Could not load session')
       setUser(null)
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }, [])
 

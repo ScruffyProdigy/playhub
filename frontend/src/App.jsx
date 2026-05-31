@@ -1,4 +1,4 @@
-import CompleteMagicPage from './components/auth/CompleteMagicPage'
+import CompleteSignInPage from './components/auth/CompleteSignInPage'
 import AuthPanel from './components/auth/AuthPanel'
 import GameLobby from './components/games/GameLobby'
 import { AuthProvider } from './components/auth/AuthProvider'
@@ -23,7 +23,7 @@ function App() {
   return (
     <AuthProvider>
       {window.location.pathname.startsWith('/auth/complete') ? (
-        <CompleteMagicPage />
+        <CompleteSignInPage />
       ) : (
         <HomePage />
       )}

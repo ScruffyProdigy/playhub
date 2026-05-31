@@ -74,10 +74,12 @@ fi
 
 if [[ -z "${BACKEND_PID:-}" ]]; then
   echo "Starting backend for auth E2E..."
+  mkdir -p "$ROOT/tmp"
+  : > "$ROOT/tmp/e2e-backend.log"
   (
     cd backend
     go run server.go
-  ) &
+  ) >> "$ROOT/tmp/e2e-backend.log" 2>&1 &
   BACKEND_PID=$!
 fi
 

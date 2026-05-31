@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/99designs/gqlgen/client"
@@ -14,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/email"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
 	"github.com/scruffyprodigy/playhub/internal/testdb"
@@ -21,6 +23,10 @@ import (
 )
 
 func newAuthGraphQLTestClient(t *testing.T) (*client.Client, http.Handler, *store.Store) {
+	return newAuthGraphQLTestClientWithMailer(t, nil)
+}
+
+func newAuthGraphQLTestClientWithMailer(t *testing.T, mailer email.Sender) (*client.Client, http.Handler, *store.Store) {
 	t.Helper()
 
 	databaseURL := testdb.RequireURL(t)
@@ -41,7 +47,12 @@ func newAuthGraphQLTestClient(t *testing.T) (*client.Client, http.Handler, *stor
 		t.Fatalf("load signer: %v", err)
 	}
 
-	authService, err := auth.NewService(st, signer)
+	var authService *auth.Service
+	if mailer == nil {
+		authService, err = auth.NewService(st, signer)
+	} else {
+		authService, err = auth.NewServiceWithMailer(st, signer, mailer)
+	}
 	if err != nil {
 		t.Fatalf("new auth service: %v", err)
 	}
@@ -99,15 +110,15 @@ func TestAuthGraphQLFlow(t *testing.T) {
 	cleaner.TrackEmail(email)
 
 	var loginResp struct {
-		LoginMagic bool `json:"loginMagic"`
+		RequestSignIn bool `json:"requestSignIn"`
 	}
-	if err := c.Post(`mutation LoginMagic($email: String!) {
-		loginMagic(email: $email)
+	if err := c.Post(`mutation RequestSignIn($email: String!) {
+		requestSignIn(email: $email)
 	}`, &loginResp, client.Var("email", email)); err != nil {
-		t.Fatalf("loginMagic failed: %v", err)
+		t.Fatalf("requestSignIn failed: %v", err)
 	}
-	if !loginResp.LoginMagic {
-		t.Fatal("expected loginMagic to return true")
+	if !loginResp.RequestSignIn {
+		t.Fatal("expected requestSignIn to return true")
 	}
 
 	link, err := st.GetLatestMagicLinkByEmail(ctx, email)
@@ -115,33 +126,33 @@ func TestAuthGraphQLFlow(t *testing.T) {
 		t.Fatalf("GetLatestMagicLinkByEmail failed: %v", err)
 	}
 
-	completeQuery := `mutation CompleteMagic($token: ID!) {
-		completeMagic(token: $token) {
+	completeQuery := `mutation CompleteSignInWithLink($token: ID!) {
+		completeSignInWithLink(token: $token) {
 			email
 			displayName
 		}
 	}`
 	sessionCookies, completeBody := postGraphQLWithCookies(t, handlerWithAuth, completeQuery, map[string]any{"token": link.Token})
 	if len(sessionCookieOptions(sessionCookies)) == 0 {
-		t.Fatal("expected completeMagic to set a session cookie")
+		t.Fatal("expected completeSignInWithLink to set a session cookie")
 	}
 
 	var completeResp struct {
 		Data struct {
-			CompleteMagic struct {
+			CompleteSignInWithLink struct {
 				Email       *string `json:"email"`
 				DisplayName *string `json:"displayName"`
-			} `json:"completeMagic"`
+			} `json:"completeSignInWithLink"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(completeBody, &completeResp); err != nil {
-		t.Fatalf("decode completeMagic response: %v", err)
+		t.Fatalf("decode completeSignInWithLink response: %v", err)
 	}
-	if completeResp.Data.CompleteMagic.Email == nil || *completeResp.Data.CompleteMagic.Email != email {
-		t.Fatalf("expected completed user email %q, got %+v", email, completeResp.Data.CompleteMagic.Email)
+	if completeResp.Data.CompleteSignInWithLink.Email == nil || *completeResp.Data.CompleteSignInWithLink.Email != email {
+		t.Fatalf("expected completed user email %q, got %+v", email, completeResp.Data.CompleteSignInWithLink.Email)
 	}
-	if completeResp.Data.CompleteMagic.DisplayName == nil || *completeResp.Data.CompleteMagic.DisplayName != store.DefaultDisplayName(email) {
-		t.Fatalf("expected provisional display name, got %+v", completeResp.Data.CompleteMagic.DisplayName)
+	if completeResp.Data.CompleteSignInWithLink.DisplayName == nil || *completeResp.Data.CompleteSignInWithLink.DisplayName != store.DefaultDisplayName(email) {
+		t.Fatalf("expected provisional display name, got %+v", completeResp.Data.CompleteSignInWithLink.DisplayName)
 	}
 
 	user, err := st.GetUserByEmail(ctx, email)
@@ -187,5 +198,98 @@ func TestAuthGraphQLFlow(t *testing.T) {
 	}
 	if meResp.Me != nil && meResp.Me.Email != nil {
 		t.Fatalf("expected me to be unauthenticated after logout, got %+v", meResp.Me)
+	}
+}
+
+func TestAuthGraphQLLoginCodeFlow(t *testing.T) {
+	mailer := &email.CaptureSender{}
+	c, handlerWithAuth, st := newAuthGraphQLTestClientWithMailer(t, mailer)
+	cleaner := st.NewTestCleaner(t)
+	ctx := context.Background()
+
+	emailAddr := "graphql-code-" + uuid.NewString() + "@example.com"
+	cleaner.TrackEmail(emailAddr)
+
+	var loginResp struct {
+		RequestSignIn bool `json:"requestSignIn"`
+	}
+	if err := c.Post(`mutation RequestSignIn($email: String!) {
+		requestSignIn(email: $email)
+	}`, &loginResp, client.Var("email", emailAddr)); err != nil {
+		t.Fatalf("requestSignIn failed: %v", err)
+	}
+	if mailer.Last.Code == "" {
+		t.Fatal("expected login code in email payload")
+	}
+
+	completeQuery := `mutation CompleteSignInWithCode($email: String!, $code: String!) {
+		completeSignInWithCode(email: $email, code: $code) {
+			email
+		}
+	}`
+	sessionCookies, completeBody := postGraphQLWithCookies(t, handlerWithAuth, completeQuery, map[string]any{
+		"email": emailAddr,
+		"code":  mailer.Last.Code,
+	})
+	if len(sessionCookieOptions(sessionCookies)) == 0 {
+		t.Fatal("expected completeSignInWithCode to set a session cookie")
+	}
+
+	var completeResp struct {
+		Data struct {
+			CompleteSignInWithCode struct {
+				Email *string `json:"email"`
+			} `json:"completeSignInWithCode"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(completeBody, &completeResp); err != nil {
+		t.Fatalf("decode completeSignInWithCode response: %v", err)
+	}
+	if completeResp.Data.CompleteSignInWithCode.Email == nil || *completeResp.Data.CompleteSignInWithCode.Email != emailAddr {
+		t.Fatalf("expected completed user email %q, got %+v", emailAddr, completeResp.Data.CompleteSignInWithCode)
+	}
+
+	user, err := st.GetUserByEmail(ctx, emailAddr)
+	if err != nil {
+		t.Fatalf("GetUserByEmail failed: %v", err)
+	}
+	cleaner.TrackUser(user.ID)
+}
+
+func TestAuthGraphQLRejectsInvalidLoginCode(t *testing.T) {
+	mailer := &email.CaptureSender{}
+	c, _, st := newAuthGraphQLTestClientWithMailer(t, mailer)
+	cleaner := st.NewTestCleaner(t)
+
+	emailAddr := "graphql-bad-code-" + uuid.NewString() + "@example.com"
+	cleaner.TrackEmail(emailAddr)
+
+	var loginResp struct {
+		RequestSignIn bool `json:"requestSignIn"`
+	}
+	if err := c.Post(`mutation RequestSignIn($email: String!) {
+		requestSignIn(email: $email)
+	}`, &loginResp, client.Var("email", emailAddr)); err != nil {
+		t.Fatalf("requestSignIn failed: %v", err)
+	}
+	if mailer.Last.Code == "" {
+		t.Fatal("expected login code in email payload")
+	}
+
+	var completeResp struct {
+		CompleteSignInWithCode *struct {
+			Email *string `json:"email"`
+		} `json:"completeSignInWithCode"`
+	}
+	err := c.Post(`mutation CompleteSignInWithCode($email: String!, $code: String!) {
+		completeSignInWithCode(email: $email, code: $code) {
+			email
+		}
+	}`, &completeResp, client.Var("email", emailAddr), client.Var("code", "000000"))
+	if err == nil {
+		t.Fatal("expected completeSignInWithCode to fail for invalid code")
+	}
+	if !strings.Contains(err.Error(), "Invalid or expired code") {
+		t.Fatalf("expected friendly invalid code error, got: %v", err)
 	}
 }

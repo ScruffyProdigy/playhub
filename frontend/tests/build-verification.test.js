@@ -22,6 +22,9 @@ test('build artifacts exist', () => {
   expect(indexContent).toContain('<title>JoinQuest</title>')
   expect(indexContent).toContain('<div id="root">')
   expect(indexContent).toContain('env.js')
+  // Absolute paths so /auth/complete and other deep links load assets from site root.
+  expect(indexContent).toMatch(/src="\/env.js"/)
+  expect(indexContent).toMatch(/src="\/assets\//)
 
   const envPath = join(distPath, 'env.js')
   expect(existsSync(envPath)).toBe(true)

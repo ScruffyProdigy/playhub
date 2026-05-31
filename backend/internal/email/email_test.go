@@ -66,3 +66,19 @@ func TestMagicLinkBodyIncludesLinkAndTTL(t *testing.T) {
 		t.Fatalf("expected branding in body: %q", body)
 	}
 }
+
+func TestMagicLinkBodyIncludesLoginCode(t *testing.T) {
+	body := magicLinkBody(MagicLinkEmail{
+		To:   "player@example.com",
+		Link: "https://joinquest.cc/auth/complete?token=abc",
+		Code: "123456",
+		TTL:  15 * time.Minute,
+	})
+
+	if !strings.Contains(body, "123456") {
+		t.Fatalf("expected code in body: %q", body)
+	}
+	if !strings.Contains(body, "Your sign-in code:") {
+		t.Fatalf("expected code label in body: %q", body)
+	}
+}

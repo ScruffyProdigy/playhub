@@ -22,6 +22,11 @@ Migrations are stored in the `backend/migrations/` directory and follow the nami
   - Game sessions table for active games
   - Digital goods table for trading system
   - User inventory table for owned items
+- `000002_provisional_display_names.up.sql` - Provisional display names for new users
+- `000003_demo_games.up.sql` - Seeds demo games for local/staging
+- `000004_game_handoff.up.sql` - Game handoff fields (`play_url`, `api_base_url`, etc.)
+- `000005_queue_one_waiting_per_user.up.sql` - One active waiting queue entry per user
+- `000006_magic_link_login_code.up.sql` - Adds `code_hash` on `magic_links` for 6-digit email codes
 
 ## CLI Usage
 
@@ -101,6 +106,7 @@ if err := migrator.Up(); err != nil {
 - `user_id` - Foreign key to users table (nullable for new users)
 - `email` - Email address for the magic link
 - `token` - Unique token for the magic link
+- `code_hash` - SHA-256 hash of the optional 6-digit email sign-in code (nullable on older rows)
 - `expires_at` - Expiration timestamp
 - `used_at` - When the link was used (nullable)
 - `created_at` - Creation timestamp

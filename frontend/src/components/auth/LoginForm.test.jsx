@@ -9,10 +9,15 @@ vi.mock('../../lib/auth', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    requestMagicLink: vi.fn(),
+    requestSignIn: vi.fn(),
+    completeSignInWithCode: vi.fn(),
     fetchCurrentUser: vi.fn().mockResolvedValue(null),
   }
 })
+
+vi.mock('../../lib/authBroadcast', () => ({
+  onAuthComplete: vi.fn(() => () => {}),
+}))
 
 function renderLoginForm() {
   return render(
@@ -24,29 +29,31 @@ function renderLoginForm() {
 
 describe('LoginForm', () => {
   beforeEach(() => {
-    vi.mocked(auth.requestMagicLink).mockReset()
-    vi.mocked(auth.requestMagicLink).mockResolvedValue(true)
+    vi.mocked(auth.requestSignIn).mockReset()
+    vi.mocked(auth.requestSignIn).mockResolvedValue(true)
+    vi.mocked(auth.completeSignInWithCode).mockReset()
     vi.mocked(auth.fetchCurrentUser).mockReset()
     vi.mocked(auth.fetchCurrentUser).mockResolvedValue(null)
   })
 
-  it('submits a magic link request for the entered email', async () => {
+  it('submits a sign-in email request and shows the code step', async () => {
     renderLoginForm()
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
     })
 
     await userEvent.type(screen.getByLabelText('Email'), 'player@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Send magic link' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
     await waitFor(() => {
-      expect(auth.requestMagicLink).toHaveBeenCalledWith('player@example.com')
-      expect(screen.getByText('Check your email for your sign-in link.')).toBeInTheDocument()
+      expect(auth.requestSignIn).toHaveBeenCalledWith('player@example.com')
+      expect(screen.getByRole('heading', { name: 'Enter your code' })).toBeInTheDocument()
+      expect(screen.getByLabelText('Sign-in code')).toBeInTheDocument()
     })
   })
 
-  it('shows an error when the magic link request fails', async () => {
-    vi.mocked(auth.requestMagicLink).mockRejectedValue(new Error('SMTP unavailable'))
+  it('shows an error when the sign-in email request fails', async () => {
+    vi.mocked(auth.requestSignIn).mockRejectedValue(new Error('SMTP unavailable'))
 
     renderLoginForm()
     await waitFor(() => {
@@ -54,21 +61,53 @@ describe('LoginForm', () => {
     })
 
     await userEvent.type(screen.getByLabelText('Email'), 'player@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Send magic link' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(await screen.findByText('SMTP unavailable')).toBeInTheDocument()
   })
 
-  it('refreshes the session when the user already signed in elsewhere', async () => {
+  it('submits a 6-digit code to complete sign-in', async () => {
+    vi.mocked(auth.completeSignInWithCode).mockResolvedValue({
+      id: 'user-1',
+      email: 'player@example.com',
+    })
+
     renderLoginForm()
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'I already signed in' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'I already signed in' }))
+    await userEvent.type(screen.getByLabelText('Email'), 'player@example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+
+    await screen.findByLabelText('Sign-in code')
+    await userEvent.type(screen.getByLabelText('Sign-in code'), '123456')
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
     await waitFor(() => {
-      expect(auth.fetchCurrentUser).toHaveBeenCalled()
+      expect(auth.completeSignInWithCode).toHaveBeenCalledWith('player@example.com', '123456')
     })
+  })
+
+  it('shows a friendly error when the sign-in code is invalid', async () => {
+    vi.mocked(auth.completeSignInWithCode).mockRejectedValue(
+      new Error('Invalid or expired code. Try again or use the sign-in link in your email.'),
+    )
+
+    renderLoginForm()
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    })
+
+    await userEvent.type(screen.getByLabelText('Email'), 'player@example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+
+    await screen.findByLabelText('Sign-in code')
+    await userEvent.type(screen.getByLabelText('Sign-in code'), '123456')
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(
+      await screen.findByText('Invalid or expired code. Try again or use the sign-in link in your email.'),
+    ).toBeInTheDocument()
   })
 })

@@ -191,8 +191,10 @@ jobs:
 
     - name: Start backend
       run: |
+        mkdir -p tmp
+        : > tmp/e2e-backend.log
         cd backend
-        go run server.go &
+        go run server.go >> ../tmp/e2e-backend.log 2>&1 &
         echo $! > ../backend.pid
 
     - name: Start frontend dev server

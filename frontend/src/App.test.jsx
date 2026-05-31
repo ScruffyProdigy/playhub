@@ -32,7 +32,7 @@ describe('App Component', () => {
     expect(screen.getByRole('heading', { name: 'Party Lobby' })).toBeInTheDocument()
   })
 
-  it('renders the magic-link completion page on /auth/complete', async () => {
+  it('renders the sign-in link completion page on /auth/complete', async () => {
     window.history.replaceState({}, '', '/auth/complete?token=test-token')
     const assign = vi.fn()
     Object.defineProperty(window, 'location', {
@@ -44,7 +44,7 @@ describe('App Component', () => {
       ok: true,
       json: async () => ({
         data: {
-          completeMagic: {
+          completeSignInWithLink: {
             id: 'user-1',
             email: 'player@example.com',
             displayName: 'player',

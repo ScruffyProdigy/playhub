@@ -1,0 +1,12 @@
+extend type Query {
+  me: User
+  # Bearer token for GraphQL websocket connection_init (httpOnly cookie is not always sent on WS upgrade).
+  subscriptionAuth: String
+}
+
+extend type Mutation {
+  requestSignIn(email: String!): Boolean!
+  completeSignInWithLink(token: ID!): User!
+  completeSignInWithCode(email: String!, code: String!): User!
+  logout: Boolean!
+}

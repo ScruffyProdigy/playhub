@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { completeMagicLoginOnce } from '../../lib/auth'
+import { completeSignInWithLinkOnce } from '../../lib/auth'
+import { notifyAuthComplete } from '../../lib/authBroadcast'
 import { APP_NAME } from '../../lib/brand'
 
 function getTokenFromLocation() {
@@ -7,7 +8,7 @@ function getTokenFromLocation() {
   return params.get('token')?.trim() || ''
 }
 
-export default function CompleteMagicPage() {
+export default function CompleteSignInPage() {
   const [status, setStatus] = useState('loading')
   const [message, setMessage] = useState('Completing sign-in…')
 
@@ -15,17 +16,18 @@ export default function CompleteMagicPage() {
     const token = getTokenFromLocation()
     if (!token) {
       setStatus('error')
-      setMessage('Missing sign-in token. Request a new magic link.')
+      setMessage('Missing sign-in token. Request a new sign-in email.')
       return
     }
 
     let cancelled = false
 
-    completeMagicLoginOnce(token)
+    completeSignInWithLinkOnce(token)
       .then(() => {
         if (cancelled) {
           return
         }
+        notifyAuthComplete()
         setStatus('success')
         setMessage('Signed in. Redirecting…')
         window.history.replaceState({}, '', '/')

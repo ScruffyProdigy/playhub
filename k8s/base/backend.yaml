@@ -14,7 +14,7 @@ spec:
       containers:
         - name: backend
           image: docker.io/scruffyprodigy/playhub-backend:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:

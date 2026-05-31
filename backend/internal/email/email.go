@@ -10,6 +10,7 @@ import (
 type MagicLinkEmail struct {
 	To   string
 	Link string
+	Code string
 	TTL  time.Duration
 }
 
@@ -37,6 +38,18 @@ func magicLinkSubject() string {
 }
 
 func magicLinkBody(msg MagicLinkEmail) string {
+	if msg.Code != "" {
+		return fmt.Sprintf(`Sign in to %s
+
+Your sign-in code: %s
+
+Or click this link to continue:
+%s
+
+This code and link expire in %s. If you did not request this email, you can ignore it.
+`, ProductName, msg.Code, msg.Link, formatTTL(msg.TTL))
+	}
+
 	return fmt.Sprintf(`Sign in to %s
 
 Click this link to continue:

@@ -7,13 +7,19 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	_ "github.com/lib/pq"
 	"github.com/google/uuid"
+	_ "github.com/lib/pq"
+	"github.com/scruffyprodigy/playhub/internal/email"
 	"github.com/scruffyprodigy/playhub/internal/store"
 	"github.com/scruffyprodigy/playhub/internal/testdb"
 )
 
 func openAuthTestService(t *testing.T) *Service {
+	t.Helper()
+	return openAuthTestServiceWithMailer(t, nil)
+}
+
+func openAuthTestServiceWithMailer(t *testing.T, mailer email.Sender) *Service {
 	t.Helper()
 
 	databaseURL := testdb.RequireURL(t)
@@ -33,11 +39,18 @@ func openAuthTestService(t *testing.T) *Service {
 		t.Fatalf("load signer: %v", err)
 	}
 
-	service, err := NewService(store.New(db), signer)
-	if err != nil {
-		t.Fatalf("new auth service: %v", err)
+	if mailer == nil {
+		service, err := NewService(store.New(db), signer)
+		if err != nil {
+			t.Fatalf("new auth service: %v", err)
+		}
+		return service
 	}
 
+	service, err := NewServiceWithMailer(store.New(db), signer, mailer)
+	if err != nil {
+		t.Fatalf("new auth service with mailer: %v", err)
+	}
 	return service
 }
 
@@ -56,6 +69,9 @@ func TestMagicLinkLoginFlow(t *testing.T) {
 	link, err := service.store.GetLatestMagicLinkByEmail(ctx, email)
 	if err != nil {
 		t.Fatalf("GetLatestMagicLinkByEmail failed: %v", err)
+	}
+	if link.CodeHash == "" {
+		t.Fatal("expected login code hash on magic link")
 	}
 
 	user, sessionToken, err := service.CompleteMagicLogin(ctx, link.Token)
@@ -90,6 +106,58 @@ func TestMagicLinkLoginFlow(t *testing.T) {
 
 	if _, _, err := service.CompleteMagicLogin(ctx, link.Token); err == nil {
 		t.Fatal("expected reused magic link to fail")
+	}
+}
+
+func TestLoginCodeFlow(t *testing.T) {
+	mailer := &email.CaptureSender{}
+	service := openAuthTestServiceWithMailer(t, mailer)
+	cleaner := service.store.NewTestCleaner(t)
+	ctx := context.Background()
+
+	emailAddr := "auth-code-" + uuid.NewString() + "@example.com"
+	cleaner.TrackEmail(emailAddr)
+
+	if err := service.RequestMagicLink(ctx, emailAddr); err != nil {
+		t.Fatalf("RequestMagicLink failed: %v", err)
+	}
+	if mailer.Last.Code == "" {
+		t.Fatal("expected login code in email payload")
+	}
+	if !loginCodePattern.MatchString(mailer.Last.Code) {
+		t.Fatalf("expected 6-digit code, got %q", mailer.Last.Code)
+	}
+
+	user, sessionToken, err := service.CompleteLoginCode(ctx, emailAddr, mailer.Last.Code)
+	if err != nil {
+		t.Fatalf("CompleteLoginCode failed: %v", err)
+	}
+	cleaner.TrackUser(user.ID)
+
+	if sessionToken == "" {
+		t.Fatal("expected session token")
+	}
+
+	if _, _, err := service.CompleteLoginCode(ctx, emailAddr, mailer.Last.Code); err == nil {
+		t.Fatal("expected reused login code to fail")
+	}
+}
+
+func TestCompleteLoginCodeRejectsInvalidCode(t *testing.T) {
+	mailer := &email.CaptureSender{}
+	service := openAuthTestServiceWithMailer(t, mailer)
+	cleaner := service.store.NewTestCleaner(t)
+	ctx := context.Background()
+
+	emailAddr := "auth-bad-code-" + uuid.NewString() + "@example.com"
+	cleaner.TrackEmail(emailAddr)
+
+	if err := service.RequestMagicLink(ctx, emailAddr); err != nil {
+		t.Fatalf("RequestMagicLink failed: %v", err)
+	}
+
+	if _, _, err := service.CompleteLoginCode(ctx, emailAddr, "000000"); err != ErrInvalidLoginCode {
+		t.Fatalf("expected ErrInvalidLoginCode, got %v", err)
 	}
 }
 
