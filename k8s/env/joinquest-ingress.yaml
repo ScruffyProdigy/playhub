@@ -1,5 +1,6 @@
-# Demo ingress for GKE + NGINX Ingress + cert-manager.
-# Prereqs: cert-manager, cluster-issuer-letsencrypt-prod.yaml, joinquest-certificate.yaml, DNS -> ingress IP.
+# Ingress for GKE + NGINX Ingress + cert-manager.
+# Prereqs: cert-manager, cluster-issuer-letsencrypt-prod.yaml, joinquest-certificate.yaml,
+# and DNS for joinquest.cc -> ingress IP (Cloudflare proxy OK).
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -13,10 +14,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - demo.joinquest.cc
-      secretName: demo-joinquest-cc-tls
+        - joinquest.cc
+      secretName: joinquest-cc-tls
   rules:
-    - host: demo.joinquest.cc
+    - host: joinquest.cc
       http:
         paths:
           - path: /graphql

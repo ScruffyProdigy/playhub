@@ -10,7 +10,7 @@ cd "$ROOT"
 
 NAMESPACE="joinquest"
 CONTEXT="${KUBE_CONTEXT:-}"
-LOBBY_PUBLIC_URL="${LOBBY_PUBLIC_URL:-https://demo.joinquest.cc}"
+LOBBY_PUBLIC_URL="${LOBBY_PUBLIC_URL:-https://joinquest.cc}"
 SMTP_FROM="${SMTP_FROM:-noreply@joinquest.cc}"
 SMTP_FROM_NAME="${SMTP_FROM_NAME:-JoinQuest}"
 INSTALL_CERT_MANAGER="${INSTALL_CERT_MANAGER:-false}"
@@ -83,4 +83,6 @@ kubectl wait --for=condition=available --timeout=300s deployment/lobby-frontend 
 kubectl get pods,svc,ingress -n "$NAMESPACE"
 echo "TLS: kubectl get certificate -n $NAMESPACE"
 kubectl get certificate -n "$NAMESPACE" 2>/dev/null || true
-echo "Done. Frontend API URL: $(kubectl get configmap lobby-frontend-config -n "$NAMESPACE" -o jsonpath='{.data.REACT_APP_API_BASE_URL}')"
+echo "Done. Public URL: $LOBBY_PUBLIC_URL"
+echo "DNS: point joinquest.cc (A or proxied CNAME) at the ingress ADDRESS below."
+echo "Frontend API URL: $(kubectl get configmap lobby-frontend-config -n "$NAMESPACE" -o jsonpath='{.data.REACT_APP_API_BASE_URL}')"
