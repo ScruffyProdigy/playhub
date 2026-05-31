@@ -7,6 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 # shellcheck source=lib/lobby-smtp.sh
 . "$ROOT/scripts/lib/lobby-smtp.sh"
+# shellcheck source=lib/lobby-game-service.sh
+. "$ROOT/scripts/lib/lobby-game-service.sh"
 
 NAMESPACE="joinquest"
 CONTEXT="${KUBE_CONTEXT:-}"
@@ -74,6 +76,7 @@ kubectl set env deployment/lobby-backend -n "$NAMESPACE" \
   LOBBY_ADMIN_EMAILS="${LOBBY_ADMIN_EMAILS:-ryan.c.kohler@gmail.com}" \
   --containers=backend
 apply_lobby_smtp_secret
+apply_lobby_game_service_secret
 
 echo "Waiting for Postgres..."
 kubectl wait --for=condition=ready --timeout=300s pod -l app=pg -n "$NAMESPACE"
@@ -83,6 +86,9 @@ kubectl delete job playhub-db-migrate -n "$NAMESPACE" --ignore-not-found
 sed 's/namespace: playhub/namespace: joinquest/g' k8s/jobs/migration.yaml | kubectl apply -f -
 kubectl wait --for=condition=complete --timeout=120s job/playhub-db-migrate -n "$NAMESPACE"
 kubectl logs job/playhub-db-migrate -n "$NAMESPACE"
+
+echo "Patching RPS catalog handoff URLs for production..."
+run_patch_rps_handoff_urls_job "$NAMESPACE"
 
 echo "Waiting for app deployments..."
 kubectl wait --for=condition=available --timeout=300s deployment/lobby-backend -n "$NAMESPACE"

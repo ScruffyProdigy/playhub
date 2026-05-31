@@ -28,7 +28,7 @@ This document describes the GraphQL API for JoinQuest.
 
 JoinQuest uses session cookies for browser clients (set by `completeSignInWithLink` / `completeSignInWithCode`). Include the cookie on GraphQL requests, or use `Authorization: Bearer <jwt>` where applicable.
 
-Game servers call `player(id:)` with `Authorization: Bearer <LOBBY_GAME_SERVICE_TOKEN>` when that env var is configured.
+Game servers call `player(id:)` with `Authorization: Bearer <serviceToken>` using the token from provision `lobby.serviceToken`.
 
 ## Queries
 

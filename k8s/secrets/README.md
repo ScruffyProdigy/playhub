@@ -9,19 +9,22 @@ cp k8s/secrets/pg-auth.example.yaml       k8s/secrets/pg-auth.yaml
 cp k8s/secrets/pg-dsn.example.yaml        k8s/secrets/pg-dsn.yaml
 cp k8s/secrets/jwks-secret.example.yaml   k8s/secrets/jwks-secret.yaml   # or: cd backend && go run ./scripts/jwks.go -namespace joinquest -yamlout ../k8s/secrets/jwks-secret.yaml
 cp k8s/secrets/lobby-smtp.example.yaml    k8s/secrets/lobby-smtp.yaml
+cp k8s/secrets/lobby-game-service.example.yaml k8s/secrets/lobby-game-service.yaml
 ```
 
 Edit each file:
 
 - **`metadata.namespace`** — must match where you deploy (`joinquest`, `playhub`, `playhub-staging`, …).
 - **`lobby-smtp.yaml`** — paste your Resend API key in `SMTP_PASSWORD`.
+- **`lobby-game-service.yaml`** — optional; sets Lobby’s `LOBBY_GAME_SERVICE_TOKEN` (sent to games as `lobby.serviceToken` on provision). Games store the token per match — no game-side env var.
 
 ## Apply to a cluster
 
 ```bash
 kubectl config use-context YOUR_CONTEXT
 kubectl apply -f k8s/secrets/
-./scripts/deploy-joinquest.sh    # or deploy-local.sh, deploy-staging.sh, …
+./scripts/deploy-joinquest.sh    # Lobby only
+./scripts/deploy-gke.sh          # Lobby + demo-game-rps (GKE)
 ```
 
 Deploy scripts apply secrets from this folder and wire SMTP into `lobby-backend` when `lobby-smtp.yaml` exists.

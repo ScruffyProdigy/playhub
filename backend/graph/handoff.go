@@ -21,10 +21,6 @@ func (r *Resolver) gameProvisioner() gameclient.MatchProvisioner {
 	return gameclient.NewClient()
 }
 
-func (r *Resolver) lobbyGameServiceToken() string {
-	return strings.TrimSpace(os.Getenv("LOBBY_GAME_SERVICE_TOKEN"))
-}
-
 func handoffDebugEnabled() bool {
 	v := strings.TrimSpace(os.Getenv("LOBBY_HANDOFF_DEBUG"))
 	return v == "1" || strings.EqualFold(v, "true")
@@ -77,8 +73,9 @@ func assignmentFromParticipants(sessionID uuid.UUID, mode *store.GameMode, parti
 
 func lobbyProvisionInfo() gameclient.LobbyInfo {
 	return gameclient.LobbyInfo{
-		ReturnURL:  auth.LobbyReturnURL(),
-		GraphqlURL: auth.LobbyGraphQLURL(),
+		ReturnURL:    auth.LobbyReturnURL(),
+		GraphqlURL:   auth.LobbyGraphQLURL(),
+		ServiceToken: auth.GameServiceTokenFromEnv(),
 	}
 }
 
@@ -109,11 +106,12 @@ func (r *Resolver) provisionParticipantsOnGame(ctx context.Context, game *store.
 		log.Printf("handoff: POST %s/api/v1/matches externalMatchId=%s seats=%d", apiBase, sessionID, len(assignment.Seats))
 	}
 
+	lobby := lobbyProvisionInfo()
 	if err := r.gameProvisioner().ProvisionMatch(ctx, gameclient.ProvisionRequest{
 		APIBaseURL:   apiBase,
-		ServiceToken: r.lobbyGameServiceToken(),
+		ServiceToken: lobby.ServiceToken,
 		LobbyID:      auth.LobbyIssuer(),
-		Lobby:        lobbyProvisionInfo(),
+		Lobby:        lobby,
 		Assignment:   assignment,
 	}); err != nil {
 		if banned, ok := err.(*gameclient.BannedPlayersError); ok {

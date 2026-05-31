@@ -142,12 +142,12 @@ and a `playUrl` (browser) for each game in your catalog.
 | Health | `GET {apiBaseUrl}/healthz` → `ok` | gate listing on this |
 | Status | `GET {apiBaseUrl}/api/v1/status` → `{game,version,appEnv,standalone}` | version/capability gating |
 | Modes | `GET {apiBaseUrl}/api/v1/game-modes` | seat/team/role manifest |
-| Provision | `POST {apiBaseUrl}/api/v1/matches` body `{ lobbyId, lobby: { returnUrl, graphqlUrl }, assignment: { ... } }` | S2S; idempotent on `externalMatchId` |
+| Provision | `POST {apiBaseUrl}/api/v1/matches` body `{ lobbyId, lobby: { returnUrl, graphqlUrl, serviceToken? }, assignment: { ... } }` | S2S; `Authorization: Bearer` must match `serviceToken` when present; idempotent on `externalMatchId` |
 | Link | redirect to `{playUrl}?match=<externalMatchId>&token=<jwt>` | optional `&seat=`, `&lobby_user=` |
 | Claim | `POST {apiBaseUrl}/api/v1/matches/{externalMatchId}/claim` + `Authorization: Bearer <jwt>` | game uses the token's `seatKey` |
 | Play | WebSocket `GET /api/v1/ws` (or REST `POST /matches/:ref/move`) | game-internal transport |
 
-**Lobby block:** `returnUrl` sends players back to the Lobby UI after a match; `graphqlUrl` is the Lobby API for `player` lookup and future match-result mutations (same `LOBBY_GAME_SERVICE_TOKEN` as provision).
+**Lobby block:** `returnUrl` sends players back to the Lobby UI after a match; `graphqlUrl` is the Lobby GraphQL endpoint; `serviceToken` is optional — when Lobby sets `LOBBY_GAME_SERVICE_TOKEN`, games store it for `player` lookup and future callbacks.
 
 **Assignment seat shape:** `{ seatKey, lobbyUserId, team?, role? }`. Resolve display names via `player(id)` at `lobby.graphqlUrl`.
 

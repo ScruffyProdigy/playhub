@@ -57,10 +57,10 @@ Game
 
 ## Provision
 
-- `lobbyId` = `LobbyIssuer()`; `lobby.returnUrl` = browser Lobby URL; `lobby.graphqlUrl` = `{issuer}/graphql`.
+- `lobbyId` = `LobbyIssuer()`; `lobby.returnUrl` = browser Lobby URL; `lobby.graphqlUrl` = `{issuer}/graphql`; `lobby.serviceToken` = Lobby’s `LOBBY_GAME_SERVICE_TOKEN` when set (same value on `Authorization: Bearer` for the provision POST).
 - `gameMode` = mode’s `mode_key` (game server resolves mode-specific rules locally).
 - Pass `team` / `role` on seats from the cached template when applicable.
-- Player display names via `player(id)` at `lobby.graphqlUrl`; match results via GraphQL when implemented (same service token).
+- Player display names via `player(id)` at `lobby.graphqlUrl` using `lobby.serviceToken` from provision.
 - Banlist handshake (`403` + `bannedLobbyUserIds`) unchanged.
 
 ## Player API (target)

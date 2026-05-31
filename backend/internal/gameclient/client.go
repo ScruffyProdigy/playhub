@@ -21,10 +21,12 @@ type AssignmentSeat struct {
 }
 
 // LobbyInfo tells the game how to reach Lobby after and during a match.
-// Match reporting and player lookup use graphqlUrl (same service token as provision).
+// serviceToken is the per-lobby credential for GraphQL (and future callbacks); games must
+// store it per match — do not rely on a global env var in multi-lobby deployments.
 type LobbyInfo struct {
-	ReturnURL  string `json:"returnUrl"`
-	GraphqlURL string `json:"graphqlUrl"`
+	ReturnURL     string `json:"returnUrl"`
+	GraphqlURL    string `json:"graphqlUrl"`
+	ServiceToken  string `json:"serviceToken,omitempty"`
 }
 
 // Assignment is the match roster pushed to the game server.

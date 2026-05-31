@@ -11,7 +11,7 @@ type Query {
   goods(gameId: ID): [DigitalGood!]!   # list goods globally or by game
   myInventory(gameId: ID): [Entitlement!]!
   myQueueStatus(queueId: ID!): JoinResult!
-  # Game servers resolve lobbyUserId → display name (requires LOBBY_GAME_SERVICE_TOKEN when configured).
+  # Game servers resolve lobbyUserId → display name (Bearer serviceToken from provision).
   player(id: ID!): PublicPlayer
 }
 

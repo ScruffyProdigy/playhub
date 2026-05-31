@@ -9,11 +9,13 @@ import (
 
 func TestProvisionMatchSendsLobbyBlock(t *testing.T) {
 	var gotBody map[string]any
+	var gotAuth string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/matches" {
 			http.NotFound(w, r)
 			return
 		}
+		gotAuth = r.Header.Get("Authorization")
 		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
 			t.Errorf("decode body: %v", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -25,11 +27,13 @@ func TestProvisionMatchSendsLobbyBlock(t *testing.T) {
 
 	client := NewClient()
 	err := client.ProvisionMatch(t.Context(), ProvisionRequest{
-		APIBaseURL: srv.URL,
-		LobbyID:    "https://joinquest.cc",
+		APIBaseURL:   srv.URL,
+		ServiceToken: "lobby-svc-secret",
+		LobbyID:      "https://joinquest.cc",
 		Lobby: LobbyInfo{
-			ReturnURL:  "https://joinquest.cc",
-			GraphqlURL: "https://joinquest.cc/graphql",
+			ReturnURL:    "https://joinquest.cc",
+			GraphqlURL:   "https://joinquest.cc/graphql",
+			ServiceToken: "lobby-svc-secret",
 		},
 		Assignment: Assignment{
 			ExternalMatchID: "match-1",
@@ -55,12 +59,18 @@ func TestProvisionMatchSendsLobbyBlock(t *testing.T) {
 	if lobby["graphqlUrl"] != "https://joinquest.cc/graphql" {
 		t.Fatalf("graphqlUrl = %v", lobby["graphqlUrl"])
 	}
+	if lobby["serviceToken"] != "lobby-svc-secret" {
+		t.Fatalf("serviceToken = %v", lobby["serviceToken"])
+	}
 	assignment, ok := gotBody["assignment"].(map[string]any)
 	if !ok {
 		t.Fatalf("assignment missing: %#v", gotBody)
 	}
 	if assignment["gameMode"] != "duel" {
 		t.Fatalf("gameMode = %v", assignment["gameMode"])
+	}
+	if gotAuth != "Bearer lobby-svc-secret" {
+		t.Fatalf("Authorization = %q, want Bearer lobby-svc-secret", gotAuth)
 	}
 }
 

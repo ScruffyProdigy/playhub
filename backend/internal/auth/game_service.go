@@ -9,7 +9,7 @@ import (
 
 type contextKeyGameService struct{}
 
-// GameServiceTokenFromEnv is the shared secret games expect on Lobby server-to-server calls.
+// GameServiceTokenFromEnv is Lobby's server-to-server secret (provision body + player GraphQL).
 func GameServiceTokenFromEnv() string {
 	return strings.TrimSpace(os.Getenv("LOBBY_GAME_SERVICE_TOKEN"))
 }

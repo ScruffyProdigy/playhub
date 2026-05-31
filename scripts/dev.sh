@@ -54,6 +54,12 @@ if [ ! -f "README.md" ] || [ ! -d "backend" ] || [ ! -d "frontend" ]; then
 fi
 
 ROOT="$(pwd)"
+if [ -f "$ROOT/.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . "$ROOT/.env"
+    set +a
+fi
 # shellcheck source=lib/lobby-smtp.sh
 . "$ROOT/scripts/lib/lobby-smtp.sh"
 load_lobby_smtp_env_from_file
@@ -76,6 +82,7 @@ if command -v docker &> /dev/null; then
     export LOBBY_ADMIN_EMAILS="${LOBBY_ADMIN_EMAILS:-ryan.c.kohler@gmail.com}"
     export LOBBY_ISSUER_URL="${LOBBY_ISSUER_URL:-http://localhost:8080}"
     export LOBBY_PUBLIC_URL="${LOBBY_PUBLIC_URL:-http://localhost:5173}"
+    # Optional: set LOBBY_GAME_SERVICE_TOKEN in .env to test provision auth + GraphQL player lookup with the game API.
 else
     print_warning "Docker not found. Set DATABASE_URL manually or the backend will use mock data."
 fi
