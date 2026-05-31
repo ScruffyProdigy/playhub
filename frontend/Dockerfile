@@ -13,8 +13,11 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application (enforce root-absolute asset paths for /auth/complete deep links)
+RUN npm run build && \
+    sed -i 's|src="./env.js"|src="/env.js"|g; s|src="./assets/|src="/assets/|g; s|href="./assets/|href="/assets/|g' dist/index.html && \
+    grep -q 'base href="/"' dist/index.html || sed -i 's|<head>|<head>\n    <base href="/" />|' dist/index.html && \
+    grep -q 'src="/env.js"' dist/index.html
 
 # Clean up node_modules to reduce image size
 RUN rm -rf node_modules
