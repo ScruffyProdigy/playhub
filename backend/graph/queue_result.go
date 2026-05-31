@@ -6,8 +6,8 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
-// joinResultFromQueueJoin is the joinGame mutation response: always "in queue" from the
-// client's perspective. Match details are delivered via queueUpdated / myQueueStatus.
+// joinResultFromQueueJoin is the joinQueue mutation response for waiters: always "in queue"
+// from the client's perspective. Match details are delivered via queueUpdated / myQueueStatus.
 func joinResultFromQueueJoin(result *store.QueueJoinResult) *model.JoinResult {
 	if result == nil {
 		return &model.JoinResult{Queued: false}
@@ -20,7 +20,7 @@ func joinResultFromQueueJoin(result *store.QueueJoinResult) *model.JoinResult {
 	}
 }
 
-// joinResultAfterJoin is the joinGame response. Waiting users get queued only; the user
+// joinResultAfterJoin is the joinQueue response. Waiting users get queued only; the user
 // who completes a match also receives sessionId/joinUrl (same as myQueueStatus).
 func joinResultAfterJoin(result *store.QueueJoinResult, userID uuid.UUID, launchURLs map[uuid.UUID]string) *model.JoinResult {
 	if result == nil {

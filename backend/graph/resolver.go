@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/gameclient"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
@@ -24,8 +25,9 @@ type Resolver struct {
 	Auth              *auth.Service
 	PubSub            pubsub.Broker
 	GameClientBaseURL string
+	ManifestFetcher   *gameclient.ManifestFetcher
 	// GameProvisioner pushes match rosters to game APIs; nil uses the default HTTP client.
-	GameProvisioner MatchProvisioner
+	GameProvisioner gameclient.MatchProvisioner
 }
 
 // NewResolver creates a resolver backed by the store and auth service.

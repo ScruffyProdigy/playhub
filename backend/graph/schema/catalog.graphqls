@@ -1,0 +1,53 @@
+input RegisterGameInput {
+  slug: String!
+  playUrl: String!
+  apiBaseUrl: String!
+  name: String
+  description: String
+}
+
+type RegisterGamePayload {
+  game: Game!
+  webhookSecret: String!
+}
+
+type GameModeSeat {
+  seatKey: String!
+  team: String
+  role: String
+  sortOrder: Int!
+}
+
+type GameMode {
+  id: ID!
+  modeKey: String!
+  displayName: String!
+  minPlayers: Int!
+  maxPlayers: Int!
+  status: String!
+  seats: [GameModeSeat!]!
+  queues: [ModeQueue!]!
+}
+
+type ModeQueue {
+  id: ID!
+  name: String!
+  playersToStart: Int!
+  status: String!
+  waitingCount: Int!
+}
+
+extend type Game {
+  slug: String
+  playUrl: String
+  apiBaseUrl: String
+  manifestSyncedAt: Time
+  manifestHash: String
+  gameVersion: String
+  modes: [GameMode!]!
+}
+
+extend type Mutation {
+  registerGame(input: RegisterGameInput!): RegisterGamePayload!
+  refreshGameManifest(gameId: ID!): Game!
+}

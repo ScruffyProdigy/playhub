@@ -73,6 +73,9 @@ if command -v docker &> /dev/null; then
     export GAME_CLIENT_BASE_URL="${GAME_CLIENT_BASE_URL:-http://localhost:5174}"
     export GAME_API_BASE_URL="${GAME_API_BASE_URL:-http://localhost:3001}"
     export LOBBY_STALE_MATCH_MINUTES="${LOBBY_STALE_MATCH_MINUTES:-5}"
+    export LOBBY_ADMIN_EMAILS="${LOBBY_ADMIN_EMAILS:-ryan.c.kohler@gmail.com}"
+    export LOBBY_ISSUER_URL="${LOBBY_ISSUER_URL:-http://localhost:8080}"
+    export LOBBY_PUBLIC_URL="${LOBBY_PUBLIC_URL:-http://localhost:5173}"
 else
     print_warning "Docker not found. Set DATABASE_URL manually or the backend will use mock data."
 fi

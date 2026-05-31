@@ -69,7 +69,9 @@ echo "Configuring backend for browser auth at $LOBBY_PUBLIC_URL ..."
 kubectl set env deployment/lobby-backend -n "$NAMESPACE" \
   CORS_ALLOWED_ORIGINS="$LOBBY_PUBLIC_URL" \
   MAGIC_LINK_BASE_URL="${LOBBY_PUBLIC_URL}/auth/complete?token=" \
+  LOBBY_ISSUER_URL="${LOBBY_ISSUER_URL:-$LOBBY_PUBLIC_URL}" \
   SESSION_COOKIE_SECURE=true \
+  LOBBY_ADMIN_EMAILS="${LOBBY_ADMIN_EMAILS:-ryan.c.kohler@gmail.com}" \
   --containers=backend
 apply_lobby_smtp_secret
 

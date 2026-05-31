@@ -16,16 +16,21 @@ import (
 type AssignmentSeat struct {
 	SeatKey     string `json:"seatKey"`
 	LobbyUserID string `json:"lobbyUserId"`
-	DisplayName string `json:"displayName,omitempty"`
 	Team        string `json:"team,omitempty"`
 	Role        string `json:"role,omitempty"`
 }
 
-// Assignment is the POST /api/v1/matches body (option 2 push provisioning).
+// LobbyInfo tells the game how to reach Lobby after and during a match.
+// Match reporting and player lookup use graphqlUrl (same service token as provision).
+type LobbyInfo struct {
+	ReturnURL  string `json:"returnUrl"`
+	GraphqlURL string `json:"graphqlUrl"`
+}
+
+// Assignment is the match roster pushed to the game server.
 type Assignment struct {
 	ExternalMatchID string           `json:"externalMatchId"`
 	GameMode        string           `json:"gameMode"`
-	BestOf          int              `json:"bestOf,omitempty"`
 	Seats           []AssignmentSeat `json:"seats"`
 }
 
@@ -54,27 +59,41 @@ func NewClient() *Client {
 }
 
 // ProvisionMatch creates or confirms a match on the game server (idempotent on externalMatchId).
-func (c *Client) ProvisionMatch(ctx context.Context, apiBaseURL, serviceToken string, assignment Assignment) error {
-	base := strings.TrimRight(strings.TrimSpace(apiBaseURL), "/")
+func (c *Client) ProvisionMatch(ctx context.Context, req ProvisionRequest) error {
+	base := strings.TrimRight(strings.TrimSpace(req.APIBaseURL), "/")
 	if base == "" {
 		return errors.New("gameclient: api base URL is required")
 	}
+	lobbyID := strings.TrimSpace(req.LobbyID)
+	if lobbyID == "" {
+		return errors.New("gameclient: lobby id is required")
+	}
+	if strings.TrimSpace(req.Lobby.ReturnURL) == "" {
+		return errors.New("gameclient: lobby return URL is required")
+	}
+	if strings.TrimSpace(req.Lobby.GraphqlURL) == "" {
+		return errors.New("gameclient: lobby graphql URL is required")
+	}
 
-	body, err := json.Marshal(map[string]any{"assignment": assignment})
+	body, err := json.Marshal(map[string]any{
+		"lobbyId":    lobbyID,
+		"lobby":      req.Lobby,
+		"assignment": req.Assignment,
+	})
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, base+"/api/v1/matches", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, base+"/api/v1/matches", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/json")
-	if header := serviceAuthHeader(serviceToken); header != "" {
-		req.Header.Set("Authorization", header)
+	httpReq.Header.Set("Content-Type", "application/json")
+	if header := serviceAuthHeader(req.ServiceToken); header != "" {
+		httpReq.Header.Set("Authorization", header)
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		return fmt.Errorf("gameclient: provision match: %w", err)
 	}

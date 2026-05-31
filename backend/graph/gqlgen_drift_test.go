@@ -20,14 +20,8 @@ func TestGqlgenDrift(t *testing.T) {
 	// Find all GraphQL schema files
 	schemaFiles := findSchemaFiles(t, projectRoot)
 
-	// Find the generated files
-	generatedFiles := []string{
-		filepath.Join(projectRoot, "backend/graph/generated/generated.go"),
-		filepath.Join(projectRoot, "backend/graph/model/models_gen.go"),
-		filepath.Join(projectRoot, "backend/graph/core.resolvers.go"),
-		filepath.Join(projectRoot, "backend/graph/auth.resolvers.go"),
-		filepath.Join(projectRoot, "backend/graph/game.resolvers.go"),
-	}
+	// Resolver and generated outputs that must stay in sync with schema changes.
+	generatedFiles := resolverGeneratedFiles(projectRoot)
 
 	// Check if any schema file is newer than the most recently committed generated file.
 	for _, schemaFile := range schemaFiles {
@@ -76,6 +70,7 @@ func TestSchemaFilesExist(t *testing.T) {
 
 	expectedFiles := []string{
 		"auth.graphqls",
+		"catalog.graphqls",
 		"core.graphqls",
 		"game.graphqls",
 		"users.graphqls",
@@ -94,16 +89,7 @@ func TestSchemaFilesExist(t *testing.T) {
 func TestGeneratedFilesExist(t *testing.T) {
 	projectRoot := findProjectRoot(t)
 
-	expectedFiles := []string{
-		"backend/graph/generated/generated.go",
-		"backend/graph/model/models_gen.go",
-		"backend/graph/core.resolvers.go",
-		"backend/graph/auth.resolvers.go",
-		"backend/graph/game.resolvers.go",
-	}
-
-	for _, filename := range expectedFiles {
-		filePath := filepath.Join(projectRoot, filename)
+	for _, filePath := range resolverGeneratedFiles(projectRoot) {
 		if !fileExists(filePath) {
 			t.Errorf("Expected generated file does not exist: %s", filePath)
 		}
@@ -111,6 +97,18 @@ func TestGeneratedFilesExist(t *testing.T) {
 }
 
 // Helper functions
+
+func resolverGeneratedFiles(projectRoot string) []string {
+	return []string{
+		filepath.Join(projectRoot, "backend/graph/generated/generated.go"),
+		filepath.Join(projectRoot, "backend/graph/model/models_gen.go"),
+		filepath.Join(projectRoot, "backend/graph/core.resolvers.go"),
+		filepath.Join(projectRoot, "backend/graph/auth.resolvers.go"),
+		filepath.Join(projectRoot, "backend/graph/game.resolvers.go"),
+		filepath.Join(projectRoot, "backend/graph/catalog.resolvers.go"),
+		filepath.Join(projectRoot, "backend/graph/users.resolvers.go"),
+	}
+}
 
 func findProjectRoot(t *testing.T) string {
 	// Start from the current directory and walk up to find go.mod

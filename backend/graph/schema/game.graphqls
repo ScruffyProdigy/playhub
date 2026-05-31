@@ -15,9 +15,8 @@ type Session {
   players: [User!]!
 }
 
-input CreateGameInput { name: String! }
 
-# joinGame returns queued + queuedCount for waiters; the player who completes the match
+# joinQueue returns queued + queuedCount for waiters; the player who completes the match
 # also gets sessionId/joinUrl. Others receive joinUrl via queueUpdated / myQueueStatus.
 type JoinResult {
   queued: Boolean!
@@ -34,8 +33,10 @@ enum QueueStatus {
 
 type QueueUpdate {
   gameId: ID!
+  queueId: ID!
   status: QueueStatus!
   sessionId: ID
   joinUrl: String
   queuedCount: Int!
+  message: String
 }

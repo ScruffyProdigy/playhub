@@ -1,10 +1,10 @@
 # Database Migrations
 
-This document describes the database migration system for PlayHub.
+This document describes the database migration system for JoinQuest.
 
 ## Overview
 
-PlayHub uses a custom migration system built on top of [golang-migrate](https://github.com/golang-migrate/migrate) to manage database schema changes. The system supports both programmatic and CLI-based migration management.
+JoinQuest uses a custom migration system built on top of [golang-migrate](https://github.com/golang-migrate/migrate) to manage database schema changes. The system supports both programmatic and CLI-based migration management.
 
 ## Migration Files
 
@@ -27,6 +27,10 @@ Migrations are stored in the `backend/migrations/` directory and follow the nami
 - `000004_game_handoff.up.sql` - Game handoff fields (`play_url`, `api_base_url`, etc.)
 - `000005_queue_one_waiting_per_user.up.sql` - One active waiting queue entry per user
 - `000006_magic_link_login_code.up.sql` - Adds `code_hash` on `magic_links` for 6-digit email codes
+- `000007_game_catalog.up.sql` - Game catalog: manifest cache on `games`, `game_modes`, `game_mode_seats`, `mode_queues`, and `game_queues.mode_queue_id`
+- `000008_mode_queue_matchmaking.up.sql` - Session `mode_id`/`mode_queue_id`, unique waiting row per user per mode queue
+- `000009_catalog_only_games.up.sql` - Seeds catalog mode/queue for RPS demo; deactivates Party Lobby
+- `000010_drop_legacy_game_fields.up.sql` - Drops legacy `games.game_mode`/`min_players`/`max_players` and `game_modes.best_of`
 
 ## CLI Usage
 

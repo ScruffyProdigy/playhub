@@ -14,12 +14,7 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
-// MatchProvisioner pushes roster assignments to game servers.
-type MatchProvisioner interface {
-	ProvisionMatch(ctx context.Context, apiBaseURL, serviceToken string, assignment gameclient.Assignment) error
-}
-
-func (r *Resolver) gameProvisioner() MatchProvisioner {
+func (r *Resolver) gameProvisioner() gameclient.MatchProvisioner {
 	if r.GameProvisioner != nil {
 		return r.GameProvisioner
 	}
@@ -54,30 +49,37 @@ func (r *Resolver) resolvedAPIBaseURL(game *store.Game) string {
 	return strings.TrimRight(strings.TrimSpace(os.Getenv("GAME_API_BASE_URL")), "/")
 }
 
-func gameModeID(game *store.Game) string {
-	if game != nil && game.GameMode != nil {
-		if m := strings.TrimSpace(*game.GameMode); m != "" {
-			return m
-		}
+func modeKeyFromCatalog(mode *store.GameMode) (string, error) {
+	if mode == nil || strings.TrimSpace(mode.ModeKey) == "" {
+		return "", fmt.Errorf("catalog mode is required")
 	}
-	return "duel"
+	return strings.TrimSpace(mode.ModeKey), nil
 }
 
-func assignmentFromParticipants(sessionID uuid.UUID, game *store.Game, participants []store.SessionParticipant) gameclient.Assignment {
+func assignmentFromParticipants(sessionID uuid.UUID, mode *store.GameMode, participants []store.SessionParticipant) (gameclient.Assignment, error) {
+	modeKey, err := modeKeyFromCatalog(mode)
+	if err != nil {
+		return gameclient.Assignment{}, err
+	}
 	assignment := gameclient.Assignment{
 		ExternalMatchID: sessionID.String(),
-		GameMode:        gameModeID(game),
-		BestOf:          3, // demo default; catalog/manifest-driven best-of is follow-up
+		GameMode:        modeKey,
 		Seats:           make([]gameclient.AssignmentSeat, 0, len(participants)),
 	}
 	for _, p := range participants {
 		assignment.Seats = append(assignment.Seats, gameclient.AssignmentSeat{
 			SeatKey:     p.SeatKey,
 			LobbyUserID: p.UserID.String(),
-			DisplayName: p.DisplayName,
 		})
 	}
-	return assignment
+	return assignment, nil
+}
+
+func lobbyProvisionInfo() gameclient.LobbyInfo {
+	return gameclient.LobbyInfo{
+		ReturnURL:  auth.LobbyReturnURL(),
+		GraphqlURL: auth.LobbyGraphQLURL(),
+	}
 }
 
 func (r *Resolver) provisionParticipantsOnGame(ctx context.Context, game *store.Game, sessionID uuid.UUID, participants []store.SessionParticipant) error {
@@ -89,12 +91,31 @@ func (r *Resolver) provisionParticipantsOnGame(ctx context.Context, game *store.
 		return fmt.Errorf("cannot provision match with no seated players")
 	}
 
-	assignment := assignmentFromParticipants(sessionID, game, participants)
+	st, err := r.requireStore()
+	if err != nil {
+		return err
+	}
+
+	mode, err := st.GetGameModeForSession(ctx, sessionID)
+	if err != nil {
+		return fmt.Errorf("catalog mode for session: %w", err)
+	}
+	assignment, err := assignmentFromParticipants(sessionID, mode, participants)
+	if err != nil {
+		return err
+	}
+
 	if handoffDebugEnabled() {
 		log.Printf("handoff: POST %s/api/v1/matches externalMatchId=%s seats=%d", apiBase, sessionID, len(assignment.Seats))
 	}
 
-	if err := r.gameProvisioner().ProvisionMatch(ctx, apiBase, r.lobbyGameServiceToken(), assignment); err != nil {
+	if err := r.gameProvisioner().ProvisionMatch(ctx, gameclient.ProvisionRequest{
+		APIBaseURL:   apiBase,
+		ServiceToken: r.lobbyGameServiceToken(),
+		LobbyID:      auth.LobbyIssuer(),
+		Lobby:        lobbyProvisionInfo(),
+		Assignment:   assignment,
+	}); err != nil {
 		if banned, ok := err.(*gameclient.BannedPlayersError); ok {
 			st, stErr := r.requireStore()
 			if stErr != nil {
@@ -130,6 +151,10 @@ func (r *Resolver) finalizeMatchedSession(ctx context.Context, game *store.Game,
 	if playURL == "" {
 		return nil, fmt.Errorf("game play URL is not configured")
 	}
+	audience := r.resolvedAPIBaseURL(game)
+	if audience == "" {
+		return nil, fmt.Errorf("game API base URL is not configured")
+	}
 
 	if err := r.provisionParticipantsOnGame(ctx, game, sessionID, participants); err != nil {
 		return nil, err
@@ -139,7 +164,7 @@ func (r *Resolver) finalizeMatchedSession(ctx context.Context, game *store.Game,
 	externalMatchID := sessionID.String()
 	urls := make(map[uuid.UUID]string, len(participants))
 	for _, p := range participants {
-		launch, err := launchURLForSeat(signer, playURL, externalMatchID, p.UserID, p.SeatKey, p.DisplayName)
+		launch, err := launchURLForSeat(signer, playURL, audience, externalMatchID, p.UserID, p.SeatKey, p.DisplayName)
 		if err != nil {
 			return nil, err
 		}
@@ -154,8 +179,8 @@ func (r *Resolver) finalizeMatchedSession(ctx context.Context, game *store.Game,
 	return urls, nil
 }
 
-func launchURLForSeat(signer *auth.Signer, playURL, externalMatchID string, userID uuid.UUID, seatKey, displayName string) (string, error) {
-	token, err := signer.SignSeatToken(userID, externalMatchID, seatKey, displayName, 0)
+func launchURLForSeat(signer *auth.Signer, playURL, audience, externalMatchID string, userID uuid.UUID, seatKey, displayName string) (string, error) {
+	token, err := signer.SignSeatToken(userID, audience, externalMatchID, seatKey, displayName, 0)
 	if err != nil {
 		return "", err
 	}
@@ -207,10 +232,14 @@ func (r *Resolver) signLaunchURL(ctx context.Context, game *store.Game, sessionI
 	if playURL == "" {
 		return "", fmt.Errorf("game play URL is not configured")
 	}
+	audience := r.resolvedAPIBaseURL(game)
+	if audience == "" {
+		return "", fmt.Errorf("game API base URL is not configured")
+	}
 
 	for _, p := range participants {
 		if p.UserID == userID {
-			return launchURLForSeat(authService.Signer(), playURL, sessionID.String(), userID, p.SeatKey, p.DisplayName)
+			return launchURLForSeat(authService.Signer(), playURL, audience, sessionID.String(), userID, p.SeatKey, p.DisplayName)
 		}
 	}
 	return "", fmt.Errorf("user is not seated in session")

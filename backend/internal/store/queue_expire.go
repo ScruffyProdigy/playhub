@@ -21,26 +21,24 @@ func staleMatchMaxAge() time.Duration {
 	return defaultStaleMatchMinutes * time.Minute
 }
 
-// ExpireStaleMatchedQueue cancels old matched rows so login does not show a stale Launch.
-func (s *Store) ExpireStaleMatchedQueue(ctx context.Context, gameID, userID uuid.UUID) error {
+func (s *Store) expireStaleMatchedModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID) error {
 	cutoff := time.Now().Add(-staleMatchMaxAge())
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE game_queues
 		SET status = 'cancelled'
-		WHERE game_id = $1
+		WHERE mode_queue_id = $1
 		  AND user_id = $2
 		  AND status = 'matched'
 		  AND (matched_at IS NULL OR matched_at < $3)
-	`, gameID, userID, cutoff)
+	`, modeQueueID, userID, cutoff)
 	return err
 }
 
-// CancelUserMatchedQueue clears an active matched queue row (user abandons the lobby match).
-func (s *Store) CancelUserMatchedQueue(ctx context.Context, gameID, userID uuid.UUID) error {
+func (s *Store) cancelUserMatchedModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID) error {
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE game_queues
 		SET status = 'cancelled'
-		WHERE game_id = $1 AND user_id = $2 AND status = 'matched'
-	`, gameID, userID)
+		WHERE mode_queue_id = $1 AND user_id = $2 AND status = 'matched'
+	`, modeQueueID, userID)
 	return err
 }

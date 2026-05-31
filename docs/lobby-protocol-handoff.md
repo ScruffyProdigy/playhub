@@ -4,8 +4,9 @@ A brief for whoever implements the **Lobby** side of the integration. It documen
 the wire contract, **why each part of the contract is shaped the way it is**, and
 how the same contract scales to bigger games and a fleet of game servers.
 
-For the step-by-step "do this, then that" version with full request/response
-bodies, see [`playhub-integration.md`](./playhub-integration.md). This doc is the
+For the step-by-step wire format with full request/response bodies, see the
+**Provision payload** section below and the `demo-game-rps` reference implementation.
+This doc is the
 *reasoning* companion — read it so contract decisions don't look arbitrary.
 
 ---
@@ -141,15 +142,16 @@ and a `playUrl` (browser) for each game in your catalog.
 | Health | `GET {apiBaseUrl}/healthz` → `ok` | gate listing on this |
 | Status | `GET {apiBaseUrl}/api/v1/status` → `{game,version,appEnv,standalone}` | version/capability gating |
 | Modes | `GET {apiBaseUrl}/api/v1/game-modes` | seat/team/role manifest |
-| Provision | `POST {apiBaseUrl}/api/v1/matches` body `{assignment:{externalMatchId,gameMode,seats[]}}` | S2S; idempotent on `externalMatchId` |
+| Provision | `POST {apiBaseUrl}/api/v1/matches` body `{ lobbyId, lobby: { returnUrl, graphqlUrl }, assignment: { ... } }` | S2S; idempotent on `externalMatchId` |
 | Link | redirect to `{playUrl}?match=<externalMatchId>&token=<jwt>` | optional `&seat=`, `&lobby_user=` |
 | Claim | `POST {apiBaseUrl}/api/v1/matches/{externalMatchId}/claim` + `Authorization: Bearer <jwt>` | game uses the token's `seatKey` |
 | Play | WebSocket `GET /api/v1/ws` (or REST `POST /matches/:ref/move`) | game-internal transport |
 
-**Assignment seat shape:** `{ seatKey, lobbyUserId, displayName?, team?, role? }`.
+**Lobby block:** `returnUrl` sends players back to the Lobby UI after a match; `graphqlUrl` is the Lobby API for `player` lookup and future match-result mutations (same `LOBBY_GAME_SERVICE_TOKEN` as provision).
 
-**Token claims:** `sub`=lobby user id, `matchId`=`externalMatchId`, `seatKey`,
-`name`? (claim names not yet frozen — coordinate before changing).
+**Assignment seat shape:** `{ seatKey, lobbyUserId, team?, role? }`. Resolve display names via `player(id)` at `lobby.graphqlUrl`.
+
+**Token claims:** `iss`=`LobbyIssuer()`, `aud`=game `api_base_url`, `sub`=lobby user id, `jti`=unique token id, `matchId`=`externalMatchId`, `seatKey`, optional `name`, `nbf`/`iat`/`exp`. Games should reject tokens whose `iss` does not match provision `lobbyId` or whose `aud` does not match their API base URL.
 
 **Status codes:** `200/201` ok · `400` bad input/illegal move · `401` bad/missing
 token · `403` **banned** (`bannedLobbyUserIds[]`) **or** seat-reservation violation

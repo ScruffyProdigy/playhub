@@ -49,15 +49,15 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 export const mockDemoGames = [
   {
     id: 'game-1',
-    name: 'Quick Match',
+    name: 'Rock Paper Scissors Lizard Spock',
     createdAt: '2026-01-01T00:00:00Z',
     activeSessions: [{ id: 'session-1' }],
-  },
-  {
-    id: 'game-2',
-    name: 'Party Lobby',
-    createdAt: '2026-01-02T00:00:00Z',
-    activeSessions: [],
+    modes: [
+      {
+        modeKey: 'duel',
+        queues: [{ id: 'queue-1', name: 'Default', playersToStart: 2, status: 'active' }],
+      },
+    ],
   },
 ]
 
@@ -85,8 +85,8 @@ function createFetchMock(handlers) {
       data = { games: handlers.games ?? [] }
     } else if (query.includes('me {') || query.includes('query Me')) {
       data = { me: handlers.me ?? null }
-    } else if (query.includes('joinGame')) {
-      data = { joinGame: handlers.joinGame ?? { queued: true, queuedCount: 1 } }
+    } else if (query.includes('joinQueue')) {
+      data = { joinQueue: handlers.joinQueue ?? { queued: true, queuedCount: 1 } }
     } else if (query.includes('leaveQueue')) {
       data = { leaveQueue: true }
     } else {

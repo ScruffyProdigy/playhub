@@ -7,6 +7,7 @@ import * as games from '../../lib/games'
 
 vi.mock('../../lib/games', () => ({
   fetchGames: vi.fn(),
+  defaultQueueForGame: vi.fn((game) => game?.modes?.[0]?.queues?.[0] ?? null),
 }))
 
 function renderGameLobby() {
@@ -23,15 +24,15 @@ describe('GameLobby', () => {
     vi.mocked(games.fetchGames).mockResolvedValue([
       {
         id: 'game-1',
-        name: 'Quick Match',
+        name: 'Rock Paper Scissors Lizard Spock',
         createdAt: '2026-01-01T00:00:00Z',
         activeSessions: [{ id: 'session-1' }],
-      },
-      {
-        id: 'game-2',
-        name: 'Party Lobby',
-        createdAt: '2026-01-02T00:00:00Z',
-        activeSessions: [],
+        modes: [
+          {
+            modeKey: 'duel',
+            queues: [{ id: 'queue-1', name: 'Default', status: 'active' }],
+          },
+        ],
       },
     ])
   })
@@ -46,15 +47,13 @@ describe('GameLobby', () => {
     expect(games.fetchGames).not.toHaveBeenCalled()
   })
 
-  it('loads and shows available games for signed-in users', async () => {
+  it('loads and shows catalog games for signed-in users', async () => {
     mockAuthenticatedSession()
     renderGameLobby()
 
     expect(await screen.findByRole('heading', { name: 'Available games' })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Quick Match' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Party Lobby' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Rock Paper Scissors Lizard Spock' })).toBeInTheDocument()
     expect(screen.getByText('1 active session')).toBeInTheDocument()
-    expect(screen.getByText('0 active sessions')).toBeInTheDocument()
     expect(games.fetchGames).toHaveBeenCalledTimes(1)
   })
 

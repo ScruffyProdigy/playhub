@@ -8,14 +8,32 @@ import (
 	"github.com/google/uuid"
 )
 
-func scanSession(row interface{ Scan(dest ...any) error }) (*Session, error) {
+func scanSessionRow(row interface{ Scan(dest ...any) error }) (*Session, error) {
 	var session Session
 	var endedAt sql.NullTime
-	if err := row.Scan(&session.ID, &session.GameID, &session.Status, &session.StartedAt, &endedAt); err != nil {
+	var modeID, modeQueueID sql.NullString
+	if err := row.Scan(
+		&session.ID, &session.GameID, &modeID, &modeQueueID,
+		&session.Status, &session.StartedAt, &endedAt,
+	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, err
+	}
+	if modeID.Valid {
+		id, err := uuid.Parse(modeID.String)
+		if err != nil {
+			return nil, err
+		}
+		session.ModeID = &id
+	}
+	if modeQueueID.Valid {
+		id, err := uuid.Parse(modeQueueID.String)
+		if err != nil {
+			return nil, err
+		}
+		session.ModeQueueID = &id
 	}
 	if endedAt.Valid {
 		t := endedAt.Time
@@ -24,7 +42,7 @@ func scanSession(row interface{ Scan(dest ...any) error }) (*Session, error) {
 	return &session, nil
 }
 
-const sessionColumns = `id, game_id, status, started_at, ended_at`
+const sessionColumns = `id, game_id, mode_id, mode_queue_id, status, started_at, ended_at`
 
 func (s *Store) GetSessionByID(ctx context.Context, id uuid.UUID) (*Session, error) {
 	row := s.db.QueryRowContext(ctx, `
@@ -32,7 +50,7 @@ func (s *Store) GetSessionByID(ctx context.Context, id uuid.UUID) (*Session, err
 		FROM game_sessions
 		WHERE id = $1
 	`, id)
-	return scanSession(row)
+	return scanSessionRow(row)
 }
 
 func (s *Store) ListActiveSessionsByGame(ctx context.Context, gameID uuid.UUID, limit int) ([]Session, error) {
@@ -54,16 +72,11 @@ func (s *Store) ListActiveSessionsByGame(ctx context.Context, gameID uuid.UUID, 
 
 	var sessions []Session
 	for rows.Next() {
-		var session Session
-		var endedAt sql.NullTime
-		if err := rows.Scan(&session.ID, &session.GameID, &session.Status, &session.StartedAt, &endedAt); err != nil {
+		session, err := scanSessionRow(rows)
+		if err != nil {
 			return nil, err
 		}
-		if endedAt.Valid {
-			t := endedAt.Time
-			session.EndedAt = &t
-		}
-		sessions = append(sessions, session)
+		sessions = append(sessions, *session)
 	}
 	return sessions, rows.Err()
 }
@@ -74,7 +87,7 @@ func (s *Store) CreateSession(ctx context.Context, gameID uuid.UUID) (*Session, 
 		VALUES ($1, 'active')
 		RETURNING `+sessionColumns+`
 	`, gameID)
-	return scanSession(row)
+	return scanSessionRow(row)
 }
 
 func (s *Store) AddSessionParticipant(ctx context.Context, sessionID, userID uuid.UUID, role string) error {
@@ -86,11 +99,10 @@ func (s *Store) AddSessionParticipant(ctx context.Context, sessionID, userID uui
 	return err
 }
 
-// GetMatchedSessionForUserAndGame returns an active session only when the user has a
-// matched queue entry for the game (used to recover after a missed queue notification).
-func (s *Store) GetMatchedSessionForUserAndGame(ctx context.Context, gameID, userID uuid.UUID) (*Session, error) {
+// GetMatchedSessionForUserAndModeQueue returns an active session for a matched mode-queue row.
+func (s *Store) GetMatchedSessionForUserAndModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID) (*Session, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT gs.id, gs.game_id, gs.status, gs.started_at, gs.ended_at
+		SELECT gs.id, gs.game_id, gs.mode_id, gs.mode_queue_id, gs.status, gs.started_at, gs.ended_at
 		FROM game_queues q
 		INNER JOIN game_session_participants p
 			ON p.user_id = q.user_id AND p.left_at IS NULL
@@ -98,13 +110,13 @@ func (s *Store) GetMatchedSessionForUserAndGame(ctx context.Context, gameID, use
 			ON gs.id = p.session_id
 			AND gs.game_id = q.game_id
 			AND gs.status = 'active'
-		WHERE q.game_id = $1
+		WHERE q.mode_queue_id = $1
 		  AND q.user_id = $2
 		  AND q.status = 'matched'
 		ORDER BY q.matched_at DESC NULLS LAST, q.joined_at DESC
 		LIMIT 1
-	`, gameID, userID)
-	return scanSession(row)
+	`, modeQueueID, userID)
+	return scanSessionRow(row)
 }
 
 func (s *Store) ListSessionParticipants(ctx context.Context, sessionID uuid.UUID) ([]User, error) {

@@ -1,10 +1,10 @@
-# PlayHub Environment Configuration
+# JoinQuest Environment Configuration
 
-This document explains how environment configuration works in PlayHub, particularly for the frontend application across different deployment environments.
+This document explains how environment configuration works in JoinQuest, particularly for the frontend application across different deployment environments.
 
 ## Overview
 
-PlayHub uses a Docker-based approach to inject environment variables into the frontend application at runtime. This allows the same Docker image to be deployed to different environments (local, staging, production) with different configurations.
+JoinQuest uses a Docker-based approach to inject environment variables into the frontend application at runtime. This allows the same Docker image to be deployed to different environments (local, staging, production) with different configurations.
 
 ## How It Works
 
@@ -54,18 +54,38 @@ metadata:
   labels: { env: local }
 data:
   REACT_APP_ENV: local
-  REACT_APP_API_BASE_URL: "http://localhost:8081"
+  REACT_APP_API_BASE_URL: "http://localhost:8080"
 ```
 
-**Deployment**: `./deploy-local.sh`
+**Deployment**: `./scripts/dev.sh` for local development, or `./deploy-local.sh` for minikube.
 
-- Uses `minikube` context
-- Backend accessible via port-forward on `localhost:8081`
-- Frontend accessible via port-forward on `localhost:8080`
+- Backend GraphQL: `http://localhost:8080/graphql`
+- Frontend: `http://localhost:5173`
 
-### Staging
+### Production (joinquest.cc)
 
-**File**: `k8s/env/staging.yaml`
+**File**: `k8s/env/joinquest.yaml`
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lobby-frontend-config
+  namespace: joinquest
+data:
+  REACT_APP_ENV: production
+  REACT_APP_API_BASE_URL: "https://joinquest.cc"
+```
+
+**Deployment**: `./scripts/deploy-joinquest.sh`
+
+- Namespace: `joinquest`
+- Public URL: `https://joinquest.cc`
+- GraphQL: `https://joinquest.cc/graphql`
+
+### Staging (legacy template)
+
+**File**: `k8s/env/staging.yaml` — example ConfigMap; URLs may differ per cluster.
 
 ```yaml
 apiVersion: v1
@@ -76,19 +96,14 @@ metadata:
   labels: { env: staging }
 data:
   REACT_APP_ENV: staging
-  REACT_APP_API_BASE_URL: "https://api-staging.playhub.com"
+  REACT_APP_API_BASE_URL: "https://staging.example.com"
 ```
 
-**Deployment**: `./deploy-staging.sh`
+**Deployment**: `./deploy-staging.sh` (legacy script)
 
-- Uses `staging-cluster` context
-- 2 replicas for high availability
-- Uses `staging` tagged Docker images
-- Higher resource limits
+### Production (legacy template)
 
-### Production
-
-**File**: `k8s/env/production.yaml`
+**File**: `k8s/env/production.yaml` — example ConfigMap; use `joinquest.yaml` for the live JoinQuest deployment.
 
 ```yaml
 apiVersion: v1
@@ -99,16 +114,10 @@ metadata:
   labels: { env: production }
 data:
   REACT_APP_ENV: production
-  REACT_APP_API_BASE_URL: "https://api.playhub.com"
+  REACT_APP_API_BASE_URL: "https://joinquest.cc"
 ```
 
-**Deployment**: `./deploy-production.sh`
-
-- Uses `production-cluster` context
-- 3 replicas for high availability
-- Uses `production` tagged Docker images
-- Highest resource limits
-- Longer health check delays
+**Deployment**: `./deploy-production.sh` (legacy script; prefer `./scripts/deploy-joinquest.sh`)
 
 ## Deployment Scripts
 

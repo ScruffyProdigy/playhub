@@ -163,18 +163,23 @@ func TestAuthGraphQLFlow(t *testing.T) {
 
 	var meResp struct {
 		Me *struct {
-			Email *string `json:"email"`
+			Email   *string `json:"email"`
+			IsAdmin bool    `json:"isAdmin"`
 		} `json:"me"`
 	}
 	if err := c.Post(`query {
 		me {
 			email
+			isAdmin
 		}
 	}`, &meResp, sessionCookieOptions(sessionCookies)...); err != nil {
 		t.Fatalf("me query failed: %v", err)
 	}
 	if meResp.Me == nil || meResp.Me.Email == nil || *meResp.Me.Email != email {
 		t.Fatalf("expected authenticated me for %q, got %+v", email, meResp.Me)
+	}
+	if meResp.Me.IsAdmin {
+		t.Fatalf("expected test user %q not to be admin", email)
 	}
 
 	var logoutResp struct {

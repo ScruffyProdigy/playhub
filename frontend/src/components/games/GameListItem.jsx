@@ -1,9 +1,11 @@
+import { defaultQueueForGame } from '../../lib/games'
 import GameListItemInfo from './GameListItemInfo'
 import GameQueueActions from './GameQueueActions'
 import { useGameQueue } from './useGameQueue'
 
 export default function GameListItem({ game }) {
-  const queue = useGameQueue(game.id)
+  const defaultQueue = defaultQueueForGame(game)
+  const queue = useGameQueue(defaultQueue?.id)
 
   return (
     <li className="game-list-item">
@@ -19,6 +21,7 @@ export default function GameListItem({ game }) {
         busy={queue.busy}
         onJoin={queue.handleJoin}
         onLeave={queue.handleLeave}
+        disabled={!defaultQueue}
       />
     </li>
   )

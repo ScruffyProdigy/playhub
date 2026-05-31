@@ -6,7 +6,7 @@ JoinQuest is a gaming lobby platform that connects players to games and enables 
 
 ### ✅ Implemented
 - **Environment Configuration**: Docker-based runtime environment injection
-- **GraphQL API**: Complete GraphQL schema with mock resolvers
+- **GraphQL API**: Catalog matchmaking, auth, digital goods, game handoff
 - **Frontend Foundation**: React application with testing infrastructure
 - **Kubernetes Deployment**: Multi-environment deployment scripts
 - **Testing Suite**: Comprehensive unit, integration, and E2E tests
@@ -16,14 +16,9 @@ JoinQuest is a gaming lobby platform that connects players to games and enables 
 - **Linting & Code Quality**: ESLint configuration with proper test environment setup
 
 ### 🚧 In Development
-- **Magic Link Authentication**: Email-based authentication system
-- **Game Management**: CRUD operations for games
-- **Queue System**: Player queuing and matchmaking
+- **Digital trading**: Player-facing purchase and trade flows
 
 ### 📋 Planned
-- **Game Integration**: Connection to 3rd party games
-- **Digital Trading**: Currency and digital goods trading system
-- **Real-time Updates**: WebSocket subscriptions for live updates
 - **Payment Processing**: Integration with payment providers
 - **Analytics Dashboard**: Usage and performance metrics
 
@@ -128,12 +123,16 @@ See [Environment Configuration](docs/environment-configuration.md) for detailed 
 
 ## Documentation
 
-- **[Development Guide](docs/development.md)** - Setup and development workflow
-- **[Architecture Overview](docs/architecture.md)** - System design and components
-- **[API Documentation](docs/api.md)** - GraphQL API reference
-- **[Testing Guide](docs/testing.md)** - Testing strategies and running tests
-- **[Environment Configuration](docs/environment-configuration.md)** - Environment setup for different deployments
-- **[Contributing Guide](docs/contributing.md)** - How to contribute to the project
+- **[Development Guide](docs/development.md)** — Setup and development workflow
+- **[Architecture Overview](docs/architecture.md)** — System design and components
+- **[Game Catalog Architecture](docs/game-catalog-architecture.md)** — Modes, queues, manifest sync
+- **[Lobby ↔ Game Handoff](docs/lobby-protocol-handoff.md)** — Provision, JWT, integration protocol
+- **[API Documentation](docs/api.md)** — GraphQL API reference
+- **[Testing Guide](docs/testing.md)** — Testing strategies and running tests
+- **[Database Migrations](docs/database-migrations.md)** — Schema migrations
+- **[Pub/Sub](docs/pubsub.md)** — Redis queue notifications
+- **[Environment Configuration](docs/environment-configuration.md)** — Deployment environment setup
+- **[Contributing Guide](docs/contributing.md)** — How to contribute
 
 ## Contributing
 

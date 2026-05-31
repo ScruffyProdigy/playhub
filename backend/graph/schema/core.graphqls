@@ -10,18 +10,19 @@ type Query {
   session(id: ID!): Session
   goods(gameId: ID): [DigitalGood!]!   # list goods globally or by game
   myInventory(gameId: ID): [Entitlement!]!
-  myQueueStatus(gameId: ID!): JoinResult!
+  myQueueStatus(queueId: ID!): JoinResult!
+  # Game servers resolve lobbyUserId → display name (requires LOBBY_GAME_SERVICE_TOKEN when configured).
+  player(id: ID!): PublicPlayer
 }
 
 type Subscription {
-  queueUpdated(gameId: ID!): QueueUpdate!
+  queueUpdated(queueId: ID!): QueueUpdate!
 }
 
 type Mutation {
   # Games & sessions
-  createGame(input: CreateGameInput!): Game!
-  joinGame(gameId: ID!): JoinResult!
-  leaveQueue(gameId: ID!): Boolean!
+  joinQueue(queueId: ID!): JoinResult!
+  leaveQueue(queueId: ID!): Boolean!
 
   # Digital goods (simple entitlement grant)
   grantGood(userId: ID!, goodId: ID!, quantity: Int = 1): Boolean!

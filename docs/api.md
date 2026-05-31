@@ -1,38 +1,34 @@
 # API Documentation
 
-This document describes the GraphQL API for PlayHub.
+This document describes the GraphQL API for JoinQuest.
 
 ## Implementation Status
 
 ### ✅ Implemented
-- **System Queries**: `version`, `healthz` - Basic system information
-- **GraphQL Schema**: Complete schema definition with all types
-- **Mock Resolvers**: All resolvers return mock data for testing
+- **Authentication**: Magic-link sign-in, session cookies, JWT seat tokens
+- **Catalog & matchmaking**: `registerGame`, mode queues, `joinQueue(queueId)`, handoff to game servers
+- **Database-backed queries**: `games`, `game`, `session`, `goods`, `myInventory`, `player` (game service)
+- **Real-time**: `queueUpdated` subscription via Redis pub/sub
+- **System**: `version`, `healthz`
 
 ### 🚧 In Development
-- **Authentication**: JWT-based authentication system
-- **Database Integration**: Real data persistence
-- **Business Logic**: Actual game management and queuing
+- **Player-facing goods**: purchase/trade flows
+- **Rate limiting**
 
 ### 📋 Planned
-- **Real-time Subscriptions**: WebSocket support for live updates
-- **File Uploads**: Support for game assets and user avatars
-- **Rate Limiting**: API rate limiting and throttling
+- **File uploads**: game assets and user avatars
+- **Match result reporting** via GraphQL (`reportMatchResult`)
 
 ## Base URL
 
-- **Development**: `http://localhost:8080/query`
-- **Production**: `https://api.playhub.com/query`
+- **Development**: `http://localhost:8080/graphql`
+- **Production**: `https://joinquest.cc/graphql`
 
 ## Authentication
 
-> **Note**: Authentication is currently in development. The API currently accepts requests without authentication for testing purposes.
+JoinQuest uses session cookies for browser clients (set by `completeSignInWithLink` / `completeSignInWithCode`). Include the cookie on GraphQL requests, or use `Authorization: Bearer <jwt>` where applicable.
 
-PlayHub will use JWT-based authentication. Include the token in the Authorization header:
-
-```
-Authorization: Bearer <your-jwt-token>
-```
+Game servers call `player(id:)` with `Authorization: Bearer <LOBBY_GAME_SERVICE_TOKEN>` when that env var is configured.
 
 ## Queries
 
@@ -76,8 +72,8 @@ query {
 
 ### User Queries
 
-#### `me` 🚧
-Get current user information. *Returns mock data - authentication in development*
+#### `me` ✅
+Get the signed-in user (null when unauthenticated).
 
 ```graphql
 query {
@@ -106,196 +102,150 @@ query {
 
 ### Game Queries
 
-#### `games` 🚧
-List available games with pagination. *Returns mock data - database integration in development*
+#### `games` ✅
+List catalog games (games with at least one active mode queue).
 
 ```graphql
 query {
   games(limit: 10, offset: 0) {
     id
     name
-    description
-    maxPlayers
-    status
+    createdAt
   }
 }
 ```
 
-**Response:**
-```json
-{
-  "data": {
-    "games": [
-      {
-        "id": "game-1",
-        "name": "Example Game",
-        "description": "A fun example game",
-        "maxPlayers": 4,
-        "status": "ACTIVE"
-      }
-    ]
-  }
-}
-```
-
-#### `game` 🚧
-Get a specific game by ID. *Returns mock data - database integration in development*
+#### `game` ✅
+Get a game by ID.
 
 ```graphql
 query {
-  game(id: "game-1") {
+  game(id: "a1000000-0000-4000-8000-000000000001") {
     id
     name
-    description
-    maxPlayers
-    status
-    currentPlayers
+    slug
+    modes {
+      modeKey
+      queues {
+        id
+        name
+        waitingCount
+      }
+    }
   }
 }
 ```
 
 ### Session Queries
 
-#### `session`
-Get session information.
+#### `session` ✅
+Get a match session by ID.
 
 ```graphql
 query {
-  session(id: "session-123") {
+  session(id: "00000000-0000-4000-8000-000000000001") {
     id
-    gameId
-    userId
     status
-    joinedAt
+    createdAt
+    game {
+      id
+      name
+    }
+    players {
+      id
+      displayName
+    }
   }
 }
 ```
 
 ### Digital Goods Queries
 
-#### `goods`
+#### `goods` ✅
 List digital goods, optionally filtered by game.
 
 ```graphql
 query {
-  goods(gameId: "game-1") {
+  goods(gameId: "a1000000-0000-4000-8000-000000000001") {
     id
+    code
     name
     description
-    price
-    gameId
-    type
   }
 }
 ```
 
-#### `myInventory`
-Get user's digital goods inventory.
+#### `myInventory` ✅
+Get the signed-in user's inventory (requires authentication).
 
 ```graphql
 query {
-  myInventory(gameId: "game-1") {
-    id
-    goodId
-    userId
-    gameId
-    acquiredAt
-    status
+  myInventory {
+    good {
+      id
+      code
+      name
+    }
+    quantity
+    grantedAt
   }
 }
 ```
 
 ## Mutations
 
-> **Note**: All mutations currently return mock data. Real database integration is in development.
+### Catalog (admin)
 
-### Game Management
-
-#### `createGame` 🚧
-Create a new game. *Returns mock data - database integration in development*
+#### `registerGame` ✅
+Register a game from its seat manifest (`playUrl` + `apiBaseUrl`). Requires admin (`LOBBY_ADMIN_EMAILS`).
 
 ```graphql
 mutation {
-  createGame(input: {
-    name: "New Game"
-    description: "A new game to play"
-    maxPlayers: 4
+  registerGame(input: {
+    slug: "my-game"
+    playUrl: "http://localhost:5174"
+    apiBaseUrl: "http://localhost:3001"
+    name: "My Game"
   }) {
-    id
-    name
-    description
-    maxPlayers
-    status
+    game { id slug }
+    webhookSecret
   }
 }
 ```
 
 ### Queue Management
 
-#### `joinQueue` 🚧
-Join a game queue. *Returns mock data - queue system in development*
+#### `joinQueue` ✅
+Join a **mode queue** by `queueId` (from `game.modes.queues`). Requires authentication.
 
 ```graphql
 mutation {
-  joinQueue(gameId: "game-1") {
-    id
-    gameId
-    userId
-    status
-    joinedAt
+  joinQueue(queueId: "a3000000-0000-4000-8000-000000000001") {
+    queued
+    sessionId
+    joinUrl
+    queuedCount
   }
 }
 ```
 
-#### `leaveQueue`
-Leave a game queue.
+#### `leaveQueue` ✅
+Leave a mode queue.
 
 ```graphql
 mutation {
-  leaveQueue(sessionId: "session-123")
+  leaveQueue(queueId: "a3000000-0000-4000-8000-000000000001")
 }
 ```
 
-### Trading
+### Digital goods (admin)
 
-#### `purchaseGood`
-Purchase a digital good.
-
-```graphql
-mutation {
-  purchaseGood(input: {
-    goodId: "good-1"
-    gameId: "game-1"
-  }) {
-    id
-    goodId
-    userId
-    gameId
-    acquiredAt
-    status
-  }
-}
-```
-
-#### `tradeGood`
-Trade a digital good with another user.
+#### `grantGood` / `revokeGood` ✅
+Grant or revoke inventory for a user. Requires admin.
 
 ```graphql
 mutation {
-  tradeGood(input: {
-    goodId: "good-1"
-    fromUserId: "user-1"
-    toUserId: "user-2"
-    gameId: "game-1"
-  }) {
-    id
-    goodId
-    fromUserId
-    toUserId
-    gameId
-    tradedAt
-    status
-  }
+  grantGood(userId: "...", goodId: "...", quantity: 1)
 }
 ```
 
@@ -321,97 +271,73 @@ GraphQL returns errors in a standardized format:
 }
 ```
 
-### Common Error Codes
+### Common errors
 
-- `GAME_NOT_FOUND`: The specified game doesn't exist
-- `SESSION_NOT_FOUND`: The specified session doesn't exist
-- `UNAUTHORIZED`: Authentication required
-- `FORBIDDEN`: Insufficient permissions
-- `VALIDATION_ERROR`: Input validation failed
-- `RATE_LIMITED`: Too many requests
+GraphQL errors use plain `message` strings from resolvers, for example:
+
+- `authentication required`
+- `game not found`
+- `database store is not configured`
 
 ## Rate Limiting
 
-API requests are rate limited to prevent abuse:
-
-- **Authenticated users**: 1000 requests per hour
-- **Unauthenticated users**: 100 requests per hour
-
-Rate limit headers are included in responses:
-
-```
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 999
-X-RateLimit-Reset: 1640995200
-```
+Not implemented yet. See **Planned** in Implementation Status above.
 
 ## Examples
 
-### Complete User Workflow
+### Matchmaking workflow
 
-1. **Get user info**
-```graphql
-query {
-  me {
-    id
-    displayName
-  }
-}
-```
+1. **Sign in** (magic link or code) via `requestSignIn` / `completeSignInWithCode`.
 
-2. **Browse games**
+2. **Browse catalog games**
 ```graphql
 query {
   games(limit: 5) {
     id
     name
-    description
-    maxPlayers
+    modes {
+      modeKey
+      queues {
+        id
+        name
+        waitingCount
+      }
+    }
   }
 }
 ```
 
-3. **Join a game queue**
+3. **Join a mode queue** (use a `queueId` from step 2)
 ```graphql
 mutation {
-  joinQueue(gameId: "game-1") {
-    id
-    status
+  joinQueue(queueId: "a3000000-0000-4000-8000-000000000001") {
+    queued
+    sessionId
+    joinUrl
+    queuedCount
   }
 }
 ```
 
-4. **Check session status**
+4. **Watch queue updates** (WebSocket subscription; requires auth)
+```graphql
+subscription {
+  queueUpdated(queueId: "a3000000-0000-4000-8000-000000000001") {
+    status
+    sessionId
+    joinUrl
+    queuedCount
+  }
+}
+```
+
+5. **Check session after match**
 ```graphql
 query {
-  session(id: "session-123") {
+  session(id: "00000000-0000-4000-8000-000000000001") {
     id
     status
-    gameId
-  }
-}
-```
-
-5. **Browse digital goods**
-```graphql
-query {
-  goods(gameId: "game-1") {
-    id
-    name
-    price
-  }
-}
-```
-
-6. **Purchase a good**
-```graphql
-mutation {
-  purchaseGood(input: {
-    goodId: "good-1"
-    gameId: "game-1"
-  }) {
-    id
-    status
+    createdAt
   }
 }
 ```

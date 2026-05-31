@@ -4,16 +4,18 @@ import { useGameQueue } from './useGameQueue'
 import * as queue from '../../lib/queue'
 
 vi.mock('../../lib/queue', () => ({
-  joinGame: vi.fn(),
+  joinQueue: vi.fn(),
   fetchMyQueueStatus: vi.fn(),
   leaveQueue: vi.fn(),
   prefetchSubscriptionAuth: vi.fn().mockResolvedValue('Bearer test-token'),
   subscribeToQueue: vi.fn(),
 }))
 
+const queueId = 'queue-1'
+
 describe('useGameQueue', () => {
   beforeEach(() => {
-    vi.mocked(queue.joinGame).mockReset()
+    vi.mocked(queue.joinQueue).mockReset()
     vi.mocked(queue.fetchMyQueueStatus).mockReset()
     vi.mocked(queue.leaveQueue).mockReset()
     vi.mocked(queue.prefetchSubscriptionAuth).mockReset()
@@ -28,20 +30,20 @@ describe('useGameQueue', () => {
       queuedCount: 2,
     })
 
-    const { result } = renderHook(() => useGameQueue('game-1'))
+    const { result } = renderHook(() => useGameQueue(queueId))
 
     await waitFor(() => {
       expect(result.current.queueState).toBe('waiting')
       expect(result.current.queuedCount).toBe(2)
-      expect(queue.subscribeToQueue).toHaveBeenCalledWith('game-1', expect.any(Object))
+      expect(queue.subscribeToQueue).toHaveBeenCalledWith(queueId, expect.any(Object))
     })
   })
 
   it('enters waiting state when join is queued', async () => {
-    vi.mocked(queue.joinGame).mockResolvedValue({ queued: true, queuedCount: 1 })
+    vi.mocked(queue.joinQueue).mockResolvedValue({ queued: true, queuedCount: 1 })
     vi.mocked(queue.fetchMyQueueStatus).mockResolvedValue({ queued: false })
 
-    const { result } = renderHook(() => useGameQueue('game-1'))
+    const { result } = renderHook(() => useGameQueue(queueId))
 
     await act(async () => {
       await result.current.handleJoin()
@@ -49,18 +51,18 @@ describe('useGameQueue', () => {
 
     await waitFor(() => {
       expect(result.current.queueState).toBe('waiting')
-      expect(queue.subscribeToQueue).toHaveBeenCalledWith('game-1', expect.any(Object))
+      expect(queue.joinQueue).toHaveBeenCalledWith(queueId)
     })
   })
 
   it('shows launch when join completes the match (second player)', async () => {
     vi.mocked(queue.fetchMyQueueStatus).mockResolvedValue({ queued: false })
-    vi.mocked(queue.joinGame).mockResolvedValue({
+    vi.mocked(queue.joinQueue).mockResolvedValue({
       queued: false,
       joinUrl: 'http://localhost:5174/?match=s2&token=eyJ.test',
     })
 
-    const { result } = renderHook(() => useGameQueue('game-1'))
+    const { result } = renderHook(() => useGameQueue(queueId))
 
     await act(async () => {
       await result.current.handleJoin()
@@ -72,14 +74,14 @@ describe('useGameQueue', () => {
 
   it('shows launch when subscription delivers a match', async () => {
     vi.mocked(queue.fetchMyQueueStatus).mockResolvedValue({ queued: false })
-    vi.mocked(queue.joinGame).mockResolvedValue({ queued: true, queuedCount: 1 })
+    vi.mocked(queue.joinQueue).mockResolvedValue({ queued: true, queuedCount: 1 })
     let onUpdate
-    vi.mocked(queue.subscribeToQueue).mockImplementation(async (_gameId, handlers) => {
+    vi.mocked(queue.subscribeToQueue).mockImplementation(async (_id, handlers) => {
       onUpdate = handlers.onUpdate
       return () => {}
     })
 
-    const { result } = renderHook(() => useGameQueue('game-1'))
+    const { result } = renderHook(() => useGameQueue(queueId))
 
     await act(async () => {
       await result.current.handleJoin()
@@ -103,14 +105,14 @@ describe('useGameQueue', () => {
 
   it('reports subscription errors', async () => {
     vi.mocked(queue.fetchMyQueueStatus).mockResolvedValue({ queued: false })
-    vi.mocked(queue.joinGame).mockResolvedValue({ queued: true, queuedCount: 1 })
+    vi.mocked(queue.joinQueue).mockResolvedValue({ queued: true, queuedCount: 1 })
     let onError
-    vi.mocked(queue.subscribeToQueue).mockImplementation(async (_gameId, handlers) => {
+    vi.mocked(queue.subscribeToQueue).mockImplementation(async (_id, handlers) => {
       onError = handlers.onError
       return () => {}
     })
 
-    const { result } = renderHook(() => useGameQueue('game-1'))
+    const { result } = renderHook(() => useGameQueue(queueId))
 
     await act(async () => {
       await result.current.handleJoin()

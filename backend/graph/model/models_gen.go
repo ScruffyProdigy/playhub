@@ -10,10 +10,6 @@ import (
 	"time"
 )
 
-type CreateGameInput struct {
-	Name string `json:"name"`
-}
-
 type DigitalGood struct {
 	ID          string  `json:"id"`
 	Code        string  `json:"code"`
@@ -29,10 +25,35 @@ type Entitlement struct {
 }
 
 type Game struct {
-	ID             string     `json:"id"`
-	Name           string     `json:"name"`
-	CreatedAt      time.Time  `json:"createdAt"`
-	ActiveSessions []*Session `json:"activeSessions"`
+	ID               string      `json:"id"`
+	Name             string      `json:"name"`
+	CreatedAt        time.Time   `json:"createdAt"`
+	ActiveSessions   []*Session  `json:"activeSessions"`
+	Slug             *string     `json:"slug,omitempty"`
+	PlayURL          *string     `json:"playUrl,omitempty"`
+	APIBaseURL       *string     `json:"apiBaseUrl,omitempty"`
+	ManifestSyncedAt *time.Time  `json:"manifestSyncedAt,omitempty"`
+	ManifestHash     *string     `json:"manifestHash,omitempty"`
+	GameVersion      *string     `json:"gameVersion,omitempty"`
+	Modes            []*GameMode `json:"modes"`
+}
+
+type GameMode struct {
+	ID          string          `json:"id"`
+	ModeKey     string          `json:"modeKey"`
+	DisplayName string          `json:"displayName"`
+	MinPlayers  int             `json:"minPlayers"`
+	MaxPlayers  int             `json:"maxPlayers"`
+	Status      string          `json:"status"`
+	Seats       []*GameModeSeat `json:"seats"`
+	Queues      []*ModeQueue    `json:"queues"`
+}
+
+type GameModeSeat struct {
+	SeatKey   string  `json:"seatKey"`
+	Team      *string `json:"team,omitempty"`
+	Role      *string `json:"role,omitempty"`
+	SortOrder int     `json:"sortOrder"`
 }
 
 type JoinResult struct {
@@ -42,7 +63,20 @@ type JoinResult struct {
 	QueuedCount *int    `json:"queuedCount,omitempty"`
 }
 
+type ModeQueue struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	PlayersToStart int    `json:"playersToStart"`
+	Status         string `json:"status"`
+	WaitingCount   int    `json:"waitingCount"`
+}
+
 type Mutation struct {
+}
+
+type PublicPlayer struct {
+	ID          string  `json:"id"`
+	DisplayName *string `json:"displayName,omitempty"`
 }
 
 type Query struct {
@@ -50,10 +84,25 @@ type Query struct {
 
 type QueueUpdate struct {
 	GameID      string      `json:"gameId"`
+	QueueID     string      `json:"queueId"`
 	Status      QueueStatus `json:"status"`
 	SessionID   *string     `json:"sessionId,omitempty"`
 	JoinURL     *string     `json:"joinUrl,omitempty"`
 	QueuedCount int         `json:"queuedCount"`
+	Message     *string     `json:"message,omitempty"`
+}
+
+type RegisterGameInput struct {
+	Slug        string  `json:"slug"`
+	PlayURL     string  `json:"playUrl"`
+	APIBaseURL  string  `json:"apiBaseUrl"`
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
+}
+
+type RegisterGamePayload struct {
+	Game          *Game  `json:"game"`
+	WebhookSecret string `json:"webhookSecret"`
 }
 
 type Session struct {
@@ -72,6 +121,7 @@ type User struct {
 	Email       *string   `json:"email,omitempty"`
 	DisplayName *string   `json:"displayName,omitempty"`
 	CreatedAt   time.Time `json:"createdAt"`
+	IsAdmin     bool      `json:"isAdmin"`
 }
 
 type QueueStatus string

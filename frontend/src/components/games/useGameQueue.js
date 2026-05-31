@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   fetchMyQueueStatus,
-  joinGame,
+  joinQueue,
   leaveQueue,
   prefetchSubscriptionAuth,
   subscribeToQueue,
 } from '../../lib/queue'
 
-/** Apply joinGame mutation result (waiting or matched for the player who triggered the match). */
+/** Apply join mutation result (waiting or matched for the player who triggered the match). */
 function applyJoinResponse(result, handlers) {
   if (result?.joinUrl) {
     return applyQueueUpdate(
@@ -41,7 +41,11 @@ function applyQueueUpdate(update, { setQueueState, setJoinUrl, setQueuedCount, s
     setQueueState('idle')
     setJoinUrl('')
     setQueuedCount(0)
-    setError('')
+    if (update.message) {
+      setError(update.message)
+    } else {
+      setError('')
+    }
     return false
   }
   return false
@@ -71,7 +75,7 @@ function applyMyQueueStatus(result, handlers) {
   )
 }
 
-export function useGameQueue(gameId) {
+export function useGameQueue(queueId) {
   const [queueState, setQueueState] = useState('idle')
   const [joinUrl, setJoinUrl] = useState('')
   const [queuedCount, setQueuedCount] = useState(0)
@@ -98,7 +102,7 @@ export function useGameQueue(gameId) {
   )
 
   const ensureSubscribed = useCallback(async () => {
-    if (unsubscribeRef.current) {
+    if (!queueId || unsubscribeRef.current) {
       return
     }
 
@@ -118,7 +122,7 @@ export function useGameQueue(gameId) {
     }
 
     try {
-      const unsubscribe = await subscribeToQueue(gameId, {
+      const unsubscribe = await subscribeToQueue(queueId, {
         onUpdate: (update) => {
           applyUpdate(update)
         },
@@ -138,12 +142,14 @@ export function useGameQueue(gameId) {
         setError(err.message || 'Queue updates unavailable')
       }
     }
-  }, [gameId, applyUpdate])
+  }, [queueId, applyUpdate])
 
-  // Cross-tab sync: subscribe on mount and hydrate from server state.
   useEffect(() => {
-    let cancelled = false
+    if (!queueId) {
+      return undefined
+    }
 
+    let cancelled = false
     const syncGen = ++syncGenerationRef.current
 
     async function syncFromServer() {
@@ -156,7 +162,7 @@ export function useGameQueue(gameId) {
         if (cancelled || syncGen !== syncGenerationRef.current) {
           return
         }
-        const status = await fetchMyQueueStatus(gameId)
+        const status = await fetchMyQueueStatus(queueId)
         if (cancelled || syncGen !== syncGenerationRef.current) {
           return
         }
@@ -176,7 +182,7 @@ export function useGameQueue(gameId) {
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
         const visGen = syncGenerationRef.current
-        void fetchMyQueueStatus(gameId)
+        void fetchMyQueueStatus(queueId)
           .then((result) => {
             if (cancelled || visGen !== syncGenerationRef.current) {
               return
@@ -199,15 +205,19 @@ export function useGameQueue(gameId) {
       document.removeEventListener('visibilitychange', onVisible)
       clearSubscription()
     }
-  }, [gameId, ensureSubscribed, clearSubscription])
+  }, [queueId, ensureSubscribed, clearSubscription])
 
   async function handleJoin() {
+    if (!queueId) {
+      setError('No queue available for this game')
+      return
+    }
     setBusy(true)
     setError('')
     syncGenerationRef.current += 1
     try {
       await ensureSubscribed()
-      const result = await joinGame(gameId)
+      const result = await joinQueue(queueId)
       applyJoinResponse(result, {
         setQueueState,
         setJoinUrl,
@@ -222,11 +232,14 @@ export function useGameQueue(gameId) {
   }
 
   async function handleLeave() {
+    if (!queueId) {
+      return
+    }
     setBusy(true)
     setError('')
     syncGenerationRef.current += 1
     try {
-      await leaveQueue(gameId)
+      await leaveQueue(queueId)
       setQueueState('idle')
       setJoinUrl('')
       setQueuedCount(0)

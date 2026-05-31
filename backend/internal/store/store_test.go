@@ -46,30 +46,24 @@ func TestStoreUserGameFlow(t *testing.T) {
 		t.Fatalf("expected user id %s, got %s", user.ID, found.ID)
 	}
 
-	game, err := st.CreateGame(ctx, "Store Test Game")
+	games, err := st.ListCatalogGames(ctx, 10, 0)
 	if err != nil {
-		t.Fatalf("CreateGame failed: %v", err)
-	}
-	cleaner.TrackGame(game.ID)
-
-	games, err := st.ListGames(ctx, 10, 0)
-	if err != nil {
-		t.Fatalf("ListGames failed: %v", err)
+		t.Fatalf("ListCatalogGames failed: %v", err)
 	}
 	if len(games) == 0 {
-		t.Fatal("expected at least one game")
+		t.Fatal("expected at least one catalog game")
 	}
 
-	entry, err := st.EnqueueGame(ctx, game.ID, user.ID)
+	result, err := st.JoinModeQueue(ctx, DemoDefaultQueueID, user.ID)
 	if err != nil {
-		t.Fatalf("EnqueueGame failed: %v", err)
+		t.Fatalf("JoinModeQueue failed: %v", err)
 	}
-	if entry.Status != "waiting" {
-		t.Fatalf("expected waiting queue status, got %s", entry.Status)
+	if result.Status != QueueStatusWaiting {
+		t.Fatalf("expected waiting queue status, got %s", result.Status)
 	}
 
-	if err := st.LeaveQueue(ctx, game.ID, user.ID); err != nil {
-		t.Fatalf("LeaveQueue failed: %v", err)
+	if _, err := st.LeaveModeQueue(ctx, DemoDefaultQueueID, user.ID); err != nil {
+		t.Fatalf("LeaveModeQueue failed: %v", err)
 	}
 }
 
@@ -129,9 +123,9 @@ func TestStoreInventoryFlow(t *testing.T) {
 	}
 	cleaner.TrackUser(user.ID)
 
-	game, err := st.CreateGame(ctx, "Inventory Game")
+	game, err := st.InsertTestGame(ctx, "Inventory Game")
 	if err != nil {
-		t.Fatalf("CreateGame failed: %v", err)
+		t.Fatalf("InsertTestGame failed: %v", err)
 	}
 	cleaner.TrackGame(game.ID)
 

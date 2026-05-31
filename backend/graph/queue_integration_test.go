@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/gameclient"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
 	"github.com/scruffyprodigy/playhub/internal/testdb"
@@ -24,7 +25,7 @@ import (
 )
 
 const (
-	demoQuickMatchGameID = store.DemoQuickMatchGameIDStr
+	demoDefaultQueueID = store.DemoDefaultQueueIDStr
 	// Must match gqlgen default and frontend graphql-ws client (not graphql-transport-ws).
 	graphqlWSSubprotocol = "graphql-ws"
 )
@@ -102,6 +103,12 @@ func (env *queueIntegrationEnv) rebuildHTTPServer(t *testing.T) {
 
 func (env *queueIntegrationEnv) newCleaner(t *testing.T) *store.TestCleaner {
 	return env.Store.NewTestCleaner(t)
+}
+
+func (env *queueIntegrationEnv) resolverWithProvisioner(t *testing.T, provisioner gameclient.MatchProvisioner) {
+	t.Helper()
+	env.resolver.GameProvisioner = provisioner
+	env.rebuildHTTPServer(t)
 }
 
 func createTestUserSession(t *testing.T, ctx context.Context, env *queueIntegrationEnv, cleaner *store.TestCleaner) (bearer string, cookie *http.Cookie) {
@@ -203,11 +210,11 @@ func connectGraphQLWS(t *testing.T, wsURL, origin, bearer string) *websocket.Con
 	return conn
 }
 
-func subscribeQueueUpdated(t *testing.T, conn *websocket.Conn, gameID string) string {
+func subscribeQueueUpdated(t *testing.T, conn *websocket.Conn, queueID string) string {
 	t.Helper()
 
 	subID := "sub-" + uuid.NewString()
-	query := fmt.Sprintf(`subscription { queueUpdated(gameId: %q) { status joinUrl queuedCount } }`, gameID)
+	query := fmt.Sprintf(`subscription { queueUpdated(queueId: %q) { status joinUrl queuedCount } }`, queueID)
 	if err := writeGraphQLWS(conn, map[string]any{
 		"id":   subID,
 		"type": "start",
@@ -317,38 +324,38 @@ func TestWebSocketRequiresAuthentication(t *testing.T) {
 	}
 }
 
-func TestJoinGameGraphQLAlwaysReturnsQueued(t *testing.T) {
+func TestJoinQueueGraphQLAlwaysReturnsQueued(t *testing.T) {
 	env := newQueueIntegrationEnv(t)
 	cleaner := env.newCleaner(t)
-	clearDemoGameWaitingQueue(t, env.Store)
+	clearDemoQueue(t, env.Store)
 	_, cookie := createTestUserSession(t, context.Background(), env, cleaner)
 
 	var resp struct {
-		JoinGame struct {
+		JoinQueue struct {
 			Queued      bool    `json:"queued"`
 			JoinURL     *string `json:"joinUrl"`
 			SessionID   *string `json:"sessionId"`
 			QueuedCount *int    `json:"queuedCount"`
-		} `json:"joinGame"`
+		} `json:"joinQueue"`
 	}
 	if err := env.Client.Post(`mutation Join($id: ID!) {
-		joinGame(gameId: $id) { queued joinUrl sessionId queuedCount }
-	}`, &resp, client.AddCookie(cookie), client.Var("id", demoQuickMatchGameID)); err != nil {
-		t.Fatalf("joinGame: %v", err)
+		joinQueue(queueId: $id) { queued joinUrl sessionId queuedCount }
+	}`, &resp, client.AddCookie(cookie), client.Var("id", demoDefaultQueueID)); err != nil {
+		t.Fatalf("joinQueue: %v", err)
 	}
-	if !resp.JoinGame.Queued {
-		t.Fatalf("expected queued=true for solo join, got %+v", resp.JoinGame)
+	if !resp.JoinQueue.Queued {
+		t.Fatalf("expected queued=true for solo join, got %+v", resp.JoinQueue)
 	}
-	if resp.JoinGame.JoinURL != nil || resp.JoinGame.SessionID != nil {
-		t.Fatalf("solo join must not return match fields, got %+v", resp.JoinGame)
+	if resp.JoinQueue.JoinURL != nil || resp.JoinQueue.SessionID != nil {
+		t.Fatalf("solo join must not return match fields, got %+v", resp.JoinQueue)
 	}
 }
 
-func TestJoinGameGraphQLReturnsMatchForPlayerWhoCompletesQueue(t *testing.T) {
+func TestJoinQueueGraphQLReturnsMatchForPlayerWhoCompletesQueue(t *testing.T) {
 	env := newQueueIntegrationEnv(t)
 	cleaner := env.newCleaner(t)
 	ctx := context.Background()
-	clearDemoGameWaitingQueue(t, env.Store)
+	clearDemoQueue(t, env.Store)
 
 	provisioner := &syncProvisioner{}
 	env.resolverWithProvisioner(t, provisioner)
@@ -357,51 +364,51 @@ func TestJoinGameGraphQLReturnsMatchForPlayerWhoCompletesQueue(t *testing.T) {
 	_, cookieB := createTestUserSession(t, ctx, env, cleaner)
 
 	joinMutation := `mutation Join($id: ID!) {
-		joinGame(gameId: $id) { queued joinUrl sessionId queuedCount }
+		joinQueue(queueId: $id) { queued joinUrl sessionId queuedCount }
 	}`
-	vars := client.Var("id", demoQuickMatchGameID)
+	vars := client.Var("id", demoDefaultQueueID)
 
 	var waitResp struct {
-		JoinGame struct {
+		JoinQueue struct {
 			Queued      bool    `json:"queued"`
 			JoinURL     *string `json:"joinUrl"`
 			SessionID   *string `json:"sessionId"`
 			QueuedCount *int    `json:"queuedCount"`
-		} `json:"joinGame"`
+		} `json:"joinQueue"`
 	}
 	if err := env.Client.Post(joinMutation, &waitResp, client.AddCookie(cookieA), vars); err != nil {
 		t.Fatalf("join A: %v", err)
 	}
-	if !waitResp.JoinGame.Queued || waitResp.JoinGame.JoinURL != nil {
-		t.Fatalf("expected A waiting only, got %+v", waitResp.JoinGame)
+	if !waitResp.JoinQueue.Queued || waitResp.JoinQueue.JoinURL != nil {
+		t.Fatalf("expected A waiting only, got %+v", waitResp.JoinQueue)
 	}
 
 	var matchResp struct {
-		JoinGame struct {
+		JoinQueue struct {
 			Queued      bool    `json:"queued"`
 			JoinURL     *string `json:"joinUrl"`
 			SessionID   *string `json:"sessionId"`
 			QueuedCount *int    `json:"queuedCount"`
-		} `json:"joinGame"`
+		} `json:"joinQueue"`
 	}
 	if err := env.Client.Post(joinMutation, &matchResp, client.AddCookie(cookieB), vars); err != nil {
 		t.Fatalf("join B: %v", err)
 	}
-	if matchResp.JoinGame.Queued {
-		t.Fatalf("expected B not queued after match, got %+v", matchResp.JoinGame)
+	if matchResp.JoinQueue.Queued {
+		t.Fatalf("expected B not queued after match, got %+v", matchResp.JoinQueue)
 	}
-	if matchResp.JoinGame.JoinURL == nil || *matchResp.JoinGame.JoinURL == "" {
-		t.Fatalf("expected B joinUrl on match, got %+v", matchResp.JoinGame)
+	if matchResp.JoinQueue.JoinURL == nil || *matchResp.JoinQueue.JoinURL == "" {
+		t.Fatalf("expected B joinUrl on match, got %+v", matchResp.JoinQueue)
 	}
 }
 
-func clearDemoGameWaitingQueue(t *testing.T, st *store.Store) {
+func clearDemoQueue(t *testing.T, st *store.Store) {
 	t.Helper()
-	gameID, err := uuid.Parse(demoQuickMatchGameID)
+	queueID, err := uuid.Parse(demoDefaultQueueID)
 	if err != nil {
-		t.Fatalf("parse demo game id: %v", err)
+		t.Fatalf("parse demo queue id: %v", err)
 	}
-	if err := st.ClearWaitingQueueForGame(context.Background(), gameID); err != nil {
+	if err := st.ClearWaitingModeQueue(context.Background(), queueID); err != nil {
 		t.Fatalf("clear waiting queue: %v", err)
 	}
 }
@@ -410,18 +417,18 @@ func TestQueueSubscriptionNotifiesWaitingPlayerOnMatch(t *testing.T) {
 	env := newQueueIntegrationEnv(t)
 	cleaner := env.newCleaner(t)
 	ctx := context.Background()
-	clearDemoGameWaitingQueue(t, env.Store)
+	clearDemoQueue(t, env.Store)
 
 	env.resolverWithProvisioner(t, &syncProvisioner{})
 
 	bearerA, cookieA := createTestUserSession(t, ctx, env, cleaner)
 	_, cookieB := createTestUserSession(t, ctx, env, cleaner)
 
-	joinQuery := `mutation Join($id: ID!) { joinGame(gameId: $id) { queued queuedCount } }`
-	vars := map[string]any{"id": demoQuickMatchGameID}
+	joinQuery := `mutation Join($id: ID!) { joinQueue(queueId: $id) { queued queuedCount } }`
+	vars := map[string]any{"id": demoDefaultQueueID}
 
 	conn := connectGraphQLWS(t, graphQLWSURL(env.Server.URL), "http://localhost:5173", bearerA)
-	subID := subscribeQueueUpdated(t, conn, demoQuickMatchGameID)
+	subID := subscribeQueueUpdated(t, conn, demoDefaultQueueID)
 
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieA)
 

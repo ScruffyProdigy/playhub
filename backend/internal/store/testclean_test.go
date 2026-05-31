@@ -11,9 +11,9 @@ func TestCleanerRemovesCreatedFixtures(t *testing.T) {
 	st := openTestStore(t)
 	ctx := context.Background()
 
-	game, err := st.CreateGame(ctx, "Cleanup Test Game "+uuid.NewString())
+	game, err := st.InsertTestGame(ctx, "Cleanup Test Game "+uuid.NewString())
 	if err != nil {
-		t.Fatalf("CreateGame failed: %v", err)
+		t.Fatalf("InsertTestGame failed: %v", err)
 	}
 
 	user, err := st.CreateUser(ctx, CreateUserParams{

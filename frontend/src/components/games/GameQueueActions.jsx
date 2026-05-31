@@ -4,6 +4,7 @@ export default function GameQueueActions({
   busy,
   onJoin,
   onLeave,
+  disabled = false,
 }) {
   if (queueState === 'matched' && joinUrl) {
     return (
@@ -25,7 +26,7 @@ export default function GameQueueActions({
           Leave queue
         </button>
       ) : (
-        <button type="button" className="game-list-button" onClick={onJoin} disabled={busy}>
+        <button type="button" className="game-list-button" onClick={onJoin} disabled={busy || disabled}>
           {busy ? 'Joining…' : 'Join queue'}
         </button>
       )}

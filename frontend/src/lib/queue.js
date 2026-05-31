@@ -2,9 +2,9 @@ import { createClient } from 'graphql-ws'
 import { getGraphQLWsUrl } from './env'
 import { graphqlRequest } from './graphql'
 
-const JOIN_GAME_MUTATION = `
-  mutation JoinGame($gameId: ID!) {
-    joinGame(gameId: $gameId) {
+const JOIN_QUEUE_MUTATION = `
+  mutation JoinQueue($queueId: ID!) {
+    joinQueue(queueId: $queueId) {
       queued
       queuedCount
       sessionId
@@ -14,8 +14,8 @@ const JOIN_GAME_MUTATION = `
 `
 
 const MY_QUEUE_STATUS_QUERY = `
-  query MyQueueStatus($gameId: ID!) {
-    myQueueStatus(gameId: $gameId) {
+  query MyQueueStatus($queueId: ID!) {
+    myQueueStatus(queueId: $queueId) {
       queued
       sessionId
       joinUrl
@@ -31,19 +31,21 @@ const SUBSCRIPTION_AUTH_QUERY = `
 `
 
 const LEAVE_QUEUE_MUTATION = `
-  mutation LeaveQueue($gameId: ID!) {
-    leaveQueue(gameId: $gameId)
+  mutation LeaveQueue($queueId: ID!) {
+    leaveQueue(queueId: $queueId)
   }
 `
 
 const QUEUE_UPDATED_SUBSCRIPTION = `
-  subscription QueueUpdated($gameId: ID!) {
-    queueUpdated(gameId: $gameId) {
+  subscription QueueUpdated($queueId: ID!) {
+    queueUpdated(queueId: $queueId) {
       gameId
+      queueId
       status
       sessionId
       joinUrl
       queuedCount
+      message
     }
   }
 `
@@ -109,18 +111,18 @@ export function clearSubscriptionAuthCache() {
   }
 }
 
-export async function joinGame(gameId) {
-  const data = await graphqlRequest(JOIN_GAME_MUTATION, { gameId })
-  return data.joinGame
+export async function joinQueue(queueId) {
+  const data = await graphqlRequest(JOIN_QUEUE_MUTATION, { queueId })
+  return data.joinQueue
 }
 
-export async function fetchMyQueueStatus(gameId) {
-  const data = await graphqlRequest(MY_QUEUE_STATUS_QUERY, { gameId })
+export async function fetchMyQueueStatus(queueId) {
+  const data = await graphqlRequest(MY_QUEUE_STATUS_QUERY, { queueId })
   return data.myQueueStatus
 }
 
-export async function leaveQueue(gameId) {
-  const data = await graphqlRequest(LEAVE_QUEUE_MUTATION, { gameId })
+export async function leaveQueue(queueId) {
+  const data = await graphqlRequest(LEAVE_QUEUE_MUTATION, { queueId })
   return data.leaveQueue
 }
 
@@ -140,7 +142,7 @@ function formatSubscriptionError(err) {
   return 'Queue updates unavailable'
 }
 
-export async function subscribeToQueue(gameId, { onUpdate, onError } = {}) {
+export async function subscribeToQueue(queueId, { onUpdate, onError } = {}) {
   await prefetchSubscriptionAuth()
 
   const client = getWsClient()
@@ -148,7 +150,7 @@ export async function subscribeToQueue(gameId, { onUpdate, onError } = {}) {
   return client.subscribe(
     {
       query: QUEUE_UPDATED_SUBSCRIPTION,
-      variables: { gameId },
+      variables: { queueId },
     },
     {
       next: (payload) => {

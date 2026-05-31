@@ -1,6 +1,6 @@
-# Contributing to PlayHub
+# Contributing to JoinQuest
 
-Thank you for your interest in contributing to PlayHub! This guide will help you get started.
+Thank you for your interest in contributing to JoinQuest! This guide will help you get started.
 
 ## Getting Started
 
@@ -215,4 +215,4 @@ Contributors will be recognized in:
 - Release notes
 - Project documentation
 
-Thank you for contributing to PlayHub! 🚀
+Thank you for contributing to JoinQuest! 🚀

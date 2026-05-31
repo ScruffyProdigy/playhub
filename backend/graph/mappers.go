@@ -20,16 +20,96 @@ func ToGraphQLUser(user *store.User) *model.User {
 	}
 }
 
+// ToGraphQLPublicPlayer maps a store user to the public player profile.
+func ToGraphQLPublicPlayer(user *store.User) *model.PublicPlayer {
+	if user == nil {
+		return nil
+	}
+	displayName := user.DisplayName
+	return &model.PublicPlayer{
+		ID:          user.ID.String(),
+		DisplayName: &displayName,
+	}
+}
+
 // ToGraphQLGame maps a store game to the GraphQL model.
 func ToGraphQLGame(game *store.Game) *model.Game {
 	if game == nil {
 		return nil
 	}
-	return &model.Game{
+	result := &model.Game{
 		ID:        game.ID.String(),
 		Name:      game.Name,
 		CreatedAt: game.CreatedAt,
 	}
+	if game.Slug != nil {
+		result.Slug = game.Slug
+	}
+	if game.PlayURL != nil {
+		result.PlayURL = game.PlayURL
+	}
+	if game.APIBaseURL != nil {
+		result.APIBaseURL = game.APIBaseURL
+	}
+	if game.ManifestSyncedAt != nil {
+		result.ManifestSyncedAt = game.ManifestSyncedAt
+	}
+	if game.ManifestHash != nil {
+		result.ManifestHash = game.ManifestHash
+	}
+	if game.GameVersion != nil {
+		result.GameVersion = game.GameVersion
+	}
+	return result
+}
+
+func ToGraphQLGameModes(modes []store.GameMode) []*model.GameMode {
+	result := make([]*model.GameMode, len(modes))
+	for i := range modes {
+		result[i] = ToGraphQLGameMode(&modes[i])
+	}
+	return result
+}
+
+func ToGraphQLGameMode(mode *store.GameMode) *model.GameMode {
+	if mode == nil {
+		return nil
+	}
+	result := &model.GameMode{
+		ID:          mode.ID.String(),
+		ModeKey:     mode.ModeKey,
+		DisplayName: mode.DisplayName,
+		MinPlayers:  mode.MinPlayers,
+		MaxPlayers:  mode.MaxPlayers,
+		Status:      mode.Status,
+	}
+	return result
+}
+
+func ToGraphQLGameModeSeats(seats []store.GameModeSeat) []*model.GameModeSeat {
+	result := make([]*model.GameModeSeat, len(seats))
+	for i := range seats {
+		result[i] = &model.GameModeSeat{
+			SeatKey:   seats[i].SeatKey,
+			Team:      seats[i].Team,
+			Role:      seats[i].Role,
+			SortOrder: seats[i].SortOrder,
+		}
+	}
+	return result
+}
+
+func ToGraphQLModeQueues(queues []store.ModeQueue) []*model.ModeQueue {
+	result := make([]*model.ModeQueue, len(queues))
+	for i := range queues {
+		result[i] = &model.ModeQueue{
+			ID:             queues[i].ID.String(),
+			Name:           queues[i].Name,
+			PlayersToStart: queues[i].PlayersToStart,
+			Status:         queues[i].Status,
+		}
+	}
+	return result
 }
 
 // ToGraphQLGames maps a slice of store games to GraphQL models.

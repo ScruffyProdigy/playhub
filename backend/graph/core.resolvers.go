@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/graph/generated"
@@ -17,62 +16,17 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
-// CreateGame is the resolver for the createGame field.
-func (r *mutationResolver) CreateGame(ctx context.Context, input model.CreateGameInput) (*model.Game, error) {
-	// TODO: Implement proper database insertion and validation
-	// For now, return a mock game
-	return &model.Game{
-		ID:        uuid.New().String(),
-		Name:      input.Name,
-		CreatedAt: time.Now(),
-	}, nil
-}
-
-// JoinGame is the resolver for the joinGame field.
-func (r *mutationResolver) JoinGame(ctx context.Context, gameID string) (*model.JoinResult, error) {
-	st, err := r.requireStore()
+// JoinQueue is the resolver for the joinQueue field.
+func (r *mutationResolver) JoinQueue(ctx context.Context, queueID string) (*model.JoinResult, error) {
+	modeQueueID, err := parseUUID(queueID, "queue id")
 	if err != nil {
 		return nil, err
 	}
-
-	userID, err := requireAuthUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-	gameUUID, err := parseUUID(gameID, "game id")
-	if err != nil {
-		return nil, err
-	}
-
-	result, err := st.JoinGameQueue(ctx, gameUUID, userID)
-	if err != nil {
-		if errors.Is(err, store.ErrAlreadyMatched) {
-			return nil, fmt.Errorf("you are already in a match for this game")
-		}
-		return nil, err
-	}
-
-	var launchURLs map[uuid.UUID]string
-	if result.Status == store.QueueStatusMatched && result.SessionID != nil {
-		game, gErr := st.GetGameByID(ctx, gameUUID)
-		if gErr != nil {
-			return nil, gErr
-		}
-		launchURLs, err = r.finalizeMatchedSession(ctx, game, *result.SessionID, result.NotifyUserIDs)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if err := r.publishQueueResult(ctx, gameUUID, result, launchURLs); err != nil {
-		return nil, err
-	}
-
-	return joinResultAfterJoin(result, userID, launchURLs), nil
+	return r.joinQueueInternal(ctx, modeQueueID)
 }
 
 // LeaveQueue is the resolver for the leaveQueue field.
-func (r *mutationResolver) LeaveQueue(ctx context.Context, gameID string) (bool, error) {
+func (r *mutationResolver) LeaveQueue(ctx context.Context, queueID string) (bool, error) {
 	st, err := r.requireStore()
 	if err != nil {
 		return false, err
@@ -82,16 +36,21 @@ func (r *mutationResolver) LeaveQueue(ctx context.Context, gameID string) (bool,
 	if err != nil {
 		return false, err
 	}
-	gameUUID, err := parseUUID(gameID, "game id")
+	modeQueueID, err := parseUUID(queueID, "queue id")
 	if err != nil {
 		return false, err
 	}
 
-	queuedCount, err := st.LeaveGameQueue(ctx, gameUUID, userID)
+	view, err := st.GetUserModeQueueView(ctx, modeQueueID, userID)
 	if err != nil {
 		return false, err
 	}
-	if err := r.publishQueueLeft(ctx, gameUUID, userID, queuedCount); err != nil {
+
+	queuedCount, err := st.LeaveModeQueue(ctx, modeQueueID, userID)
+	if err != nil {
+		return false, err
+	}
+	if err := r.publishQueueLeft(ctx, view.GameID, modeQueueID, userID, queuedCount); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -99,25 +58,78 @@ func (r *mutationResolver) LeaveQueue(ctx context.Context, gameID string) (bool,
 
 // GrantGood is the resolver for the grantGood field.
 func (r *mutationResolver) GrantGood(ctx context.Context, userID string, goodID string, quantity *int) (bool, error) {
-	// TODO: Implement proper entitlement granting logic
-	// For now, return true to simulate successful grant
+	if _, err := r.requireAdmin(ctx); err != nil {
+		return false, err
+	}
 
-	// TODO: Validate userID and goodID exist
-	// TODO: Create entitlement record in database
-	// TODO: Use quantity parameter for entitlement amount
+	st, err := r.requireStore()
+	if err != nil {
+		return false, err
+	}
 
+	uid, err := parseUUID(userID, "user id")
+	if err != nil {
+		return false, err
+	}
+	gid, err := parseUUID(goodID, "good id")
+	if err != nil {
+		return false, err
+	}
+
+	qty := 1
+	if quantity != nil {
+		qty = *quantity
+	}
+
+	if err := st.EnsureUserExists(ctx, uid); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return false, fmt.Errorf("user not found")
+		}
+		return false, err
+	}
+	if err := st.EnsureDigitalGoodExists(ctx, gid); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return false, fmt.Errorf("good not found")
+		}
+		return false, err
+	}
+	if err := st.GrantInventoryItem(ctx, uid, gid, qty); err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
 // RevokeGood is the resolver for the revokeGood field.
 func (r *mutationResolver) RevokeGood(ctx context.Context, userID string, goodID string, quantity *int) (bool, error) {
-	// TODO: Implement proper entitlement revocation logic
-	// For now, return true to simulate successful revocation
+	if _, err := r.requireAdmin(ctx); err != nil {
+		return false, err
+	}
 
-	// TODO: Validate userID and goodID exist
-	// TODO: Update or remove entitlement record in database
-	// TODO: Use quantity parameter for revocation amount
+	st, err := r.requireStore()
+	if err != nil {
+		return false, err
+	}
 
+	uid, err := parseUUID(userID, "user id")
+	if err != nil {
+		return false, err
+	}
+	gid, err := parseUUID(goodID, "good id")
+	if err != nil {
+		return false, err
+	}
+
+	qty := 1
+	if quantity != nil {
+		qty = *quantity
+	}
+
+	if err := st.RevokeInventoryItem(ctx, uid, gid, qty); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return false, fmt.Errorf("insufficient inventory")
+		}
+		return false, err
+	}
 	return true, nil
 }
 
@@ -147,7 +159,7 @@ func (r *queryResolver) Games(ctx context.Context, limit *int, offset *int) ([]*
 		pageOffset = *offset
 	}
 
-	games, err := st.ListDemoGames(ctx, pageSize, pageOffset)
+	games, err := st.ListCatalogGames(ctx, pageSize, pageOffset)
 	if err != nil {
 		return nil, err
 	}
@@ -203,60 +215,29 @@ func (r *queryResolver) Session(ctx context.Context, id string) (*model.Session,
 
 // Goods is the resolver for the goods field.
 func (r *queryResolver) Goods(ctx context.Context, gameID *string) ([]*model.DigitalGood, error) {
-	// TODO: Implement proper database query
-	// For now, return mock goods
-	goods := []*model.DigitalGood{
-		{
-			ID:          uuid.New().String(),
-			Code:        "SKIN_001",
-			Name:        "Cool Skin",
-			Description: &[]string{"A really cool skin for your character"}[0],
-		},
-		{
-			ID:          uuid.New().String(),
-			Code:        "WEAPON_001",
-			Name:        "Epic Weapon",
-			Description: &[]string{"An epic weapon with special abilities"}[0],
-		},
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
 	}
 
-	// If gameID is specified, filter goods for that game
+	var filterGameID *uuid.UUID
 	if gameID != nil {
-		// TODO: Implement proper filtering
-		// For now, return all goods
+		id, err := parseUUID(*gameID, "game id")
+		if err != nil {
+			return nil, err
+		}
+		filterGameID = &id
 	}
 
-	return goods, nil
+	goods, err := st.ListDigitalGoods(ctx, filterGameID)
+	if err != nil {
+		return nil, err
+	}
+	return ToGraphQLDigitalGoods(goods), nil
 }
 
 // MyInventory is the resolver for the myInventory field.
 func (r *queryResolver) MyInventory(ctx context.Context, gameID *string) ([]*model.Entitlement, error) {
-	// TODO: Implement proper database query and authentication
-	// For now, return mock inventory
-	entitlements := []*model.Entitlement{
-		{
-			Good: &model.DigitalGood{
-				ID:          uuid.New().String(),
-				Code:        "SKIN_001",
-				Name:        "Cool Skin",
-				Description: &[]string{"A really cool skin for your character"}[0],
-			},
-			Quantity:  1,
-			GrantedAt: time.Now().Add(-1 * time.Hour),
-		},
-	}
-
-	// If gameID is specified, filter entitlements for that game
-	if gameID != nil {
-		// TODO: Implement proper filtering
-		// For now, return all entitlements
-	}
-
-	return entitlements, nil
-}
-
-// MyQueueStatus is the resolver for the myQueueStatus field.
-func (r *queryResolver) MyQueueStatus(ctx context.Context, gameID string) (*model.JoinResult, error) {
 	st, err := r.requireStore()
 	if err != nil {
 		return nil, err
@@ -266,19 +247,47 @@ func (r *queryResolver) MyQueueStatus(ctx context.Context, gameID string) (*mode
 	if err != nil {
 		return nil, err
 	}
-	gameUUID, err := parseUUID(gameID, "game id")
+
+	var filterGameID *uuid.UUID
+	if gameID != nil {
+		id, err := parseUUID(*gameID, "game id")
+		if err != nil {
+			return nil, err
+		}
+		filterGameID = &id
+	}
+
+	items, err := st.ListUserInventory(ctx, userID, filterGameID)
+	if err != nil {
+		return nil, err
+	}
+	return ToGraphQLEntitlements(items), nil
+}
+
+// MyQueueStatus is the resolver for the myQueueStatus field.
+func (r *queryResolver) MyQueueStatus(ctx context.Context, queueID string) (*model.JoinResult, error) {
+	st, err := r.requireStore()
 	if err != nil {
 		return nil, err
 	}
 
-	view, err := st.GetUserQueueView(ctx, gameUUID, userID)
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	modeQueueID, err := parseUUID(queueID, "queue id")
+	if err != nil {
+		return nil, err
+	}
+
+	view, err := st.GetUserModeQueueView(ctx, modeQueueID, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	launchURL := ""
 	if view.Matched && view.SessionID != nil {
-		game, gErr := st.GetGameByID(ctx, gameUUID)
+		game, gErr := st.GetGameByID(ctx, view.GameID)
 		if gErr != nil {
 			return nil, gErr
 		}
@@ -290,8 +299,34 @@ func (r *queryResolver) MyQueueStatus(ctx context.Context, gameID string) (*mode
 	return joinResultFromQueueView(view, launchURL), nil
 }
 
+// Player is the resolver for the player field.
+func (r *queryResolver) Player(ctx context.Context, id string) (*model.PublicPlayer, error) {
+	if err := requireGameServiceAuth(ctx); err != nil {
+		return nil, err
+	}
+
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+
+	playerID, err := parseUUID(id, "player id")
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := st.GetUserByID(ctx, playerID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return ToGraphQLPublicPlayer(user), nil
+}
+
 // QueueUpdated is the resolver for the queueUpdated field.
-func (r *subscriptionResolver) QueueUpdated(ctx context.Context, gameID string) (<-chan *model.QueueUpdate, error) {
+func (r *subscriptionResolver) QueueUpdated(ctx context.Context, queueID string) (<-chan *model.QueueUpdate, error) {
 	if r.PubSub == nil {
 		return nil, fmt.Errorf("pubsub is not configured")
 	}
@@ -306,17 +341,25 @@ func (r *subscriptionResolver) QueueUpdated(ctx context.Context, gameID string) 
 		return nil, err
 	}
 
-	gameUUID, err := parseUUID(gameID, "game id")
+	modeQueueID, err := parseUUID(queueID, "queue id")
 	if err != nil {
 		return nil, err
 	}
 
-	game, err := st.GetGameByID(ctx, gameUUID)
+	modeQueue, err := st.GetModeQueueByID(ctx, modeQueueID)
+	if err != nil {
+		return nil, err
+	}
+	gameMode, err := st.GetGameModeByID(ctx, modeQueue.ModeID)
+	if err != nil {
+		return nil, err
+	}
+	game, err := st.GetGameByID(ctx, gameMode.GameID)
 	if err != nil {
 		return nil, err
 	}
 
-	view, err := st.GetUserQueueView(ctx, gameUUID, userID)
+	view, err := st.GetUserModeQueueView(ctx, modeQueueID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +371,7 @@ func (r *subscriptionResolver) QueueUpdated(ctx context.Context, gameID string) 
 			return nil, fmt.Errorf("launch url: %w", err)
 		}
 	}
-	initial := queueUpdateFromView(view, gameUUID, initialLaunchURL)
+	initial := queueUpdateFromView(view, initialLaunchURL)
 
 	messages, unsubscribe, err := r.PubSub.Subscribe(ctx, pubsub.UserQueueChannel(userID.String()))
 	if err != nil {
@@ -357,7 +400,7 @@ func (r *subscriptionResolver) QueueUpdated(ctx context.Context, gameID string) 
 					return
 				}
 				event, err := pubsub.UnmarshalQueueEvent(payload)
-				if err != nil || event.GameID != gameUUID.String() {
+				if err != nil || event.QueueID != modeQueueID.String() {
 					continue
 				}
 				update := toGraphQLQueueUpdate(event)

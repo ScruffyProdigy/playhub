@@ -41,7 +41,7 @@ func TestSeatTokenVerifiedViaJWKSHandler(t *testing.T) {
 	}
 
 	userID := uuid.MustParse("22222222-2222-4222-8222-222222222222")
-	token, err := signer.SignSeatToken(userID, "match-1", "b", "Bob", time.Hour)
+	token, err := signer.SignSeatToken(userID, "http://localhost:3001", "match-1", "b", "Bob", time.Hour)
 	if err != nil {
 		t.Fatalf("SignSeatToken: %v", err)
 	}
@@ -85,5 +85,14 @@ func TestSeatTokenVerifiedViaJWKSHandler(t *testing.T) {
 	}
 	if claims["matchId"] != "match-1" || claims["seatKey"] != "b" {
 		t.Fatalf("claims: %+v", claims)
+	}
+	if claims["iss"] != LobbyIssuer() {
+		t.Fatalf("iss: %v", claims["iss"])
+	}
+	if claims["aud"] != "http://localhost:3001" {
+		t.Fatalf("aud: %v", claims["aud"])
+	}
+	if claims["jti"] == "" {
+		t.Fatal("expected jti")
 	}
 }

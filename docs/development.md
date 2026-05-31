@@ -1,12 +1,12 @@
 # Development Guide
 
-This guide will help you set up and run PlayHub locally for development.
+This guide will help you set up and run JoinQuest locally for development.
 
 ## Current Development Status
 
 ### ✅ Ready for Development
 - **Environment Configuration**: Docker-based runtime environment injection
-- **GraphQL API**: Complete schema with mock resolvers
+- **GraphQL API**: Catalog matchmaking, auth, PostgreSQL-backed resolvers
 - **Frontend Foundation**: React app with testing infrastructure
 - **Kubernetes Deployment**: Multi-environment deployment scripts
 - **Testing Suite**: Comprehensive test coverage
@@ -14,14 +14,10 @@ This guide will help you set up and run PlayHub locally for development.
 - **CI/CD Pipeline**: GitHub Actions workflows with proper linting and testing
 
 ### 🚧 In Active Development
-- **Database Migrations**: Schema migrations and data management
-- **Authentication**: JWT-based user authentication
-- **Business Logic**: Real game management and queuing
+- **Digital goods**: Player purchase and trade flows
 
 ### 📋 Next Steps
-- **Game Integration**: 3rd party game connections
-- **Trading System**: Digital goods and currency trading
-- **Real-time Features**: WebSocket subscriptions
+- **Match reporting**: Game → Lobby result callbacks via GraphQL
 
 ## Prerequisites
 
@@ -142,7 +138,7 @@ go run github.com/99designs/gqlgen@v0.17.81 generate
 
 ## Environment Configuration
 
-PlayHub uses a Docker-based environment configuration system that allows the same Docker image to work across different environments (local, staging, production).
+JoinQuest uses a Docker-based environment configuration system that allows the same Docker image to work across different environments (local, staging, production).
 
 ### Environment Variables
 
@@ -161,19 +157,14 @@ PlayHub uses a Docker-based environment configuration system that allows the sam
 ### Environment-Specific Configurations
 
 #### Local Development
-- **API URL**: `http://localhost:8081`
-- **Environment**: `local`
-- **Deployment**: `./scripts/deploy-local.sh`
+- **Frontend**: `http://localhost:5173`
+- **GraphQL**: `http://localhost:8080/graphql`
+- **Start**: `./scripts/dev.sh`
 
-#### Staging
-- **API URL**: `https://api-staging.playhub.com`
-- **Environment**: `staging`
-- **Deployment**: `./scripts/deploy-staging.sh`
-
-#### Production
-- **API URL**: `https://api.playhub.com`
-- **Environment**: `production`
-- **Deployment**: `./scripts/deploy-production.sh`
+#### Production (JoinQuest)
+- **Public URL**: `https://joinquest.cc`
+- **GraphQL**: `https://joinquest.cc/graphql`
+- **Deploy**: `./scripts/deploy-joinquest.sh`
 
 ### How Environment Configuration Works
 

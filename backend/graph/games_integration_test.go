@@ -47,7 +47,7 @@ func newGamesGraphQLTestClient(t *testing.T) (*client.Client, *store.Store) {
 	return client.New(gql), st
 }
 
-func TestGamesGraphQLListsDemoGames(t *testing.T) {
+func TestGamesGraphQLListsCatalogGames(t *testing.T) {
 	c, _ := newGamesGraphQLTestClient(t)
 
 	var resp struct {
@@ -65,18 +65,19 @@ func TestGamesGraphQLListsDemoGames(t *testing.T) {
 		t.Fatalf("games query failed: %v", err)
 	}
 
-	if len(resp.Games) < 2 {
-		t.Fatalf("expected at least 2 demo games, got %d", len(resp.Games))
+	if len(resp.Games) < 1 {
+		t.Fatalf("expected at least 1 catalog game, got %d", len(resp.Games))
 	}
 
 	names := map[string]bool{}
 	for _, game := range resp.Games {
 		names[game.Name] = true
 	}
-	for _, want := range []string{"Rock Paper Scissors Lizard Spock", "Party Lobby"} {
-		if !names[want] {
-			t.Fatalf("expected demo game %q in results, got %+v", want, resp.Games)
-		}
+	if !names["Rock Paper Scissors Lizard Spock"] {
+		t.Fatalf("expected RPS catalog game in results, got %+v", resp.Games)
+	}
+	if names["Party Lobby"] {
+		t.Fatal("expected inactive Party Lobby to be excluded")
 	}
 }
 
@@ -127,9 +128,9 @@ func TestSessionGraphQLLoadsNestedGameAndPlayers(t *testing.T) {
 	cleaner := st.NewTestCleaner(t)
 	ctx := context.Background()
 
-	game, err := st.CreateGame(ctx, "GraphQL Session Test "+uuid.NewString())
+	game, err := st.InsertTestGame(ctx, "GraphQL Session Test "+uuid.NewString())
 	if err != nil {
-		t.Fatalf("CreateGame failed: %v", err)
+		t.Fatalf("InsertTestGame failed: %v", err)
 	}
 	cleaner.TrackGame(game.ID)
 

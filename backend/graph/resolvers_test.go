@@ -7,7 +7,6 @@ import (
 	"github.com/99designs/gqlgen/client"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/scruffyprodigy/playhub/graph/generated"
-	"github.com/scruffyprodigy/playhub/graph/model"
 )
 
 func TestMeResolver(t *testing.T) {
@@ -82,158 +81,56 @@ func TestGamesWithPagination(t *testing.T) {
 	}
 }
 
-func TestCreateGameMutation(t *testing.T) {
+func TestGoodsResolverRequiresStore(t *testing.T) {
 	resolver := &Resolver{}
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
 	c := client.New(srv)
-
-	var resp struct {
-		CreateGame struct {
-			ID        string
-			Name      string
-			CreatedAt string
-		}
-	}
-
-	err := c.Post(`mutation { 
-		createGame(input: { name: "Test Game" }) { 
-			id 
-			name 
-			createdAt 
-		} 
-	}`, &resp)
-	if err != nil {
-		t.Fatalf("GraphQL mutation failed: %v", err)
-	}
-
-	// Verify the response
-	if resp.CreateGame.ID == "" {
-		t.Error("Expected createGame.id to be non-empty")
-	}
-	if resp.CreateGame.Name != "Test Game" {
-		t.Errorf("Expected createGame.name to be 'Test Game', got %q", resp.CreateGame.Name)
-	}
-	if resp.CreateGame.CreatedAt == "" {
-		t.Error("Expected createGame.createdAt to be non-empty")
-	}
-}
-
-func TestJoinGameMutationRequiresAuthAndStore(t *testing.T) {
-	resolver := &Resolver{}
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
-	c := client.New(srv)
-
-	err := c.Post(`mutation { 
-		joinGame(gameId: "test-game-id") { 
-			queued 
-		} 
-	}`, &struct{}{})
-	if err == nil {
-		t.Fatal("expected joinGame to fail without auth and store")
-	}
-}
-
-func TestGoodsResolver(t *testing.T) {
-	resolver := &Resolver{}
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
-	c := client.New(srv)
-
-	var resp struct {
-		Goods []struct {
-			ID          string
-			Code        string
-			Name        string
-			Description *string
-		}
-	}
 
 	err := c.Post(`query { 
 		goods { 
 			id 
 			code 
 			name 
-			description 
 		} 
-	}`, &resp)
-	if err != nil {
-		t.Fatalf("GraphQL query failed: %v", err)
-	}
-
-	// Verify we get some goods back
-	if len(resp.Goods) == 0 {
-		t.Error("Expected to get at least one good")
-	}
-
-	// Verify the structure of the first good
-	good := resp.Goods[0]
-	if good.ID == "" {
-		t.Error("Expected good.id to be non-empty")
-	}
-	if good.Code == "" {
-		t.Error("Expected good.code to be non-empty")
-	}
-	if good.Name == "" {
-		t.Error("Expected good.name to be non-empty")
+	}`, &struct{}{})
+	if err == nil {
+		t.Fatal("expected goods query to fail without a configured store")
 	}
 }
 
-func TestMyInventoryResolver(t *testing.T) {
+func TestMyInventoryResolverRequiresAuthAndStore(t *testing.T) {
 	resolver := &Resolver{}
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
 	c := client.New(srv)
-
-	var resp struct {
-		MyInventory []struct {
-			Good struct {
-				ID   string
-				Code string
-				Name string
-			}
-			Quantity  int
-			GrantedAt string
-		}
-	}
 
 	err := c.Post(`query { 
 		myInventory { 
 			good { 
 				id 
-				code 
-				name 
 			} 
 			quantity 
-			grantedAt 
 		} 
-	}`, &resp)
-	if err != nil {
-		t.Fatalf("GraphQL query failed: %v", err)
-	}
-
-	// Verify we get some inventory back
-	if len(resp.MyInventory) == 0 {
-		t.Error("Expected to get at least one inventory item")
-	}
-
-	// Verify the structure of the first inventory item
-	item := resp.MyInventory[0]
-	if item.Good.ID == "" {
-		t.Error("Expected inventory.good.id to be non-empty")
-	}
-	if item.Good.Code == "" {
-		t.Error("Expected inventory.good.code to be non-empty")
-	}
-	if item.Good.Name == "" {
-		t.Error("Expected inventory.good.name to be non-empty")
-	}
-	if item.Quantity <= 0 {
-		t.Error("Expected inventory.quantity to be positive")
-	}
-	if item.GrantedAt == "" {
-		t.Error("Expected inventory.grantedAt to be non-empty")
+	}`, &struct{}{})
+	if err == nil {
+		t.Fatal("expected myInventory to fail without auth and store")
 	}
 }
 
-// Test error handling
+func TestJoinQueueMutationRequiresAuthAndStore(t *testing.T) {
+	resolver := &Resolver{}
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
+	c := client.New(srv)
+
+	err := c.Post(`mutation { 
+		joinQueue(queueId: "test-queue-id") { 
+			queued 
+		} 
+	}`, &struct{}{})
+	if err == nil {
+		t.Fatal("expected joinQueue to fail without auth and store")
+	}
+}
+
 func TestGameNotFound(t *testing.T) {
 	resolver := &Resolver{}
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
@@ -255,7 +152,6 @@ func TestGameNotFound(t *testing.T) {
 func TestDirectResolverCalls(t *testing.T) {
 	resolver := &Resolver{}
 	queryResolver := resolver.Query()
-	mutationResolver := resolver.Mutation()
 
 	// Test direct healthz call
 	healthz, err := queryResolver.Healthz(context.Background())
@@ -273,14 +169,5 @@ func TestDirectResolverCalls(t *testing.T) {
 	}
 	if version != "1.0.0" {
 		t.Errorf("Expected version to return '1.0.0', got %q", version)
-	}
-
-	// Test direct createGame call
-	game, err := mutationResolver.CreateGame(context.Background(), model.CreateGameInput{Name: "Direct Test Game"})
-	if err != nil {
-		t.Fatalf("Direct createGame call failed: %v", err)
-	}
-	if game.Name != "Direct Test Game" {
-		t.Errorf("Expected game name to be 'Direct Test Game', got %q", game.Name)
 	}
 }

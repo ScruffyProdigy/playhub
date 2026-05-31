@@ -5,16 +5,28 @@ import GameListItem from './GameListItem'
 import * as queue from '../../lib/queue'
 
 vi.mock('../../lib/queue', () => ({
-  joinGame: vi.fn(),
+  joinQueue: vi.fn(),
   fetchMyQueueStatus: vi.fn(),
   leaveQueue: vi.fn(),
   prefetchSubscriptionAuth: vi.fn().mockResolvedValue('Bearer test'),
   subscribeToQueue: vi.fn().mockResolvedValue(() => {}),
 }))
 
+const catalogGame = {
+  id: 'game-1',
+  name: 'Rock Paper Scissors Lizard Spock',
+  activeSessions: [{ id: 'session-1' }],
+  modes: [
+    {
+      modeKey: 'duel',
+      queues: [{ id: 'queue-1', name: 'Default', status: 'active' }],
+    },
+  ],
+}
+
 describe('GameListItem', () => {
   beforeEach(() => {
-    vi.mocked(queue.joinGame).mockReset()
+    vi.mocked(queue.joinQueue).mockReset()
     vi.mocked(queue.fetchMyQueueStatus).mockReset()
     vi.mocked(queue.leaveQueue).mockReset()
     vi.mocked(queue.subscribeToQueue).mockReset()
@@ -25,38 +37,26 @@ describe('GameListItem', () => {
   it('shows the game name and session count', () => {
     render(
       <ul>
-        <GameListItem
-          game={{
-            id: 'game-1',
-            name: 'Quick Match',
-            activeSessions: [{ id: 'session-1' }],
-          }}
-        />
+        <GameListItem game={catalogGame} />
       </ul>,
     )
 
-    expect(screen.getByRole('heading', { name: 'Quick Match' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Rock Paper Scissors Lizard Spock' })).toBeInTheDocument()
     expect(screen.getByText('1 active session')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Join queue' })).toBeInTheDocument()
   })
 
   it('shows launch when the subscription reports a match', async () => {
-    vi.mocked(queue.joinGame).mockResolvedValue({ queued: true, queuedCount: 1 })
+    vi.mocked(queue.joinQueue).mockResolvedValue({ queued: true, queuedCount: 1 })
     let onUpdate
-    vi.mocked(queue.subscribeToQueue).mockImplementation(async (_gameId, handlers) => {
+    vi.mocked(queue.subscribeToQueue).mockImplementation(async (_queueId, handlers) => {
       onUpdate = handlers.onUpdate
       return () => {}
     })
 
     render(
       <ul>
-        <GameListItem
-          game={{
-            id: 'game-1',
-            name: 'Quick Match',
-            activeSessions: [],
-          }}
-        />
+        <GameListItem game={catalogGame} />
       </ul>,
     )
 

@@ -14,10 +14,12 @@ const (
 // QueueEvent is published on per-user Redis channels when queue state changes.
 type QueueEvent struct {
 	GameID      string           `json:"gameId"`
+	QueueID     string           `json:"queueId,omitempty"`
 	Status      QueueEventStatus `json:"status"`
 	SessionID   string           `json:"sessionId,omitempty"`
 	JoinURL     string           `json:"joinUrl,omitempty"`
 	QueuedCount int              `json:"queuedCount,omitempty"`
+	Message     string           `json:"message,omitempty"`
 }
 
 // UserQueueChannel returns the Redis channel for a user's queue updates.

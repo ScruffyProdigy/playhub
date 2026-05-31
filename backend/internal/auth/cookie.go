@@ -81,7 +81,9 @@ func Middleware(signer *Signer, next http.Handler) http.Handler {
 		ctx := WithResponseWriter(r.Context(), w)
 
 		if token := TokenFromRequest(r); token != "" {
-			if userID, err := signer.VerifyUserToken(token); err == nil {
+			if MatchesGameServiceToken(token) {
+				ctx = WithGameServiceAuth(ctx)
+			} else if userID, err := signer.VerifyUserToken(token); err == nil {
 				ctx = WithUserID(ctx, userID.String())
 				ctx = WithSessionToken(ctx, token)
 			}

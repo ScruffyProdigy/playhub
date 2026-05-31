@@ -3,4 +3,11 @@ type User {
   email: String
   displayName: String
   createdAt: Time!
+  isAdmin: Boolean!
+}
+
+# Public player profile for game servers (no email).
+type PublicPlayer {
+  id: ID!
+  displayName: String
 }

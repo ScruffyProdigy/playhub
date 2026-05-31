@@ -28,8 +28,7 @@ describe('App Component', () => {
     expect(screen.getByText('player@example.com')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Available games' })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Quick Match' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Party Lobby' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Rock Paper Scissors Lizard Spock' })).toBeInTheDocument()
   })
 
   it('renders the sign-in link completion page on /auth/complete', async () => {

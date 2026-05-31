@@ -37,15 +37,3 @@ func (s *Store) ListSessionSeatAssignments(ctx context.Context, sessionID uuid.U
 	}
 	return out, rows.Err()
 }
-
-func defaultSeatKeysForCount(n int) []string {
-	keys := []string{"a", "b", "c", "d", "e", "f", "g", "h"}
-	if n > len(keys) {
-		out := make([]string, n)
-		for i := range out {
-			out[i] = keys[i%len(keys)]
-		}
-		return out
-	}
-	return keys[:n]
-}

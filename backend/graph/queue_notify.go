@@ -9,7 +9,7 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
-func (r *Resolver) publishQueueResult(ctx context.Context, gameID uuid.UUID, result *store.QueueJoinResult, launchURLs map[uuid.UUID]string) error {
+func (r *Resolver) publishQueueResult(ctx context.Context, result *store.QueueJoinResult, launchURLs map[uuid.UUID]string) error {
 	if r.PubSub == nil || result == nil {
 		return nil
 	}
@@ -22,8 +22,11 @@ func (r *Resolver) publishQueueResult(ctx context.Context, gameID uuid.UUID, res
 		seen[userID] = struct{}{}
 
 		event := pubsub.QueueEvent{
-			GameID:      gameID.String(),
+			GameID:      result.GameID.String(),
 			QueuedCount: result.QueuedCount,
+		}
+		if result.ModeQueueID != uuid.Nil {
+			event.QueueID = result.ModeQueueID.String()
 		}
 
 		switch result.Status {
@@ -46,29 +49,40 @@ func (r *Resolver) publishQueueResult(ctx context.Context, gameID uuid.UUID, res
 	return nil
 }
 
-func (r *Resolver) publishQueueLeft(ctx context.Context, gameID, userID uuid.UUID, queuedCount int) error {
+func (r *Resolver) publishQueueLeft(ctx context.Context, gameID, modeQueueID, userID uuid.UUID, queuedCount int) error {
 	if r.PubSub == nil {
 		return nil
 	}
-	return pubsub.PublishQueueEvent(ctx, r.PubSub, userID.String(), pubsub.QueueEvent{
+	event := pubsub.QueueEvent{
 		GameID:      gameID.String(),
 		Status:      pubsub.QueueStatusLeft,
 		QueuedCount: queuedCount,
-	})
+	}
+	if modeQueueID != uuid.Nil {
+		event.QueueID = modeQueueID.String()
+	}
+	return pubsub.PublishQueueEvent(ctx, r.PubSub, userID.String(), event)
 }
 
-func queueUpdateFromView(view *store.UserQueueView, gameID uuid.UUID, launchURL string) *model.QueueUpdate {
+func queueUpdateFromView(view *store.UserQueueView, launchURL string) *model.QueueUpdate {
 	if view == nil || !view.InQueue {
 		return nil
 	}
 
-	gameIDStr := gameID.String()
+	gameIDStr := view.GameID.String()
+	queueIDStr := ""
+	if view.ModeQueueID != uuid.Nil {
+		queueIDStr = view.ModeQueueID.String()
+	}
+	update := &model.QueueUpdate{
+		GameID:      gameIDStr,
+		QueueID:     queueIDStr,
+		QueuedCount: view.QueuedCount,
+	}
+
 	if view.Matched && view.SessionID != nil {
-		update := &model.QueueUpdate{
-			GameID:      gameIDStr,
-			Status:      model.QueueStatusMatched,
-			QueuedCount: 0,
-		}
+		update.Status = model.QueueStatusMatched
+		update.QueuedCount = 0
 		sessionID := view.SessionID.String()
 		update.SessionID = &sessionID
 		if launchURL != "" {
@@ -78,11 +92,8 @@ func queueUpdateFromView(view *store.UserQueueView, gameID uuid.UUID, launchURL 
 	}
 
 	if view.Waiting {
-		return &model.QueueUpdate{
-			GameID:      gameIDStr,
-			Status:      model.QueueStatusWaiting,
-			QueuedCount: view.QueuedCount,
-		}
+		update.Status = model.QueueStatusWaiting
+		return update
 	}
 
 	return nil
@@ -91,6 +102,7 @@ func queueUpdateFromView(view *store.UserQueueView, gameID uuid.UUID, launchURL 
 func toGraphQLQueueUpdate(event pubsub.QueueEvent) *model.QueueUpdate {
 	update := &model.QueueUpdate{
 		GameID:      event.GameID,
+		QueueID:     event.QueueID,
 		QueuedCount: event.QueuedCount,
 	}
 	switch event.Status {
@@ -106,6 +118,9 @@ func toGraphQLQueueUpdate(event pubsub.QueueEvent) *model.QueueUpdate {
 	}
 	if event.JoinURL != "" {
 		update.JoinURL = &event.JoinURL
+	}
+	if event.Message != "" {
+		update.Message = &event.Message
 	}
 	return update
 }

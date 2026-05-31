@@ -8,32 +8,41 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/gameclient"
 )
 
-type syncProvisioner struct {
-	mu    sync.Mutex
-	calls []gameclient.Assignment
+type provisionCall struct {
+	LobbyID    string
+	Lobby      gameclient.LobbyInfo
+	Assignment gameclient.Assignment
 }
 
-func (p *syncProvisioner) ProvisionMatch(_ context.Context, _, _ string, assignment gameclient.Assignment) error {
+type syncProvisioner struct {
+	mu    sync.Mutex
+	calls []provisionCall
+}
+
+func (p *syncProvisioner) ProvisionMatch(_ context.Context, req gameclient.ProvisionRequest) error {
 	p.mu.Lock()
-	p.calls = append(p.calls, assignment)
+	p.calls = append(p.calls, provisionCall{LobbyID: req.LobbyID, Lobby: req.Lobby, Assignment: req.Assignment})
 	p.mu.Unlock()
 	return nil
 }
 
-func (p *syncProvisioner) lastAssignment() gameclient.Assignment {
+func (p *syncProvisioner) lastCall() provisionCall {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if len(p.calls) == 0 {
-		return gameclient.Assignment{}
+		return provisionCall{}
 	}
 	return p.calls[len(p.calls)-1]
 }
 
-func TestJoinGameQueueProvisionsMatchOnGameServer(t *testing.T) {
+func TestJoinQueueProvisionsMatchOnGameServer(t *testing.T) {
 	env := newQueueIntegrationEnv(t)
 	cleaner := env.newCleaner(t)
 	ctx := context.Background()
-	clearDemoGameWaitingQueue(t, env.Store)
+	clearDemoQueue(t, env.Store)
+
+	t.Setenv("LOBBY_ISSUER_URL", "http://localhost:8080")
+	t.Setenv("LOBBY_PUBLIC_URL", "http://localhost:5173")
 
 	provisioner := &syncProvisioner{}
 	env.resolverWithProvisioner(t, provisioner)
@@ -41,8 +50,8 @@ func TestJoinGameQueueProvisionsMatchOnGameServer(t *testing.T) {
 	_, cookieA := createTestUserSession(t, ctx, env, cleaner)
 	_, cookieB := createTestUserSession(t, ctx, env, cleaner)
 
-	joinQuery := `mutation Join($id: ID!) { joinGame(gameId: $id) { queued queuedCount } }`
-	vars := map[string]any{"id": demoQuickMatchGameID}
+	joinQuery := `mutation Join($id: ID!) { joinQueue(queueId: $id) { queued queuedCount } }`
+	vars := map[string]any{"id": demoDefaultQueueID}
 
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieA)
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
@@ -50,17 +59,24 @@ func TestJoinGameQueueProvisionsMatchOnGameServer(t *testing.T) {
 	if n := len(provisioner.calls); n != 1 {
 		t.Fatalf("expected exactly 1 provision call, got %d", n)
 	}
-	a := provisioner.lastAssignment()
+	call := provisioner.lastCall()
+	a := call.Assignment
+	if call.LobbyID != "http://localhost:8080" {
+		t.Fatalf("lobbyId = %q, want http://localhost:8080", call.LobbyID)
+	}
+	if call.Lobby.ReturnURL != "http://localhost:5173" {
+		t.Fatalf("lobby.returnUrl = %q", call.Lobby.ReturnURL)
+	}
+	if call.Lobby.GraphqlURL != "http://localhost:8080/graphql" {
+		t.Fatalf("lobby.graphqlUrl = %q", call.Lobby.GraphqlURL)
+	}
 	if a.ExternalMatchID == "" || len(a.Seats) != 2 {
 		t.Fatalf("expected provisioned duel with 2 seats, got %+v", a)
 	}
 	if a.GameMode != "duel" {
 		t.Fatalf("gameMode = %q, want duel", a.GameMode)
 	}
-}
-
-func (env *queueIntegrationEnv) resolverWithProvisioner(t *testing.T, p MatchProvisioner) {
-	t.Helper()
-	env.resolver.GameProvisioner = p
-	env.rebuildHTTPServer(t)
+	if a.Seats[0].SeatKey != "a" || a.Seats[1].SeatKey != "b" {
+		t.Fatalf("expected manifest seat keys a/b, got %+v", a.Seats)
+	}
 }

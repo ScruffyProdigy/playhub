@@ -19,9 +19,25 @@ models:
     fields:
       activeSessions:
         resolver: true
+      modes:
+        resolver: true
+  GameMode:
+    fields:
+      seats:
+        resolver: true
+      queues:
+        resolver: true
+  ModeQueue:
+    fields:
+      waitingCount:
+        resolver: true
   Session:
     fields:
       game:
         resolver: true
       players:
+        resolver: true
+  User:
+    fields:
+      isAdmin:
         resolver: true

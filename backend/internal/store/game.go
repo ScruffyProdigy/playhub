@@ -12,10 +12,14 @@ import (
 
 func scanGame(row interface{ Scan(dest ...any) error }) (*Game, error) {
 	var g Game
-	var description, slug, playURL, apiBaseURL, gameMode sql.NullString
+	var description, slug, playURL, apiBaseURL sql.NullString
+	var manifestHash, manifestETag, gameVersion, webhookSecret sql.NullString
+	var manifestSyncedAt sql.NullTime
 	if err := row.Scan(
-		&g.ID, &g.Name, &description, &slug, &playURL, &apiBaseURL, &gameMode,
-		&g.Status, &g.MinPlayers, &g.MaxPlayers, &g.CreatedAt,
+		&g.ID, &g.Name, &description, &slug, &playURL, &apiBaseURL,
+		&g.Status,
+		&manifestHash, &manifestETag, &manifestSyncedAt, &gameVersion, &webhookSecret,
+		&g.CreatedAt,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -34,23 +38,33 @@ func scanGame(row interface{ Scan(dest ...any) error }) (*Game, error) {
 	if apiBaseURL.Valid {
 		g.APIBaseURL = &apiBaseURL.String
 	}
-	if gameMode.Valid {
-		g.GameMode = &gameMode.String
+	if manifestHash.Valid {
+		g.ManifestHash = &manifestHash.String
+	}
+	if manifestETag.Valid {
+		g.ManifestETag = &manifestETag.String
+	}
+	if manifestSyncedAt.Valid {
+		g.ManifestSyncedAt = &manifestSyncedAt.Time
+	}
+	if gameVersion.Valid {
+		g.GameVersion = &gameVersion.String
+	}
+	if webhookSecret.Valid {
+		g.WebhookSecret = &webhookSecret.String
 	}
 	return &g, nil
 }
 
-const gameColumns = `id, name, description, slug, play_url, api_base_url, game_mode, status, min_players, max_players, created_at`
+const gameColumns = `id, name, description, slug, play_url, api_base_url, status,
+	manifest_hash, manifest_etag, manifest_synced_at, game_version, webhook_secret, created_at`
 
 func (s *Store) ListGames(ctx context.Context, limit, offset int) ([]Game, error) {
-	return s.listGames(ctx, limit, offset, "")
+	return s.ListCatalogGames(ctx, limit, offset)
 }
 
-func (s *Store) ListDemoGames(ctx context.Context, limit, offset int) ([]Game, error) {
-	return s.listGames(ctx, limit, offset, "demo")
-}
-
-func (s *Store) listGames(ctx context.Context, limit, offset int, category string) ([]Game, error) {
+// ListCatalogGames returns active games that have at least one active mode queue.
+func (s *Store) ListCatalogGames(ctx context.Context, limit, offset int) ([]Game, error) {
 	if limit <= 0 {
 		limit = 20
 	}
@@ -58,23 +72,21 @@ func (s *Store) listGames(ctx context.Context, limit, offset int, category strin
 		offset = 0
 	}
 
-	query := `
-		SELECT ` + gameColumns + `
-		FROM games
-		WHERE status = 'active'`
-	args := []any{}
-
-	if category != "" {
-		query += ` AND category = $1`
-		args = append(args, category)
-	}
-
-	limitArg := len(args) + 1
-	offsetArg := len(args) + 2
-	query += fmt.Sprintf(` ORDER BY created_at DESC LIMIT $%d OFFSET $%d`, limitArg, offsetArg)
-	args = append(args, limit, offset)
-
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT `+gameColumns+`
+		FROM games g
+		WHERE g.status = 'active'
+		  AND EXISTS (
+		    SELECT 1
+		    FROM game_modes gm
+		    INNER JOIN mode_queues mq ON mq.mode_id = gm.id
+		    WHERE gm.game_id = g.id
+		      AND gm.status = 'active'
+		      AND mq.status = 'active'
+		  )
+		ORDER BY g.created_at DESC
+		LIMIT $1 OFFSET $2
+	`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +112,7 @@ func (s *Store) GetGameByID(ctx context.Context, id uuid.UUID) (*Game, error) {
 	return scanGame(row)
 }
 
-func (s *Store) CreateGame(ctx context.Context, name string) (*Game, error) {
+func (s *Store) InsertTestGame(ctx context.Context, name string) (*Game, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("store: game name is required")

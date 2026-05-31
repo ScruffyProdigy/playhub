@@ -1,6 +1,6 @@
 # Architecture Overview
 
-PlayHub is a gaming lobby platform built with a modern microservices architecture.
+JoinQuest is a gaming lobby platform built with a modern microservices architecture.
 
 ## System Architecture
 
@@ -44,20 +44,17 @@ PlayHub is a gaming lobby platform built with a modern microservices architectur
 - **Features**: Basic UI, environment configuration, comprehensive testing
 - **Port**: 5173 (development), 80 (production)
 
-### Backend (Go + GraphQL) 🚧
+### Backend (Go + GraphQL) ✅
 - **Technology**: Go 1.25, gqlgen, GraphQL
 - **Purpose**: API server and business logic
-- **Status**: Schema and mock resolvers implemented
-- **Features**: GraphQL API with mock data, health checks, version endpoint
+- **Status**: Catalog matchmaking, auth, handoff, and PostgreSQL persistence
+- **Features**: `registerGame`, queue-scoped `joinQueue`, provision to game APIs, Redis subscriptions
 - **Port**: 8080
-- **In Progress**: Database integration, authentication, real business logic
 
-### Database (PostgreSQL) 📋
+### Database (PostgreSQL) ✅
 - **Technology**: PostgreSQL
 - **Purpose**: Data persistence
-- **Status**: Planned - not yet implemented
-- **Features**: User data, game sessions, trading history
-- **Next Steps**: Schema design, migration system, connection pooling
+- **Status**: Migrations, users, games, sessions, queues, digital goods
 
 ## Data Flow
 
@@ -95,11 +92,11 @@ Query {
 }
 
 Mutation {
-  createGame(input: CreateGameInput!): Game!
-  joinQueue(gameId: ID!): Session!
-  leaveQueue(sessionId: ID!): Boolean!
-  purchaseGood(input: PurchaseGoodInput!): Entitlement!
-  tradeGood(input: TradeGoodInput!): Trade!
+  registerGame(input: RegisterGameInput!): RegisterGamePayload!
+  joinQueue(queueId: ID!): JoinResult!
+  leaveQueue(queueId: ID!): Boolean!
+  grantGood(userId: ID!, goodId: ID!, quantity: Int = 1): Boolean!
+  revokeGood(userId: ID!, goodId: ID!, quantity: Int = 1): Boolean!
 }
 ```
 
@@ -147,7 +144,7 @@ Mutation {
 
 ## Environment Configuration System
 
-PlayHub uses a Docker-based environment configuration system that allows the same Docker image to work across different environments.
+JoinQuest uses a Docker-based environment configuration system that allows the same Docker image to work across different environments.
 
 ### How It Works
 
@@ -159,19 +156,14 @@ PlayHub uses a Docker-based environment configuration system that allows the sam
 ### Environment Configurations
 
 #### Local Development
-- **API URL**: `http://localhost:8081`
-- **Environment**: `local`
-- **Deployment**: Kubernetes with port-forwarding
+- **Frontend**: `http://localhost:5173`
+- **GraphQL**: `http://localhost:8080/graphql`
+- **Start**: `./scripts/dev.sh`
 
-#### Staging
-- **API URL**: `https://api-staging.playhub.com`
-- **Environment**: `staging`
-- **Deployment**: Kubernetes cluster with staging ConfigMaps
-
-#### Production
-- **API URL**: `https://api.playhub.com`
-- **Environment**: `production`
-- **Deployment**: Kubernetes cluster with production ConfigMaps
+#### Production (JoinQuest)
+- **Public URL**: `https://joinquest.cc`
+- **GraphQL**: `https://joinquest.cc/graphql`
+- **Deploy**: `./scripts/deploy-joinquest.sh`
 
 ### Benefits
 
