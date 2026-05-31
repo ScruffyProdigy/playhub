@@ -41,13 +41,26 @@ print_status() { echo -e "${GREEN}[INFO]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
+docker_config_json() {
+  echo "${DOCKER_CONFIG:-$HOME/.docker}/config.json"
+}
+
+# Hub creds live in ~/.docker/config.json (index.docker.io/v1). Modern Docker/Colima
+# often omit Username from `docker info`, so do not use that for login detection.
+docker_hub_auth_configured() {
+  local config
+  config="$(docker_config_json)"
+  [ -f "$config" ] || return 1
+  grep -q 'index.docker.io' "$config" 2>/dev/null
+}
+
 if ! docker info > /dev/null 2>&1; then
   print_error "Docker is not running. Please start Docker and try again."
   exit 1
 fi
 
-if [ "$PUSH" = true ] && ! docker info 2>/dev/null | grep -q "Username"; then
-  print_error "docker login required before --push"
+if [ "$PUSH" = true ] && ! docker_hub_auth_configured; then
+  print_error "Docker Hub login not found in $(docker_config_json). Run: docker login"
   exit 1
 fi
 
