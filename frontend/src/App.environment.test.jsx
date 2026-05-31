@@ -21,8 +21,8 @@ describe('App Environment Integration', () => {
     render(<App />)
     
     // The app should render without crashing
-    expect(screen.getByText('PlayHub')).toBeInTheDocument()
-    expect(screen.getByText('Your Gaming Hub - Queue, Play, Trade')).toBeInTheDocument()
+    expect(screen.getByText('JoinQuest')).toBeInTheDocument()
+    expect(screen.getByText('Queue up. Play together.')).toBeInTheDocument()
     
     // Environment should be available
     expect(window.env).toBeDefined()
@@ -36,7 +36,7 @@ describe('App Environment Integration', () => {
     
     // App should still render
     render(<App />)
-    expect(screen.getByText('PlayHub')).toBeInTheDocument()
+    expect(screen.getByText('JoinQuest')).toBeInTheDocument()
   })
 
   it('can access environment variables in component', () => {

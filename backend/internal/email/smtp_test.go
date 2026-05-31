@@ -102,16 +102,16 @@ func TestSendMagicLinkReturnsConnectError(t *testing.T) {
 
 func TestBuildMessage(t *testing.T) {
 	message := string(buildMessage(
-		"PlayHub <noreply@example.com>",
+		"JoinQuest <noreply@example.com>",
 		"player@example.com",
-		"Sign in to PlayHub",
+		"Sign in to JoinQuest",
 		"Click here",
 	))
 
 	for _, want := range []string{
-		"From: PlayHub <noreply@example.com>",
+		"From: JoinQuest <noreply@example.com>",
 		"To: player@example.com",
-		"Subject: Sign in to PlayHub",
+		"Subject: Sign in to JoinQuest",
 		"Content-Type: text/plain; charset=UTF-8",
 		"Click here",
 	} {
@@ -126,8 +126,8 @@ func TestFormatAddress(t *testing.T) {
 		t.Fatalf("formatAddress without name = %q", got)
 	}
 
-	want := "PlayHub <noreply@example.com>"
-	if got := formatAddress("noreply@example.com", "PlayHub"); got != want {
+	want := "JoinQuest <noreply@example.com>"
+	if got := formatAddress("noreply@example.com", "JoinQuest"); got != want {
 		t.Fatalf("formatAddress with name = %q, want %q", got, want)
 	}
 }
@@ -136,7 +136,7 @@ func TestSenderFromEnvUsesSMTPWhenConfigured(t *testing.T) {
 	t.Setenv("SMTP_HOST", "smtp.example.com")
 	t.Setenv("SMTP_PORT", "2525")
 	t.Setenv("SMTP_FROM", "noreply@example.com")
-	t.Setenv("SMTP_FROM_NAME", "PlayHub")
+	t.Setenv("SMTP_FROM_NAME", "JoinQuest")
 
 	sender, err := SenderFromEnv()
 	if err != nil {

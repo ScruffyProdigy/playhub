@@ -1,8 +1,8 @@
-# PlayHub Frontend
+# JoinQuest Frontend
 
-PlayHub is a gaming lobby platform that allows users to join game queues, get sent to 3rd party games, and trade currency for digital goods.
+JoinQuest is a gaming lobby platform that allows users to join game queues, get sent to 3rd party games, and trade currency for digital goods.
 
-This frontend is built with React + Vite and provides a modern, responsive interface for the PlayHub platform.
+This frontend is built with React + Vite and provides a modern, responsive interface for JoinQuest.
 
 Currently, two official plugins are available:
 

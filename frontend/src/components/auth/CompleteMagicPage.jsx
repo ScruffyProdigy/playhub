@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { completeMagicLoginOnce } from '../../lib/auth'
+import { APP_NAME } from '../../lib/brand'
 
 function getTokenFromLocation() {
   const params = new URLSearchParams(window.location.search)
@@ -45,7 +46,7 @@ export default function CompleteMagicPage() {
 
   return (
     <main className="auth-page">
-      <h1>PlayHub</h1>
+      <h1>{APP_NAME}</h1>
       <section className="panel-card" aria-live="polite">
         <h2>Signing you in</h2>
         <p className={status === 'error' ? 'status-message status-message-error' : 'status-message'}>{message}</p>

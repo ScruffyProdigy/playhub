@@ -3,6 +3,11 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+# shellcheck source=lib/lobby-smtp.sh
+. "$ROOT/scripts/lib/lobby-smtp.sh"
+
 echo "🚀 Deploying PlayHub to Staging..."
 
 # Configuration
@@ -73,6 +78,9 @@ kubectl wait --for=condition=ready --timeout=300s pod -l app=pg -n $NAMESPACE
 print_step "Waiting for deployments to be ready..."
 kubectl wait --for=condition=available --timeout=300s deployment/lobby-backend -n $NAMESPACE
 kubectl wait --for=condition=available --timeout=300s deployment/lobby-frontend -n $NAMESPACE
+
+print_step "Configuring Resend SMTP (if k8s/secrets/lobby-smtp.yaml exists)..."
+apply_lobby_smtp_secret
 
 # Show deployment status
 print_step "Deployment status:"

@@ -2,14 +2,15 @@ import CompleteMagicPage from './components/auth/CompleteMagicPage'
 import AuthPanel from './components/auth/AuthPanel'
 import GameLobby from './components/games/GameLobby'
 import { AuthProvider } from './components/auth/AuthProvider'
+import { APP_NAME, APP_TAGLINE } from './lib/brand'
 import './App.css'
 
 function HomePage() {
   return (
     <main className="app-shell">
       <header className="app-header">
-        <h1>PlayHub</h1>
-        <p className="tagline">Your Gaming Hub - Queue, Play, Trade</p>
+        <h1>{APP_NAME}</h1>
+        <p className="tagline">{APP_TAGLINE}</p>
       </header>
 
       <AuthPanel />

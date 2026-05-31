@@ -1,0 +1,13 @@
+# Explicit TLS cert for demo.joinquest.cc (cert-manager). Secret is referenced by joinquest-ingress.yaml.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: demo-joinquest-cc
+  namespace: joinquest
+spec:
+  secretName: demo-joinquest-cc-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - demo.joinquest.cc

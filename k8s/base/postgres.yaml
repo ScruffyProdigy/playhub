@@ -39,6 +39,10 @@ spec:
           envFrom:
             - secretRef:
                 name: pg-auth     # contains POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+          env:
+            # PVC roots often contain lost+found; use a subdir so initdb succeeds (common on GKE).
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           volumeMounts:
             - name: pgdata
               mountPath: /var/lib/postgresql/data

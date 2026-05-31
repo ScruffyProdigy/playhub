@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# PlayHub Development Script
+# JoinQuest Development Script
 # This script starts both frontend and backend development servers
 
 set -e
@@ -44,16 +44,19 @@ cleanup() {
 # Set up signal handlers
 trap cleanup SIGINT SIGTERM
 
-echo "🚀 Starting PlayHub development servers..."
+echo "🚀 Starting JoinQuest development servers..."
 echo ""
 
 # Check if we're in the right directory
 if [ ! -f "README.md" ] || [ ! -d "backend" ] || [ ! -d "frontend" ]; then
-    print_error "Please run this script from the PlayHub project root directory"
+    print_error "Please run this script from the JoinQuest project root directory"
     exit 1
 fi
 
 ROOT="$(pwd)"
+# shellcheck source=lib/lobby-smtp.sh
+. "$ROOT/scripts/lib/lobby-smtp.sh"
+load_lobby_smtp_env_from_file
 
 # Start shared PostgreSQL for local development
 if command -v docker &> /dev/null; then

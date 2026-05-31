@@ -14,9 +14,9 @@ test.describe('Debug Tests', () => {
       console.log('Page content length:', content.length)
       console.log('Page content preview:', content.substring(0, 500))
       
-      console.log('Checking if PlayHub text exists...')
-      const hasPlayHub = await page.getByText('PlayHub').isVisible()
-      console.log('PlayHub text visible:', hasPlayHub)
+      console.log('Checking if JoinQuest text exists...')
+      const hasJoinQuest = await page.getByText('JoinQuest').isVisible()
+      console.log('JoinQuest text visible:', hasJoinQuest)
       
       console.log('Checking page title...')
       const title = await page.title()

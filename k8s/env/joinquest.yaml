@@ -1,0 +1,10 @@
+# GKE demo / joinquest namespace — edit REACT_APP_API_BASE_URL to your public lobby URL.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lobby-frontend-config
+  namespace: joinquest
+  labels: { env: joinquest }
+data:
+  REACT_APP_ENV: production
+  REACT_APP_API_BASE_URL: "https://demo.joinquest.cc"

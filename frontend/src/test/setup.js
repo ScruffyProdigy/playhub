@@ -1,4 +1,13 @@
 import '@testing-library/jest-dom'
+import { beforeEach, vi } from 'vitest'
+import { clearSubscriptionAuthCache } from '../lib/queue'
+
+vi.mock('graphql-ws', () => ({
+  createClient: vi.fn(() => ({
+    subscribe: vi.fn(() => () => {}),
+    dispose: vi.fn(),
+  })),
+}))
 
 // Mock window.env for testing
 Object.defineProperty(window, 'env', {
@@ -13,38 +22,29 @@ Object.defineProperty(window, 'env', {
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
 })
 
-// Mock IntersectionObserver
 global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }))
 
-// Mock ResizeObserver
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }))
-
-export function mockGraphQLResponse(data) {
-  global.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => ({ data }),
-  })
-}
 
 export const mockDemoGames = [
   {
@@ -61,15 +61,70 @@ export const mockDemoGames = [
   },
 ]
 
-export function mockUnauthenticatedSession() {
-  mockGraphQLResponse({ me: null })
+const defaultQueueStatus = { queued: false, queuedCount: 0 }
+
+function createFetchMock(handlers) {
+  return vi.fn(async (_url, init) => {
+    const body = JSON.parse(init?.body ?? '{}')
+    const query = body.query ?? ''
+    let data = {}
+
+    if (query.includes('loginMagic')) {
+      data = { loginMagic: true }
+    } else if (query.includes('completeMagic')) {
+      data = { completeMagic: handlers.me ?? null }
+    } else if (query.includes('logout')) {
+      data = { logout: true }
+    } else if (query.includes('subscriptionAuth')) {
+      data = { subscriptionAuth: handlers.subscriptionAuth ?? 'Bearer test-token' }
+    } else if (query.includes('myQueueStatus')) {
+      data = { myQueueStatus: handlers.myQueueStatus ?? defaultQueueStatus }
+    } else if (query.includes('games {')) {
+      data = { games: handlers.games ?? [] }
+    } else if (query.includes('me {') || query.includes('query Me')) {
+      data = { me: handlers.me ?? null }
+    } else if (query.includes('joinGame')) {
+      data = { joinGame: handlers.joinGame ?? { queued: true, queuedCount: 1 } }
+    } else if (query.includes('leaveQueue')) {
+      data = { leaveQueue: true }
+    } else {
+      data = handlers.fallback ?? {}
+    }
+
+    return {
+      ok: true,
+      json: async () => ({ data }),
+    }
+  })
 }
 
-export function mockAuthenticatedSession(user = {
-  id: 'user-1',
-  email: 'player@example.com',
-  displayName: 'player',
-  createdAt: '2026-01-01T00:00:00Z',
-}) {
-  mockGraphQLResponse({ me: user, games: mockDemoGames })
+export function mockGraphQLResponse(data) {
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ data }),
+  })
 }
+
+export function mockUnauthenticatedSession() {
+  global.fetch = createFetchMock({ me: null, games: [] })
+}
+
+export function mockAuthenticatedSession(
+  user = {
+    id: 'user-1',
+    email: 'player@example.com',
+    displayName: 'player',
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+) {
+  global.fetch = createFetchMock({
+    me: user,
+    games: mockDemoGames,
+    subscriptionAuth: 'Bearer test-token',
+    myQueueStatus: defaultQueueStatus,
+  })
+}
+
+beforeEach(() => {
+  clearSubscriptionAuthCache()
+})

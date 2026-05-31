@@ -17,13 +17,13 @@ import (
 const yamlFormat = `apiVersion: v1
 kind: Secret
 metadata:
-	name: %s
-	namespace: %s
+  name: %s
+  namespace: %s
 type: Opaque
 stringData:
-	KID: %s
-	PUB_X: %s
-	PRIV_PEM: |
+  KID: %s
+  PUB_X: %s
+  PRIV_PEM: |
 %s`
 
 func main() {

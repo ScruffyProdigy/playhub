@@ -13,8 +13,8 @@ describe('App Integration Tests', () => {
       mockUnauthenticatedSession()
       render(<App />)
 
-      expect(screen.getByRole('heading', { name: 'PlayHub' })).toBeInTheDocument()
-      expect(screen.getByText('Your Gaming Hub - Queue, Play, Trade')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'JoinQuest' })).toBeInTheDocument()
+      expect(screen.getByText('Queue up. Play together.')).toBeInTheDocument()
 
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()

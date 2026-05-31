@@ -62,7 +62,7 @@ func TestMagicLinkBodyIncludesLinkAndTTL(t *testing.T) {
 	if !strings.Contains(body, "15 minutes") {
 		t.Fatalf("expected ttl in body: %q", body)
 	}
-	if !strings.Contains(body, "PlayHub") {
+	if !strings.Contains(body, "JoinQuest") {
 		t.Fatalf("expected branding in body: %q", body)
 	}
 }

@@ -1,6 +1,6 @@
-# PlayHub
+# JoinQuest
 
-PlayHub is a gaming lobby platform that connects players to games and enables trading of digital goods and currency.
+JoinQuest is a gaming lobby platform that connects players to games and enables trading of digital goods and currency.
 
 ## Features
 

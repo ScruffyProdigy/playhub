@@ -12,8 +12,8 @@ describe('App Component', () => {
     mockUnauthenticatedSession()
     render(<App />)
 
-    expect(screen.getByText('PlayHub')).toBeInTheDocument()
-    expect(screen.getByText('Your Gaming Hub - Queue, Play, Trade')).toBeInTheDocument()
+    expect(screen.getByText('JoinQuest')).toBeInTheDocument()
+    expect(screen.getByText('Queue up. Play together.')).toBeInTheDocument()
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
@@ -24,14 +24,12 @@ describe('App Component', () => {
     mockAuthenticatedSession()
     render(<App />)
 
-    await waitFor(() => {
-      expect(screen.getByText('Welcome back')).toBeInTheDocument()
-      expect(screen.getByText('player@example.com')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
-      expect(screen.getByRole('heading', { name: 'Available games' })).toBeInTheDocument()
-      expect(screen.getByRole('heading', { name: 'Quick Match' })).toBeInTheDocument()
-      expect(screen.getByRole('heading', { name: 'Party Lobby' })).toBeInTheDocument()
-    })
+    expect(await screen.findByText('Welcome back')).toBeInTheDocument()
+    expect(screen.getByText('player@example.com')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Available games' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Quick Match' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Party Lobby' })).toBeInTheDocument()
   })
 
   it('renders the magic-link completion page on /auth/complete', async () => {

@@ -11,8 +11,8 @@ test.describe('Basic App Functionality', () => {
       await page.waitForLoadState('networkidle', { timeout: 30000 })
       
       // Check that the basic content is present
-      await expect(page.getByText('PlayHub')).toBeVisible({ timeout: 10000 })
-      await expect(page.getByText('Your Gaming Hub - Queue, Play, Trade')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText('JoinQuest')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText('Queue up. Play together.')).toBeVisible({ timeout: 10000 })
     } catch (error) {
       // If the test fails, take a screenshot for debugging
       await page.screenshot({ path: 'test-failure.png' })
@@ -26,7 +26,7 @@ test.describe('Basic App Functionality', () => {
       await page.waitForLoadState('domcontentloaded', { timeout: 30000 })
       
       // Check the page title
-      await expect(page).toHaveTitle(/PlayHub/, { timeout: 10000 })
+      await expect(page).toHaveTitle(/JoinQuest/, { timeout: 10000 })
     } catch (error) {
       await page.screenshot({ path: 'title-test-failure.png' })
       throw error

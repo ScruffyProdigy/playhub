@@ -13,6 +13,9 @@ type MagicLinkEmail struct {
 	TTL  time.Duration
 }
 
+// ProductName is used in sign-in email subject and body.
+const ProductName = "JoinQuest"
+
 // Sender delivers transactional email.
 type Sender interface {
 	SendMagicLink(ctx context.Context, msg MagicLinkEmail) error
@@ -30,15 +33,15 @@ func formatTTL(ttl time.Duration) string {
 }
 
 func magicLinkSubject() string {
-	return "Sign in to PlayHub"
+	return fmt.Sprintf("Sign in to %s", ProductName)
 }
 
 func magicLinkBody(msg MagicLinkEmail) string {
-	return fmt.Sprintf(`Sign in to PlayHub
+	return fmt.Sprintf(`Sign in to %s
 
 Click this link to continue:
 %s
 
 This link expires in %s. If you did not request this email, you can ignore it.
-`, msg.Link, formatTTL(msg.TTL))
+`, ProductName, msg.Link, formatTTL(msg.TTL))
 }
