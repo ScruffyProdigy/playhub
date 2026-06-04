@@ -19,7 +19,7 @@ test.describe.skip('App E2E Tests', () => {
 
   test('displays the tagline', async ({ page }) => {
     // Check that the tagline is visible
-    await expect(page.getByText('Queue up. Play together.')).toBeVisible()
+    await expect(page.getByText('Find your group. Play together.')).toBeVisible()
   })
 
   test('has proper heading structure', async ({ page }) => {
@@ -30,13 +30,13 @@ test.describe.skip('App E2E Tests', () => {
   test('renders all expected content', async ({ page }) => {
     // Check that all main content is visible
     await expect(page.getByText('JoinQuest')).toBeVisible()
-    await expect(page.getByText('Queue up. Play together.')).toBeVisible()
+    await expect(page.getByText('Find your group. Play together.')).toBeVisible()
   })
 
   test('has accessible content structure', async ({ page }) => {
     // Check that content has proper semantic structure
     const heading = page.getByRole('heading', { name: 'JoinQuest' })
-    const tagline = page.getByText('Queue up. Play together.')
+    const tagline = page.getByText('Find your group. Play together.')
     
     await expect(heading).toBeVisible()
     await expect(tagline).toBeVisible()
@@ -45,7 +45,7 @@ test.describe.skip('App E2E Tests', () => {
   test('maintains content during page interactions', async ({ page }) => {
     // Check that content remains stable
     await expect(page.getByText('JoinQuest')).toBeVisible()
-    await expect(page.getByText('Queue up. Play together.')).toBeVisible()
+    await expect(page.getByText('Find your group. Play together.')).toBeVisible()
     
     // Simulate some page interactions (hover, scroll, etc.)
     await page.hover('h1')
@@ -53,7 +53,7 @@ test.describe.skip('App E2E Tests', () => {
     
     // Content should still be visible
     await expect(page.getByText('JoinQuest')).toBeVisible()
-    await expect(page.getByText('Queue up. Play together.')).toBeVisible()
+    await expect(page.getByText('Find your group. Play together.')).toBeVisible()
   })
 })
 
@@ -68,7 +68,7 @@ test.describe('App Accessibility E2E Tests', () => {
 
   test('has accessible content', async ({ page }) => {
     const heading = page.getByRole('heading', { name: 'JoinQuest' })
-    const tagline = page.getByText('Queue up. Play together.')
+    const tagline = page.getByText('Find your group. Play together.')
     
     await expect(heading).toBeVisible()
     await expect(tagline).toBeVisible()
@@ -81,7 +81,7 @@ test.describe('App Accessibility E2E Tests', () => {
     
     // Content should still be visible
     await expect(page.getByText('JoinQuest')).toBeVisible()
-    await expect(page.getByText('Queue up. Play together.')).toBeVisible()
+    await expect(page.getByText('Find your group. Play together.')).toBeVisible()
   })
 })
 
@@ -119,23 +119,23 @@ test.describe('App Cross-Browser E2E Tests', () => {
 
   test('works in different browsers', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'JoinQuest' })).toBeVisible()
-    await expect(page.getByText('Queue up. Play together.')).toBeVisible()
+    await expect(page.getByText('Find your group. Play together.')).toBeVisible()
   })
 
   test('handles different screen sizes', async ({ page }) => {
     // Test mobile viewport
     await page.setViewportSize({ width: 375, height: 667 }) // iPhone SE
     await expect(page.getByRole('heading', { name: 'JoinQuest' })).toBeVisible()
-    await expect(page.getByText('Queue up. Play together.')).toBeVisible()
+    await expect(page.getByText('Find your group. Play together.')).toBeVisible()
 
     // Test tablet viewport
     await page.setViewportSize({ width: 1024, height: 768 }) // iPad
     await expect(page.getByRole('heading', { name: 'JoinQuest' })).toBeVisible()
-    await expect(page.getByText('Queue up. Play together.')).toBeVisible()
+    await expect(page.getByText('Find your group. Play together.')).toBeVisible()
 
     // Test desktop viewport
     await page.setViewportSize({ width: 1920, height: 1080 }) // Desktop
     await expect(page.getByRole('heading', { name: 'JoinQuest' })).toBeVisible()
-    await expect(page.getByText('Queue up. Play together.')).toBeVisible()
+    await expect(page.getByText('Find your group. Play together.')).toBeVisible()
   })
 })

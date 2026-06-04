@@ -13,7 +13,7 @@ vi.mock('../../lib/games', () => ({
 function renderGameLobby() {
   return render(
     <AuthProvider>
-      <GameLobby />
+      <GameLobby activeQueue={null} onQueueChange={vi.fn()} />
     </AuthProvider>,
   )
 }

@@ -278,6 +278,30 @@ func (s *Store) CountWaitingInModeQueue(ctx context.Context, modeQueueID uuid.UU
 	return count, err
 }
 
+// ListWaitingUserIDsInModeQueue returns user ids with a waiting row in the queue.
+func (s *Store) ListWaitingUserIDsInModeQueue(ctx context.Context, modeQueueID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT user_id
+		FROM game_queues
+		WHERE mode_queue_id = $1 AND status = 'waiting'
+		ORDER BY joined_at ASC
+	`, modeQueueID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func (s *Store) GetGameBySlug(ctx context.Context, slug string) (*Game, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT `+gameColumns+`

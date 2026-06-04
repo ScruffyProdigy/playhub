@@ -57,6 +57,7 @@ assignments only. See the linked doc.
 - **Hybrid creation:** on register, auto-create queue(s) from template (default fifo, or
   one row per `queue: true` role dimension).
 - Matchmaking is **scoped to `queue_id`**, not `game_id`.
+- **One waiting queue per player** globally (migration `000012`). Joining another queue **automatically leaves** the previous waiting queue; the client shows a `message` on `joinQueue`.
 - **Fifo:** FIFO within one queue until `players_to_start` (default `max`).
 - **Composition:** match fires when every role bucket reaches `required`; coordinator
   assigns teams (see seat-templates doc).

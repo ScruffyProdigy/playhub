@@ -9,6 +9,7 @@ const JOIN_QUEUE_MUTATION = `
       queuedCount
       sessionId
       joinUrl
+      message
     }
   }
 `
@@ -81,7 +82,7 @@ function getSubscriptionConnectionParams() {
   return async () => {
     const header = await loadSubscriptionAuth()
     if (!header) {
-      throw new Error('Sign in required for live queue updates')
+      throw new Error('Sign in required for live updates')
     }
     return { Authorization: header }
   }
@@ -128,18 +129,18 @@ export async function leaveQueue(queueId) {
 
 function formatSubscriptionError(err) {
   if (!err) {
-    return 'Queue updates unavailable'
+    return 'Live updates unavailable'
   }
   if (typeof err === 'string') {
     return err
   }
   if (Array.isArray(err)) {
-    return err[0]?.message || 'Queue updates unavailable'
+    return err[0]?.message || 'Live updates unavailable'
   }
   if (err.message) {
     return err.message
   }
-  return 'Queue updates unavailable'
+  return 'Live updates unavailable'
 }
 
 export async function subscribeToQueue(queueId, { onUpdate, onError } = {}) {

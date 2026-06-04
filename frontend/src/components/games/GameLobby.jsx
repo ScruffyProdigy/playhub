@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { fetchGames } from '../../lib/games'
 import GameListItem from './GameListItem'
+import { GAMES_HEADING, GAMES_INTRO } from '../../lib/playerCopy'
 
-export default function GameLobby() {
+export default function GameLobby({ activeQueue, onQueueChange }) {
   const { user, loading: authLoading } = useAuth()
   const [games, setGames] = useState([])
   const [status, setStatus] = useState('idle')
@@ -46,8 +47,8 @@ export default function GameLobby() {
 
   return (
     <section className="game-lobby panel-card" aria-labelledby="games-heading">
-      <h2 id="games-heading">Available games</h2>
-      <p className="panel-copy">Pick a game to join when matchmaking is ready.</p>
+      <h2 id="games-heading">{GAMES_HEADING}</h2>
+      <p className="panel-copy">{GAMES_INTRO}</p>
 
       {status === 'loading' ? (
         <p className="status-message" role="status">
@@ -70,7 +71,12 @@ export default function GameLobby() {
       {status === 'ready' && games.length > 0 ? (
         <ul className="game-list">
           {games.map((game) => (
-            <GameListItem key={game.id} game={game} />
+            <GameListItem
+              key={game.id}
+              game={game}
+              activeQueue={activeQueue}
+              onQueueChange={onQueueChange}
+            />
           ))}
         </ul>
       ) : null}

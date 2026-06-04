@@ -23,6 +23,18 @@ type JoinResult {
   sessionId: ID
   joinUrl: String
   queuedCount: Int
+  # Set when the player was removed from another game's queue to join this one.
+  message: String
+}
+
+# User's single active queue membership (waiting or matched), if any.
+type ActiveQueue {
+  queueId: ID!
+  gameId: ID!
+  gameName: String!
+  status: QueueStatus!
+  queuedCount: Int
+  joinUrl: String
 }
 
 enum QueueStatus {

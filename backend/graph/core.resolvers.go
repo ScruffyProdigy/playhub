@@ -50,7 +50,7 @@ func (r *mutationResolver) LeaveQueue(ctx context.Context, queueID string) (bool
 	if err != nil {
 		return false, err
 	}
-	if err := r.publishQueueLeft(ctx, view.GameID, modeQueueID, userID, queuedCount); err != nil {
+	if err := r.publishQueueLeft(ctx, view.GameID, modeQueueID, userID, queuedCount, ""); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -297,6 +297,57 @@ func (r *queryResolver) MyQueueStatus(ctx context.Context, queueID string) (*mod
 		}
 	}
 	return joinResultFromQueueView(view, launchURL), nil
+}
+
+// MyActiveQueue is the resolver for the myActiveQueue field.
+func (r *queryResolver) MyActiveQueue(ctx context.Context) (*model.ActiveQueue, error) {
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	active, err := st.GetUserActiveQueue(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if active == nil {
+		return nil, nil
+	}
+
+	queueID := active.ModeQueueID.String()
+	gameID := active.GameID.String()
+	resp := &model.ActiveQueue{
+		QueueID:  queueID,
+		GameID:   gameID,
+		GameName: active.GameName,
+	}
+	if active.Waiting {
+		resp.Status = model.QueueStatusWaiting
+		count := active.QueuedCount
+		resp.QueuedCount = &count
+		return resp, nil
+	}
+
+	resp.Status = model.QueueStatusMatched
+	if active.SessionID != nil {
+		game, gErr := st.GetGameByID(ctx, active.GameID)
+		if gErr != nil {
+			return nil, gErr
+		}
+		launchURL, uErr := r.signLaunchURL(ctx, game, *active.SessionID, userID)
+		if uErr != nil {
+			return nil, fmt.Errorf("launch url: %w", uErr)
+		}
+		if launchURL != "" {
+			resp.JoinURL = &launchURL
+		}
+	}
+	return resp, nil
 }
 
 // Player is the resolver for the player field.

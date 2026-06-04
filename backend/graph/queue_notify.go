@@ -49,7 +49,7 @@ func (r *Resolver) publishQueueResult(ctx context.Context, result *store.QueueJo
 	return nil
 }
 
-func (r *Resolver) publishQueueLeft(ctx context.Context, gameID, modeQueueID, userID uuid.UUID, queuedCount int) error {
+func (r *Resolver) publishQueueLeft(ctx context.Context, gameID, modeQueueID, userID uuid.UUID, queuedCount int, message string) error {
 	if r.PubSub == nil {
 		return nil
 	}
@@ -57,11 +57,43 @@ func (r *Resolver) publishQueueLeft(ctx context.Context, gameID, modeQueueID, us
 		GameID:      gameID.String(),
 		Status:      pubsub.QueueStatusLeft,
 		QueuedCount: queuedCount,
+		Message:     message,
 	}
 	if modeQueueID != uuid.Nil {
 		event.QueueID = modeQueueID.String()
 	}
 	return pubsub.PublishQueueEvent(ctx, r.PubSub, userID.String(), event)
+}
+
+// publishQueueSwitchFrom notifies the player and remaining waiters after leaving a queue to join another.
+func (r *Resolver) publishQueueSwitchFrom(ctx context.Context, st *store.Store, from *store.SwitchedFromQueue, userID uuid.UUID) error {
+	if r.PubSub == nil || from == nil {
+		return nil
+	}
+	count, err := st.CountWaitingInModeQueue(ctx, from.ModeQueueID)
+	if err != nil {
+		return err
+	}
+	leftMsg := "You left this queue to join another game."
+	if err := r.publishQueueLeft(ctx, from.GameID, from.ModeQueueID, userID, count, leftMsg); err != nil {
+		return err
+	}
+	waiters, err := st.ListWaitingUserIDsInModeQueue(ctx, from.ModeQueueID)
+	if err != nil {
+		return err
+	}
+	for _, waiterID := range waiters {
+		event := pubsub.QueueEvent{
+			GameID:      from.GameID.String(),
+			QueueID:     from.ModeQueueID.String(),
+			Status:      pubsub.QueueStatusWaiting,
+			QueuedCount: count,
+		}
+		if err := pubsub.PublishQueueEvent(ctx, r.PubSub, waiterID.String(), event); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func queueUpdateFromView(view *store.UserQueueView, launchURL string) *model.QueueUpdate {

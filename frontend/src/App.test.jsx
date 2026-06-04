@@ -13,7 +13,7 @@ describe('App Component', () => {
     render(<App />)
 
     expect(screen.getByText('JoinQuest')).toBeInTheDocument()
-    expect(screen.getByText('Queue up. Play together.')).toBeInTheDocument()
+    expect(screen.getByText('Find your group. Play together.')).toBeInTheDocument()
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()

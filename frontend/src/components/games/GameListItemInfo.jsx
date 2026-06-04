@@ -1,4 +1,6 @@
-export default function GameListItemInfo({ game, queueState, queuedCount, error }) {
+import { waitingForGroupLine } from '../../lib/playerCopy'
+
+export default function GameListItemInfo({ game, queueState, queuedCount, error, notice }) {
   const sessionCount = game.activeSessions?.length ?? 0
 
   return (
@@ -9,7 +11,12 @@ export default function GameListItemInfo({ game, queueState, queuedCount, error 
       </p>
       {queueState === 'waiting' ? (
         <p className="game-list-meta" role="status">
-          Waiting for players… ({queuedCount} in queue)
+          {waitingForGroupLine(queuedCount)}
+        </p>
+      ) : null}
+      {notice ? (
+        <p className="status-message" role="status">
+          {notice}
         </p>
       ) : null}
       {error ? (

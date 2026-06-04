@@ -53,6 +53,15 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	ActiveQueue struct {
+		GameID      func(childComplexity int) int
+		GameName    func(childComplexity int) int
+		JoinURL     func(childComplexity int) int
+		QueueID     func(childComplexity int) int
+		QueuedCount func(childComplexity int) int
+		Status      func(childComplexity int) int
+	}
+
 	DigitalGood struct {
 		Code        func(childComplexity int) int
 		Description func(childComplexity int) int
@@ -101,6 +110,7 @@ type ComplexityRoot struct {
 
 	JoinResult struct {
 		JoinURL     func(childComplexity int) int
+		Message     func(childComplexity int) int
 		Queued      func(childComplexity int) int
 		QueuedCount func(childComplexity int) int
 		SessionID   func(childComplexity int) int
@@ -138,6 +148,7 @@ type ComplexityRoot struct {
 		Goods            func(childComplexity int, gameID *string) int
 		Healthz          func(childComplexity int) int
 		Me               func(childComplexity int) int
+		MyActiveQueue    func(childComplexity int) int
 		MyInventory      func(childComplexity int, gameID *string) int
 		MyQueueStatus    func(childComplexity int, queueID string) int
 		Player           func(childComplexity int, id string) int
@@ -216,6 +227,7 @@ type QueryResolver interface {
 	Goods(ctx context.Context, gameID *string) ([]*model.DigitalGood, error)
 	MyInventory(ctx context.Context, gameID *string) ([]*model.Entitlement, error)
 	MyQueueStatus(ctx context.Context, queueID string) (*model.JoinResult, error)
+	MyActiveQueue(ctx context.Context) (*model.ActiveQueue, error)
 	Player(ctx context.Context, id string) (*model.PublicPlayer, error)
 	Me(ctx context.Context) (*model.User, error)
 	SubscriptionAuth(ctx context.Context) (*string, error)
@@ -250,6 +262,43 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "ActiveQueue.gameId":
+		if e.complexity.ActiveQueue.GameID == nil {
+			break
+		}
+
+		return e.complexity.ActiveQueue.GameID(childComplexity), true
+	case "ActiveQueue.gameName":
+		if e.complexity.ActiveQueue.GameName == nil {
+			break
+		}
+
+		return e.complexity.ActiveQueue.GameName(childComplexity), true
+	case "ActiveQueue.joinUrl":
+		if e.complexity.ActiveQueue.JoinURL == nil {
+			break
+		}
+
+		return e.complexity.ActiveQueue.JoinURL(childComplexity), true
+	case "ActiveQueue.queueId":
+		if e.complexity.ActiveQueue.QueueID == nil {
+			break
+		}
+
+		return e.complexity.ActiveQueue.QueueID(childComplexity), true
+	case "ActiveQueue.queuedCount":
+		if e.complexity.ActiveQueue.QueuedCount == nil {
+			break
+		}
+
+		return e.complexity.ActiveQueue.QueuedCount(childComplexity), true
+	case "ActiveQueue.status":
+		if e.complexity.ActiveQueue.Status == nil {
+			break
+		}
+
+		return e.complexity.ActiveQueue.Status(childComplexity), true
 
 	case "DigitalGood.code":
 		if e.complexity.DigitalGood.Code == nil {
@@ -453,6 +502,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.JoinResult.JoinURL(childComplexity), true
+	case "JoinResult.message":
+		if e.complexity.JoinResult.Message == nil {
+			break
+		}
+
+		return e.complexity.JoinResult.Message(childComplexity), true
 	case "JoinResult.queued":
 		if e.complexity.JoinResult.Queued == nil {
 			break
@@ -667,6 +722,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Me(childComplexity), true
+	case "Query.myActiveQueue":
+		if e.complexity.Query.MyActiveQueue == nil {
+			break
+		}
+
+		return e.complexity.Query.MyActiveQueue(childComplexity), true
 	case "Query.myInventory":
 		if e.complexity.Query.MyInventory == nil {
 			break
@@ -1065,6 +1126,8 @@ type Query {
   goods(gameId: ID): [DigitalGood!]!   # list goods globally or by game
   myInventory(gameId: ID): [Entitlement!]!
   myQueueStatus(queueId: ID!): JoinResult!
+  # Current waiting or matched queue anywhere in the catalog (at most one).
+  myActiveQueue: ActiveQueue
   # Game servers resolve lobbyUserId → display name (Bearer serviceToken from provision).
   player(id: ID!): PublicPlayer
 }
@@ -1108,6 +1171,18 @@ type JoinResult {
   sessionId: ID
   joinUrl: String
   queuedCount: Int
+  # Set when the player was removed from another game's queue to join this one.
+  message: String
+}
+
+# User's single active queue membership (waiting or matched), if any.
+type ActiveQueue {
+  queueId: ID!
+  gameId: ID!
+  gameName: String!
+  status: QueueStatus!
+  queuedCount: Int
+  joinUrl: String
 }
 
 enum QueueStatus {
@@ -1451,6 +1526,180 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _ActiveQueue_queueId(ctx context.Context, field graphql.CollectedField, obj *model.ActiveQueue) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ActiveQueue_queueId,
+		func(ctx context.Context) (any, error) {
+			return obj.QueueID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ActiveQueue_queueId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActiveQueue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ActiveQueue_gameId(ctx context.Context, field graphql.CollectedField, obj *model.ActiveQueue) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ActiveQueue_gameId,
+		func(ctx context.Context) (any, error) {
+			return obj.GameID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ActiveQueue_gameId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActiveQueue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ActiveQueue_gameName(ctx context.Context, field graphql.CollectedField, obj *model.ActiveQueue) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ActiveQueue_gameName,
+		func(ctx context.Context) (any, error) {
+			return obj.GameName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ActiveQueue_gameName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActiveQueue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ActiveQueue_status(ctx context.Context, field graphql.CollectedField, obj *model.ActiveQueue) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ActiveQueue_status,
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		ec.marshalNQueueStatus2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐQueueStatus,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ActiveQueue_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActiveQueue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type QueueStatus does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ActiveQueue_queuedCount(ctx context.Context, field graphql.CollectedField, obj *model.ActiveQueue) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ActiveQueue_queuedCount,
+		func(ctx context.Context) (any, error) {
+			return obj.QueuedCount, nil
+		},
+		nil,
+		ec.marshalOInt2ᚖint,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ActiveQueue_queuedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActiveQueue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ActiveQueue_joinUrl(ctx context.Context, field graphql.CollectedField, obj *model.ActiveQueue) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ActiveQueue_joinUrl,
+		func(ctx context.Context) (any, error) {
+			return obj.JoinURL, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ActiveQueue_joinUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActiveQueue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _DigitalGood_id(ctx context.Context, field graphql.CollectedField, obj *model.DigitalGood) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
@@ -2567,6 +2816,35 @@ func (ec *executionContext) fieldContext_JoinResult_queuedCount(_ context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _JoinResult_message(ctx context.Context, field graphql.CollectedField, obj *model.JoinResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_JoinResult_message,
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_JoinResult_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "JoinResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ModeQueue_id(ctx context.Context, field graphql.CollectedField, obj *model.ModeQueue) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2745,6 +3023,8 @@ func (ec *executionContext) fieldContext_Mutation_joinQueue(ctx context.Context,
 				return ec.fieldContext_JoinResult_joinUrl(ctx, field)
 			case "queuedCount":
 				return ec.fieldContext_JoinResult_queuedCount(ctx, field)
+			case "message":
+				return ec.fieldContext_JoinResult_message(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type JoinResult", field.Name)
 		},
@@ -3610,6 +3890,8 @@ func (ec *executionContext) fieldContext_Query_myQueueStatus(ctx context.Context
 				return ec.fieldContext_JoinResult_joinUrl(ctx, field)
 			case "queuedCount":
 				return ec.fieldContext_JoinResult_queuedCount(ctx, field)
+			case "message":
+				return ec.fieldContext_JoinResult_message(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type JoinResult", field.Name)
 		},
@@ -3624,6 +3906,49 @@ func (ec *executionContext) fieldContext_Query_myQueueStatus(ctx context.Context
 	if fc.Args, err = ec.field_Query_myQueueStatus_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_myActiveQueue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_myActiveQueue,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().MyActiveQueue(ctx)
+		},
+		nil,
+		ec.marshalOActiveQueue2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐActiveQueue,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_myActiveQueue(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "queueId":
+				return ec.fieldContext_ActiveQueue_queueId(ctx, field)
+			case "gameId":
+				return ec.fieldContext_ActiveQueue_gameId(ctx, field)
+			case "gameName":
+				return ec.fieldContext_ActiveQueue_gameName(ctx, field)
+			case "status":
+				return ec.fieldContext_ActiveQueue_status(ctx, field)
+			case "queuedCount":
+				return ec.fieldContext_ActiveQueue_queuedCount(ctx, field)
+			case "joinUrl":
+				return ec.fieldContext_ActiveQueue_joinUrl(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ActiveQueue", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -6059,6 +6384,64 @@ func (ec *executionContext) unmarshalInputRegisterGameInput(ctx context.Context,
 
 // region    **************************** object.gotpl ****************************
 
+var activeQueueImplementors = []string{"ActiveQueue"}
+
+func (ec *executionContext) _ActiveQueue(ctx context.Context, sel ast.SelectionSet, obj *model.ActiveQueue) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, activeQueueImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ActiveQueue")
+		case "queueId":
+			out.Values[i] = ec._ActiveQueue_queueId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gameId":
+			out.Values[i] = ec._ActiveQueue_gameId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gameName":
+			out.Values[i] = ec._ActiveQueue_gameName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._ActiveQueue_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "queuedCount":
+			out.Values[i] = ec._ActiveQueue_queuedCount(ctx, field, obj)
+		case "joinUrl":
+			out.Values[i] = ec._ActiveQueue_joinUrl(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var digitalGoodImplementors = []string{"DigitalGood"}
 
 func (ec *executionContext) _DigitalGood(ctx context.Context, sel ast.SelectionSet, obj *model.DigitalGood) graphql.Marshaler {
@@ -6500,6 +6883,8 @@ func (ec *executionContext) _JoinResult(ctx context.Context, sel ast.SelectionSe
 			out.Values[i] = ec._JoinResult_joinUrl(ctx, field, obj)
 		case "queuedCount":
 			out.Values[i] = ec._JoinResult_queuedCount(ctx, field, obj)
+		case "message":
+			out.Values[i] = ec._JoinResult_message(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6946,6 +7331,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "myActiveQueue":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_myActiveQueue(ctx, field)
 				return res
 			}
 
@@ -8550,6 +8954,13 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalOActiveQueue2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐActiveQueue(ctx context.Context, sel ast.SelectionSet, v *model.ActiveQueue) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ActiveQueue(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v any) (bool, error) {

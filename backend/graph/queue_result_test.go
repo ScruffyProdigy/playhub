@@ -7,6 +7,20 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
+func TestJoinResultIncludesSwitchMessage(t *testing.T) {
+	name := "Rock Paper Scissors"
+	result := joinResultFromQueueJoin(&store.QueueJoinResult{
+		Status:      store.QueueStatusWaiting,
+		QueuedCount: 1,
+		SwitchedFrom: &store.SwitchedFromQueue{
+			GameName: name,
+		},
+	})
+	if result.Message == nil || *result.Message != "You left the group for Rock Paper Scissors to look for a group here." {
+		t.Fatalf("message = %+v", result.Message)
+	}
+}
+
 func TestJoinResultFromQueueJoinAlwaysQueued(t *testing.T) {
 	sessionID := uuid.New()
 	waiting := joinResultFromQueueJoin(&store.QueueJoinResult{

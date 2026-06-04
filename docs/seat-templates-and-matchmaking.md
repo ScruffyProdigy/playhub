@@ -63,7 +63,7 @@ You **do not** implement LFG, party logic, or queue paths. You **do** need to ha
 - **`min` / `max` / `sizeForQueue`** — only when the mode supports variable match sizes (see [Mode sizing](#mode-sizing)).
 - Optional **`count`** — validation only; must equal expanded leaf count if present.
 
-Lobby derives lobby UI (Join queue vs Join as DPS) from the template; you do not configure that.
+Lobby derives player UI (**Look for group** vs **Join as …** role buckets) from the template; you do not configure button labels in the manifest.
 
 ---
 
@@ -145,7 +145,7 @@ Walk the template; register a queue at each [branch endpoint](#queue-path-algori
 
 | Paths | UI |
 |-------|-----|
-| 1 (`""`) | **Join queue** (fifo) |
+| 1 (`""`) | **Look for group** (fifo; `joinQueue` in API) |
 | 2+ | **Join as …** per path (composition) |
 
 **Algorithm**

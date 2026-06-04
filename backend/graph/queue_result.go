@@ -6,6 +6,14 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
+func joinSwitchMessage(from *store.SwitchedFromQueue) *string {
+	if from == nil || from.GameName == "" {
+		return nil
+	}
+	msg := store.SwitchedFromPlayerMessage(from.GameName)
+	return &msg
+}
+
 // joinResultFromQueueJoin is the joinQueue mutation response for waiters: always "in queue"
 // from the client's perspective. Match details are delivered via queueUpdated / myQueueStatus.
 func joinResultFromQueueJoin(result *store.QueueJoinResult) *model.JoinResult {
@@ -17,6 +25,7 @@ func joinResultFromQueueJoin(result *store.QueueJoinResult) *model.JoinResult {
 	return &model.JoinResult{
 		Queued:      true,
 		QueuedCount: &count,
+		Message:     joinSwitchMessage(result.SwitchedFrom),
 	}
 }
 
@@ -32,6 +41,7 @@ func joinResultAfterJoin(result *store.QueueJoinResult, userID uuid.UUID, launch
 		resp := &model.JoinResult{
 			Queued:    false,
 			SessionID: &sessionID,
+			Message:   joinSwitchMessage(result.SwitchedFrom),
 		}
 		if launchURLs != nil {
 			if url, ok := launchURLs[userID]; ok && url != "" {

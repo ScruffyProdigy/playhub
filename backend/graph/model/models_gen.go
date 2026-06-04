@@ -10,6 +10,15 @@ import (
 	"time"
 )
 
+type ActiveQueue struct {
+	QueueID     string      `json:"queueId"`
+	GameID      string      `json:"gameId"`
+	GameName    string      `json:"gameName"`
+	Status      QueueStatus `json:"status"`
+	QueuedCount *int        `json:"queuedCount,omitempty"`
+	JoinURL     *string     `json:"joinUrl,omitempty"`
+}
+
 type DigitalGood struct {
 	ID          string  `json:"id"`
 	Code        string  `json:"code"`
@@ -61,6 +70,7 @@ type JoinResult struct {
 	SessionID   *string `json:"sessionId,omitempty"`
 	JoinURL     *string `json:"joinUrl,omitempty"`
 	QueuedCount *int    `json:"queuedCount,omitempty"`
+	Message     *string `json:"message,omitempty"`
 }
 
 type ModeQueue struct {

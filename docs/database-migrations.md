@@ -25,7 +25,8 @@ Migrations are stored in the `backend/migrations/` directory and follow the nami
 - `000002_provisional_display_names.up.sql` - Provisional display names for new users
 - `000003_demo_games.up.sql` - Seeds demo games for local/staging
 - `000004_game_handoff.up.sql` - Game handoff fields (`play_url`, `api_base_url`, etc.)
-- `000005_queue_one_waiting_per_user.up.sql` - One active waiting queue entry per user
+- `000005_queue_one_waiting_per_user.up.sql` - One active waiting queue entry per user (per game; superseded by 000012)
+- `000012_one_waiting_queue_global.up.sql` - One waiting queue row per user across all games
 - `000006_magic_link_login_code.up.sql` - Adds `code_hash` on `magic_links` for 6-digit email codes
 - `000007_game_catalog.up.sql` - Game catalog: manifest cache on `games`, `game_modes`, `game_mode_seats`, `mode_queues`, and `game_queues.mode_queue_id`
 - `000008_mode_queue_matchmaking.up.sql` - Session `mode_id`/`mode_queue_id`, unique waiting row per user per mode queue

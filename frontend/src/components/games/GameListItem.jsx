@@ -1,11 +1,39 @@
 import { defaultQueueForGame } from '../../lib/games'
+import { activeMatchBlockedLine } from '../../lib/playerCopy'
 import GameListItemInfo from './GameListItemInfo'
 import GameQueueActions from './GameQueueActions'
 import { useGameQueue } from './useGameQueue'
 
-export default function GameListItem({ game }) {
+export default function GameListItem({ game, activeQueue, onQueueChange }) {
   const defaultQueue = defaultQueueForGame(game)
-  const queue = useGameQueue(defaultQueue?.id)
+
+  const isThisQueue =
+    defaultQueue?.id && activeQueue?.queueId && activeQueue.queueId === defaultQueue.id
+  const queue = useGameQueue(defaultQueue?.id, {
+    skipSubscription: Boolean(isThisQueue && activeQueue),
+  })
+  const showRowActions =
+    !isThisQueue || (queue.queueState !== 'waiting' && queue.queueState !== 'matched')
+  const blockedActiveMatch =
+    activeQueue &&
+    defaultQueue?.id &&
+    !isThisQueue &&
+    queue.queueState === 'idle' &&
+    activeQueue.status === 'MATCHED'
+
+  async function handleJoin() {
+    await queue.handleJoin()
+    await onQueueChange?.()
+  }
+
+  async function handleLeave() {
+    await queue.handleLeave()
+    await onQueueChange?.()
+  }
+
+  const displayError =
+    queue.error ||
+    (blockedActiveMatch ? activeMatchBlockedLine(activeQueue.gameName) : '')
 
   return (
     <li className="game-list-item">
@@ -13,16 +41,21 @@ export default function GameListItem({ game }) {
         game={game}
         queueState={queue.queueState}
         queuedCount={queue.queuedCount}
-        error={queue.error}
+        error={displayError}
+        notice={queue.notice}
       />
-      <GameQueueActions
-        queueState={queue.queueState}
-        joinUrl={queue.joinUrl}
-        busy={queue.busy}
-        onJoin={queue.handleJoin}
-        onLeave={queue.handleLeave}
-        disabled={!defaultQueue}
-      />
+      {showRowActions ? (
+        <GameQueueActions
+          queueState={queue.queueState}
+          joinUrl={queue.joinUrl}
+          busy={queue.busy}
+          onJoin={handleJoin}
+          onLeave={handleLeave}
+          disabled={!defaultQueue || blockedActiveMatch}
+        />
+      ) : (
+        <p className="game-list-meta game-list-meta--banner">Use the banner above to launch or stop looking.</p>
+      )}
     </li>
   )
 }

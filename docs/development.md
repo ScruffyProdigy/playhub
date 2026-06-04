@@ -18,8 +18,10 @@ This guide will help you set up and run JoinQuest locally for development.
 ### 🚧 In Active Development
 - **Digital goods**: Player purchase and trade flows
 
-### 📋 Next Steps
-- **Match reporting**: Game → Lobby result callbacks via GraphQL
+### 📋 Next Steps (not in current branch)
+- **E2E partner path**: [end-to-end-partner-checklist.md](./end-to-end-partner-checklist.md)
+- **`seatTemplate` + LFG**: [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md) — manifest still flat `seats[]` in code
+- **Post-game GraphQL**: [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md) (`reportPlayerFinished`, `reportMatchResult`)
 
 ## Prerequisites
 

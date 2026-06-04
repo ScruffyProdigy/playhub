@@ -9,6 +9,9 @@ import {
 
 /** Apply join mutation result (waiting or matched for the player who triggered the match). */
 function applyJoinResponse(result, handlers) {
+  if (result?.message) {
+    handlers.setNotice?.(result.message)
+  }
   if (result?.joinUrl) {
     return applyQueueUpdate(
       { status: 'MATCHED', joinUrl: result.joinUrl, queuedCount: 0 },
@@ -75,11 +78,16 @@ function applyMyQueueStatus(result, handlers) {
   )
 }
 
-export function useGameQueue(queueId) {
+/**
+ * @param {string | undefined} queueId
+ * @param {{ skipSubscription?: boolean }} [options] — set when the sticky banner already subscribes to this queue
+ */
+export function useGameQueue(queueId, { skipSubscription = false } = {}) {
   const [queueState, setQueueState] = useState('idle')
   const [joinUrl, setJoinUrl] = useState('')
   const [queuedCount, setQueuedCount] = useState(0)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const unsubscribeRef = useRef(null)
   const subscribeGenerationRef = useRef(0)
@@ -112,7 +120,7 @@ export function useGameQueue(queueId) {
       await prefetchSubscriptionAuth()
     } catch (err) {
       if (generation === subscribeGenerationRef.current) {
-        setError(err.message || 'Sign in required for live queue updates')
+        setError(err.message || 'Sign in required for live updates')
       }
       return
     }
@@ -139,7 +147,7 @@ export function useGameQueue(queueId) {
       }
     } catch (err) {
       if (generation === subscribeGenerationRef.current) {
-        setError(err.message || 'Queue updates unavailable')
+        setError(err.message || 'Live updates unavailable')
       }
     }
   }, [queueId, applyUpdate])
@@ -158,9 +166,11 @@ export function useGameQueue(queueId) {
         if (cancelled || syncGen !== syncGenerationRef.current) {
           return
         }
-        await ensureSubscribed()
-        if (cancelled || syncGen !== syncGenerationRef.current) {
-          return
+        if (!skipSubscription) {
+          await ensureSubscribed()
+          if (cancelled || syncGen !== syncGenerationRef.current) {
+            return
+          }
         }
         const status = await fetchMyQueueStatus(queueId)
         if (cancelled || syncGen !== syncGenerationRef.current) {
@@ -205,27 +215,31 @@ export function useGameQueue(queueId) {
       document.removeEventListener('visibilitychange', onVisible)
       clearSubscription()
     }
-  }, [queueId, ensureSubscribed, clearSubscription])
+  }, [queueId, skipSubscription, ensureSubscribed, clearSubscription])
 
   async function handleJoin() {
     if (!queueId) {
-      setError('No queue available for this game')
+      setError('This game is not available for group matchmaking yet')
       return
     }
     setBusy(true)
     setError('')
+    setNotice('')
     syncGenerationRef.current += 1
     try {
-      await ensureSubscribed()
+      if (!skipSubscription) {
+        await ensureSubscribed()
+      }
       const result = await joinQueue(queueId)
       applyJoinResponse(result, {
         setQueueState,
         setJoinUrl,
         setQueuedCount,
         setError,
+        setNotice,
       })
     } catch (err) {
-      setError(err.message || 'Could not join queue')
+      setError(err.message || 'Could not start looking for a group')
     } finally {
       setBusy(false)
     }
@@ -244,7 +258,7 @@ export function useGameQueue(queueId) {
       setJoinUrl('')
       setQueuedCount(0)
     } catch (err) {
-      setError(err.message || 'Could not leave queue')
+      setError(err.message || 'Could not stop looking')
     } finally {
       setBusy(false)
     }
@@ -255,6 +269,7 @@ export function useGameQueue(queueId) {
     joinUrl,
     queuedCount,
     error,
+    notice,
     busy,
     handleJoin,
     handleLeave,

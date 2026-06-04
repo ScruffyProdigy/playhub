@@ -25,7 +25,8 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 
 ### 📋 Planned
 - **File uploads**: game assets and user avatars
-- **Match result reporting** via GraphQL (`reportMatchResult`)
+- **Post-game callbacks** (game server): `reportPlayerFinished`, `reportMatchResult` — see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md)
+- **`seatTemplate`** manifest + LFG matchmaking — see [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md); games still publish flat `seats[]` today
 
 ## Base URL
 
@@ -221,10 +222,34 @@ mutation {
 }
 ```
 
-### Queue Management
+### Queue / group matchmaking
+
+#### `myActiveQueue` ✅
+The player’s current **waiting or matched** mode queue anywhere in the catalog (at most one waiting row globally). Used by the sticky lobby banner.
+
+```graphql
+query {
+  myActiveQueue {
+    queueId
+    gameId
+    gameName
+    status    # WAITING | MATCHED
+    queuedCount
+    joinUrl   # when MATCHED
+  }
+}
+```
+
+Returns `null` when not in a queue.
+
+#### `myQueueStatus(queueId)` ✅
+Status for a specific mode queue (per-game row sync).
 
 #### `joinQueue` ✅
-Join a **mode queue** by `queueId` (from `game.modes.queues`). Requires authentication.
+Start **looking for a group** in a mode queue (`queueId` from `game.modes.queues`). Requires authentication.
+
+- Only one **waiting** queue per player globally. Joining another game **leaves** the previous wait list and sets **`message`** explaining the switch.
+- Still **blocked** while **matched** in another queue until the player leaves or the match ends.
 
 ```graphql
 mutation {
@@ -233,9 +258,12 @@ mutation {
     sessionId
     joinUrl
     queuedCount
+    message
   }
 }
 ```
+
+**`message` example:** `You left the group for Rock Paper Scissors to look for a group here.`
 
 #### `leaveQueue` ✅
 Leave a mode queue.

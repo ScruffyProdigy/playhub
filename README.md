@@ -147,6 +147,7 @@ See [Environment Configuration](docs/environment-configuration.md) for detailed 
 ## Documentation
 
 - **[Product vision](docs/vision.md)** — Why JoinQuest exists; indie dev + integration story
+- **[End-to-end partner checklist](docs/end-to-end-partner-checklist.md)** — Verify sign-in → queue → play → return
 - **[Development Guide](docs/development.md)** — Setup and development workflow
 - **[Architecture Overview](docs/architecture.md)** — System design and components
 - **[Game Catalog Architecture](docs/game-catalog-architecture.md)** — Modes, queues, manifest sync

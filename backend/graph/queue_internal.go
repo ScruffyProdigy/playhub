@@ -24,7 +24,7 @@ func (r *mutationResolver) joinQueueInternal(ctx context.Context, modeQueueID uu
 	result, err := st.JoinModeQueue(ctx, modeQueueID, userID)
 	if err != nil {
 		if errors.Is(err, store.ErrAlreadyMatched) {
-			return nil, fmt.Errorf("you are already in a match for this queue")
+			return nil, fmt.Errorf("you already have an active match; finish or leave your current queue first")
 		}
 		if errors.Is(err, store.ErrNotFound) {
 			return nil, fmt.Errorf("queue not found")
@@ -40,6 +40,12 @@ func (r *mutationResolver) joinQueueInternal(ctx context.Context, modeQueueID uu
 		}
 		launchURLs, err = r.finalizeMatchedSession(ctx, game, *result.SessionID, result.NotifyUserIDs)
 		if err != nil {
+			return nil, err
+		}
+	}
+
+	if result.SwitchedFrom != nil {
+		if err := r.publishQueueSwitchFrom(ctx, st, result.SwitchedFrom, userID); err != nil {
 			return nil, err
 		}
 	}

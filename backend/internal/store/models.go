@@ -120,6 +120,18 @@ type UserQueueView struct {
 	SessionID   *uuid.UUID
 }
 
+// SwitchedFromQueue records a waiting queue the user left to join another.
+type SwitchedFromQueue struct {
+	ModeQueueID uuid.UUID
+	GameID      uuid.UUID
+	GameName    string
+}
+
+// SwitchedFromPlayerMessage is shown on joinQueue when the player left another game's wait list.
+func SwitchedFromPlayerMessage(gameName string) string {
+	return "You left the group for " + gameName + " to look for a group here."
+}
+
 // QueueJoinResult is returned when a user joins a game queue.
 type QueueJoinResult struct {
 	GameID         uuid.UUID
@@ -129,6 +141,7 @@ type QueueJoinResult struct {
 	QueuedCount    int
 	NotifyUserIDs  []uuid.UUID
 	AlreadyInQueue bool
+	SwitchedFrom   *SwitchedFromQueue
 }
 
 type QueueEntry struct {

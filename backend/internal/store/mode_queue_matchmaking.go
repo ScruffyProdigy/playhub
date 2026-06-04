@@ -156,7 +156,7 @@ func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID
 		return nil, fmt.Errorf("store: queue requires %d players but mode only defines %d seats", playersToStart, len(joinCtx.SeatKeys))
 	}
 
-	alreadyWaiting, err := enqueueModeQueueTx(ctx, tx, joinCtx.Game.ID, modeQueueID, userID)
+	enqueue, err := enqueueModeQueueTx(ctx, tx, joinCtx.Game.ID, modeQueueID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,8 @@ func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID
 			Status:         QueueStatusWaiting,
 			QueuedCount:    len(waiting),
 			NotifyUserIDs:  []uuid.UUID{userID},
-			AlreadyInQueue: alreadyWaiting,
+			AlreadyInQueue: enqueue.alreadyInQueue,
+			SwitchedFrom:   enqueue.switchedFrom,
 		}, nil
 	}
 
@@ -213,6 +214,7 @@ func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID
 		SessionID:     &session.ID,
 		QueuedCount:   0,
 		NotifyUserIDs: notifyIDs,
+		SwitchedFrom:  enqueue.switchedFrom,
 	}, nil
 }
 
@@ -239,22 +241,39 @@ func (s *Store) leaveModeQueueWaiting(ctx context.Context, modeQueueID, userID u
 	return ensureRowsAffected(result, ErrNotFound)
 }
 
-func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, userID uuid.UUID) (bool, error) {
+type enqueueOutcome struct {
+	alreadyInQueue bool
+	switchedFrom   *SwitchedFromQueue
+}
+
+func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, userID uuid.UUID) (enqueueOutcome, error) {
+	var out enqueueOutcome
 	if _, err := getMatchedModeQueueEntryTx(ctx, tx, modeQueueID, userID); err == nil {
-		return false, ErrAlreadyMatched
+		return out, ErrAlreadyMatched
 	} else if !errors.Is(err, ErrNotFound) {
-		return false, err
+		return out, err
 	}
 
-	// Legacy rows may be waiting on game_id only (mode_queue_id NULL) or another queue;
-	// idx_game_queues_one_waiting_per_user blocks a second INSERT and aborts the tx on conflict.
+	if other, err := getUserMatchedModeQueueIDTx(ctx, tx, userID, modeQueueID); err != nil {
+		return out, err
+	} else if other != nil {
+		return out, ErrAlreadyMatched
+	}
+
+	if prev, err := getUserWaitingQueueSwitchInfoTx(ctx, tx, userID, modeQueueID); err != nil {
+		return out, err
+	} else if prev != nil {
+		out.switchedFrom = prev
+	}
+
+	// Legacy rows (mode_queue_id NULL) or waiting rows on another queue.
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE game_queues
 		SET status = 'cancelled'
-		WHERE game_id = $1 AND user_id = $2 AND status = 'waiting'
-		  AND (mode_queue_id IS NULL OR mode_queue_id <> $3)
-	`, gameID, userID, modeQueueID); err != nil {
-		return false, err
+		WHERE user_id = $1 AND status = 'waiting'
+		  AND (mode_queue_id IS NULL OR mode_queue_id <> $2)
+	`, userID, modeQueueID); err != nil {
+		return out, err
 	}
 
 	row := tx.QueryRowContext(ctx, `
@@ -265,13 +284,14 @@ func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, us
 		LIMIT 1
 	`, modeQueueID, userID)
 	if _, err := scanQueueEntry(row); err == nil {
-		return true, nil
+		out.alreadyInQueue = true
+		return out, nil
 	} else if !errors.Is(err, ErrNotFound) {
-		return false, err
+		return out, err
 	}
 
 	if _, err := tx.ExecContext(ctx, "SAVEPOINT gq_enqueue"); err != nil {
-		return false, err
+		return out, err
 	}
 	row = tx.QueryRowContext(ctx, `
 		INSERT INTO game_queues (game_id, user_id, status, mode_queue_id)
@@ -281,7 +301,7 @@ func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, us
 	if _, err := scanQueueEntry(row); err != nil {
 		if isUniqueViolation(err) {
 			if _, rbErr := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT gq_enqueue"); rbErr != nil {
-				return false, err
+				return out, err
 			}
 			row = tx.QueryRowContext(ctx, `
 				SELECT `+queueColumns+`
@@ -291,16 +311,17 @@ func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, us
 				LIMIT 1
 			`, gameID, userID)
 			if _, err := scanQueueEntry(row); err != nil {
-				return false, err
+				return out, err
 			}
-			return true, nil
+			out.alreadyInQueue = true
+			return out, nil
 		}
-		return false, err
+		return out, err
 	}
 	if _, err := tx.ExecContext(ctx, "RELEASE SAVEPOINT gq_enqueue"); err != nil {
-		return false, err
+		return out, err
 	}
-	return false, nil
+	return out, nil
 }
 
 func getMatchedModeQueueEntryTx(ctx context.Context, tx *sql.Tx, modeQueueID, userID uuid.UUID) (*QueueEntry, error) {

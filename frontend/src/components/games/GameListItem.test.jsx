@@ -37,13 +37,13 @@ describe('GameListItem', () => {
   it('shows the game name and session count', () => {
     render(
       <ul>
-        <GameListItem game={catalogGame} />
+        <GameListItem game={catalogGame} activeQueue={null} onQueueChange={vi.fn()} />
       </ul>,
     )
 
     expect(screen.getByRole('heading', { name: 'Rock Paper Scissors Lizard Spock' })).toBeInTheDocument()
     expect(screen.getByText('1 active session')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Join queue' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Look for group' })).toBeInTheDocument()
   })
 
   it('shows launch when the subscription reports a match', async () => {
@@ -56,11 +56,11 @@ describe('GameListItem', () => {
 
     render(
       <ul>
-        <GameListItem game={catalogGame} />
+        <GameListItem game={catalogGame} activeQueue={null} onQueueChange={vi.fn()} />
       </ul>,
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Join queue' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Look for group' }))
 
     await waitFor(() => expect(onUpdate).toBeDefined())
 

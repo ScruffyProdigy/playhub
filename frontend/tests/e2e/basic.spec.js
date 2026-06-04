@@ -12,7 +12,7 @@ test.describe('Basic App Functionality', () => {
       
       // Check that the basic content is present
       await expect(page.getByText('JoinQuest')).toBeVisible({ timeout: 10000 })
-      await expect(page.getByText('Queue up. Play together.')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText('Find your group. Play together.')).toBeVisible({ timeout: 10000 })
     } catch (error) {
       // If the test fails, take a screenshot for debugging
       await page.screenshot({ path: 'test-failure.png' })

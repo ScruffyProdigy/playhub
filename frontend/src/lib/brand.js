@@ -1,3 +1,3 @@
-export const APP_NAME = 'JoinQuest'
+export { APP_TAGLINE } from './playerCopy'
 
-export const APP_TAGLINE = 'Queue up. Play together.'
+export const APP_NAME = 'JoinQuest'
