@@ -16,9 +16,16 @@ import (
 )
 
 var (
-	ErrInvalidEmail     = errors.New("auth: invalid email address")
-	ErrInvalidMagicLink = errors.New("Invalid or expired sign-in link. Request a new sign-in email.")
-	ErrInvalidLoginCode = errors.New("Invalid or expired code. Try again or use the sign-in link in your email.")
+	ErrInvalidEmail          = errors.New("auth: invalid email address")
+	ErrInvalidMagicLink      = errors.New("Invalid or expired sign-in link. Request a new sign-in email.")
+	ErrInvalidLoginCode      = errors.New("Invalid or expired code. Try again or use the sign-in link in your email.")
+	ErrMagicLinkRateLimit    = errors.New("Too many sign-in emails requested. Please wait and try again.")
+	ErrTooManyLoginAttempts  = errors.New("Too many incorrect codes. Request a new sign-in email.")
+)
+
+const (
+	maxMagicLinksPerEmailPerHour = 5
+	magicLinkRateWindow          = time.Hour
 )
 
 // Service handles authentication workflows.
@@ -93,6 +100,15 @@ func (s *Service) RequestMagicLink(ctx context.Context, emailAddr string) error 
 		return err
 	}
 
+	since := time.Now().Add(-magicLinkRateWindow)
+	count, err := s.store.CountRecentMagicLinksByEmail(ctx, normalized, since)
+	if err != nil {
+		return err
+	}
+	if count >= maxMagicLinksPerEmailPerHour {
+		return ErrMagicLinkRateLimit
+	}
+
 	code, err := generateLoginCode()
 	if err != nil {
 		return err
@@ -101,7 +117,7 @@ func (s *Service) RequestMagicLink(ctx context.Context, emailAddr string) error 
 	token := uuid.NewString()
 	_, err = s.store.CreateMagicLink(ctx, store.CreateMagicLinkParams{
 		Email:     normalized,
-		Token:     token,
+		TokenHash: hashMagicLinkToken(token),
 		CodeHash:  hashLoginCode(code),
 		ExpiresAt: time.Now().Add(s.magicLinkTTL),
 	})
@@ -115,19 +131,18 @@ func (s *Service) RequestMagicLink(ctx context.Context, emailAddr string) error 
 
 // CompleteMagicLogin validates a magic link token and returns the user plus session JWT.
 func (s *Service) CompleteMagicLogin(ctx context.Context, token string) (*store.User, string, error) {
-	link, err := s.store.GetMagicLinkByToken(ctx, token)
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return nil, "", ErrInvalidMagicLink
+	}
+	link, err := s.store.ConsumeMagicLinkByTokenHash(ctx, hashMagicLinkToken(token), time.Now())
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			return nil, "", ErrInvalidMagicLink
 		}
 		return nil, "", err
 	}
-
-	if !s.store.IsMagicLinkValid(link, time.Now()) {
-		return nil, "", ErrInvalidMagicLink
-	}
-
-	return s.completeMagicLink(ctx, link)
+	return s.finishLogin(ctx, link)
 }
 
 // CompleteLoginCode validates a 6-digit code for the given email.
@@ -137,7 +152,8 @@ func (s *Service) CompleteLoginCode(ctx context.Context, emailAddr, code string)
 		return nil, "", err
 	}
 
-	link, err := s.store.GetLatestValidMagicLinkByEmail(ctx, normalized, time.Now())
+	now := time.Now()
+	link, err := s.store.GetLatestValidMagicLinkByEmail(ctx, normalized, now)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			return nil, "", ErrInvalidLoginCode
@@ -146,19 +162,28 @@ func (s *Service) CompleteLoginCode(ctx context.Context, emailAddr, code string)
 	}
 
 	if !verifyLoginCode(strings.TrimSpace(code), link.CodeHash) {
+		if incErr := s.store.IncrementMagicLinkFailedAttempts(ctx, link.ID); incErr != nil {
+			return nil, "", incErr
+		}
+		if link.FailedAttempts+1 >= store.MaxLoginCodeAttempts {
+			return nil, "", ErrTooManyLoginAttempts
+		}
 		return nil, "", ErrInvalidLoginCode
 	}
 
-	return s.completeMagicLink(ctx, link)
-}
-
-func (s *Service) completeMagicLink(ctx context.Context, link *store.MagicLink) (*store.User, string, error) {
-	user, err := s.findOrCreateUser(ctx, link.Email)
+	link, err = s.store.ConsumeMagicLinkByID(ctx, link.ID, now)
 	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, "", ErrInvalidLoginCode
+		}
 		return nil, "", err
 	}
+	return s.finishLogin(ctx, link)
+}
 
-	if err := s.store.MarkMagicLinkUsed(ctx, link.ID); err != nil {
+func (s *Service) finishLogin(ctx context.Context, link *store.MagicLink) (*store.User, string, error) {
+	user, err := s.findOrCreateUser(ctx, link.Email)
+	if err != nil {
 		return nil, "", err
 	}
 

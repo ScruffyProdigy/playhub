@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/gameclient"
+	"github.com/scruffyprodigy/playhub/internal/gameurl"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
@@ -71,18 +72,25 @@ func assignmentFromParticipants(sessionID uuid.UUID, mode *store.GameMode, parti
 	return assignment, nil
 }
 
-func lobbyProvisionInfo() gameclient.LobbyInfo {
+func lobbyProvisionInfo(game *store.Game) (gameclient.LobbyInfo, error) {
+	token, err := auth.FormatGameServiceToken(game.ID)
+	if err != nil {
+		return gameclient.LobbyInfo{}, err
+	}
 	return gameclient.LobbyInfo{
 		ReturnURL:    auth.LobbyReturnURL(),
 		GraphqlURL:   auth.LobbyGraphQLURL(),
-		ServiceToken: auth.GameServiceTokenFromEnv(),
-	}
+		ServiceToken: token,
+	}, nil
 }
 
 func (r *Resolver) provisionParticipantsOnGame(ctx context.Context, game *store.Game, sessionID uuid.UUID, participants []store.SessionParticipant) error {
 	apiBase := r.resolvedAPIBaseURL(game)
 	if apiBase == "" {
 		return fmt.Errorf("game API base URL is not configured (set games.api_base_url or GAME_API_BASE_URL)")
+	}
+	if err := gameurl.ValidateOutboundURL(ctx, apiBase, auth.IsProductionEnv()); err != nil {
+		return fmt.Errorf("game API base URL: %w", err)
 	}
 	if len(participants) == 0 {
 		return fmt.Errorf("cannot provision match with no seated players")
@@ -106,7 +114,10 @@ func (r *Resolver) provisionParticipantsOnGame(ctx context.Context, game *store.
 		log.Printf("handoff: POST %s/api/v1/matches externalMatchId=%s seats=%d", apiBase, sessionID, len(assignment.Seats))
 	}
 
-	lobby := lobbyProvisionInfo()
+	lobby, err := lobbyProvisionInfo(game)
+	if err != nil {
+		return err
+	}
 	if err := r.gameProvisioner().ProvisionMatch(ctx, gameclient.ProvisionRequest{
 		APIBaseURL:   apiBase,
 		ServiceToken: lobby.ServiceToken,
@@ -209,8 +220,9 @@ func parseBannedLobbyUserIDs(ids []string) []uuid.UUID {
 	return out
 }
 
-// signLaunchURL mints a fresh seat JWT and launch link. The match must already
-// have been provisioned on the game (finalizeMatchedSession); this does not POST again.
+// signLaunchURL ensures the game has the roster (idempotent provision), then mints a seat JWT.
+// Called from finalizeMatchedSession and from queue status/subscription refresh paths so
+// a launch link is never issued before the game has the match.
 func (r *Resolver) signLaunchURL(ctx context.Context, game *store.Game, sessionID, userID uuid.UUID) (string, error) {
 	st, err := r.requireStore()
 	if err != nil {
@@ -223,6 +235,12 @@ func (r *Resolver) signLaunchURL(ctx context.Context, game *store.Game, sessionI
 
 	participants, err := st.ListSessionSeatAssignments(ctx, sessionID)
 	if err != nil {
+		return "", err
+	}
+	if len(participants) == 0 {
+		return "", fmt.Errorf("session has no seated participants")
+	}
+	if err := r.provisionParticipantsOnGame(ctx, game, sessionID, participants); err != nil {
 		return "", err
 	}
 

@@ -5,7 +5,8 @@
 #   - kubectl context pointing at your GKE cluster
 #   - k8s/secrets/*.yaml filled in for lobby (joinquest namespace)
 #   - ../demo-game-rps/k8s/secrets/pg-dsn.yaml for the game DB
-#   - Optional: lobby-game-service secret in joinquest (Lobby LOBBY_GAME_SERVICE_TOKEN)
+#   - Recommended: k8s/secrets/lobby-auth-peppers.yaml (MAGIC_LINK_PEPPER, LOBBY_GAME_TOKEN_PEPPER)
+#   - Optional legacy: lobby-game-service.yaml (global LOBBY_GAME_SERVICE_TOKEN for dev)
 #
 # Usage:
 #   ./scripts/deploy-gke.sh              # build, push, deploy both

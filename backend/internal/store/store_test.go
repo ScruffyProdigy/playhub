@@ -67,7 +67,7 @@ func TestStoreUserGameFlow(t *testing.T) {
 	}
 }
 
-func TestStoreMagicLinkFlow(t *testing.T) {
+func TestStoreMagicLinkConsume(t *testing.T) {
 	st := openTestStore(t)
 	cleaner := st.NewTestCleaner(t)
 	ctx := context.Background()
@@ -76,36 +76,32 @@ func TestStoreMagicLinkFlow(t *testing.T) {
 	cleaner.TrackEmail(email)
 
 	token := uuid.NewString()
+	tokenHash := "test-hash-" + uuid.NewString()
 	link, err := st.CreateMagicLink(ctx, CreateMagicLinkParams{
 		Email:     email,
-		Token:     token,
+		TokenHash: tokenHash,
 		ExpiresAt: time.Now().Add(15 * time.Minute),
 	})
 	if err != nil {
 		t.Fatalf("CreateMagicLink failed: %v", err)
 	}
+	_ = token
+
 	if !st.IsMagicLinkValid(link, time.Now()) {
 		t.Fatal("expected magic link to be valid")
 	}
 
-	found, err := st.GetMagicLinkByToken(ctx, token)
+	consumed, err := st.ConsumeMagicLinkByTokenHash(ctx, tokenHash, time.Now())
 	if err != nil {
-		t.Fatalf("GetMagicLinkByToken failed: %v", err)
+		t.Fatalf("ConsumeMagicLinkByTokenHash failed: %v", err)
 	}
-	if found.ID != link.ID {
-		t.Fatalf("expected link id %s, got %s", link.ID, found.ID)
+	if consumed.ID != link.ID {
+		t.Fatalf("expected link id %s, got %s", link.ID, consumed.ID)
 	}
 
-	if err := st.MarkMagicLinkUsed(ctx, link.ID); err != nil {
-		t.Fatalf("MarkMagicLinkUsed failed: %v", err)
-	}
-
-	found, err = st.GetMagicLinkByToken(ctx, token)
-	if err != nil {
-		t.Fatalf("GetMagicLinkByToken after use failed: %v", err)
-	}
-	if st.IsMagicLinkValid(found, time.Now()) {
-		t.Fatal("expected magic link to be invalid after use")
+	_, err = st.ConsumeMagicLinkByTokenHash(ctx, tokenHash, time.Now())
+	if err != ErrNotFound {
+		t.Fatalf("expected ErrNotFound on reuse, got %v", err)
 	}
 }
 

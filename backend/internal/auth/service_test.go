@@ -55,7 +55,9 @@ func openAuthTestServiceWithMailer(t *testing.T, mailer email.Sender) *Service {
 }
 
 func TestMagicLinkLoginFlow(t *testing.T) {
-	service := openAuthTestService(t)
+	t.Setenv("MAGIC_LINK_BASE_URL", "http://localhost:5174/sign-in?token={token}")
+	mailer := &email.CaptureSender{}
+	service := openAuthTestServiceWithMailer(t, mailer)
 	cleaner := service.store.NewTestCleaner(t)
 	ctx := context.Background()
 
@@ -73,8 +75,15 @@ func TestMagicLinkLoginFlow(t *testing.T) {
 	if link.CodeHash == "" {
 		t.Fatal("expected login code hash on magic link")
 	}
+	if link.TokenHash == "" {
+		t.Fatal("expected token hash on magic link")
+	}
 
-	user, sessionToken, err := service.CompleteMagicLogin(ctx, link.Token)
+	token, err := MagicLinkTokenFromURL(mailer.Last.Link)
+	if err != nil {
+		t.Fatalf("MagicLinkTokenFromURL: %v", err)
+	}
+	user, sessionToken, err := service.CompleteMagicLogin(ctx, token)
 	if err != nil {
 		t.Fatalf("CompleteMagicLogin failed: %v", err)
 	}
@@ -104,7 +113,7 @@ func TestMagicLinkLoginFlow(t *testing.T) {
 		t.Fatalf("expected authenticated user %s, got %+v", user.ID, found)
 	}
 
-	if _, _, err := service.CompleteMagicLogin(ctx, link.Token); err == nil {
+	if _, _, err := service.CompleteMagicLogin(ctx, token); err == nil {
 		t.Fatal("expected reused magic link to fail")
 	}
 }

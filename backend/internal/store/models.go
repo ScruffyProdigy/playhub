@@ -20,20 +20,21 @@ type CreateUserParams struct {
 }
 
 type MagicLink struct {
-	ID        uuid.UUID
-	UserID    *uuid.UUID
-	Email     string
-	Token     string
-	CodeHash  string
-	ExpiresAt time.Time
-	UsedAt    *time.Time
-	CreatedAt time.Time
+	ID             uuid.UUID
+	UserID         *uuid.UUID
+	Email          string
+	TokenHash      string
+	FailedAttempts int
+	CodeHash       string
+	ExpiresAt      time.Time
+	UsedAt         *time.Time
+	CreatedAt      time.Time
 }
 
 type CreateMagicLinkParams struct {
 	Email     string
 	UserID    *uuid.UUID
-	Token     string
+	TokenHash string
 	CodeHash  string
 	ExpiresAt time.Time
 }

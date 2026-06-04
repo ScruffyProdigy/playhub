@@ -7,6 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 # shellcheck source=lib/lobby-smtp.sh
 . "$ROOT/scripts/lib/lobby-smtp.sh"
+# shellcheck source=lib/lobby-auth-peppers.sh
+. "$ROOT/scripts/lib/lobby-auth-peppers.sh"
 
 echo "🚀 Deploying PlayHub to Staging..."
 
@@ -81,6 +83,7 @@ kubectl wait --for=condition=available --timeout=300s deployment/lobby-frontend 
 
 print_step "Configuring Resend SMTP (if k8s/secrets/lobby-smtp.yaml exists)..."
 apply_lobby_smtp_secret
+apply_lobby_auth_peppers_secret
 
 # Show deployment status
 print_step "Deployment status:"

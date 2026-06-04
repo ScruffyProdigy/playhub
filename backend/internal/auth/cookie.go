@@ -25,6 +25,9 @@ func CookieConfigFromEnv() CookieConfig {
 	}
 
 	secure := strings.EqualFold(os.Getenv("SESSION_COOKIE_SECURE"), "true")
+	if IsProductionEnv() {
+		secure = true
+	}
 
 	return CookieConfig{
 		Name:     name,

@@ -25,7 +25,7 @@ spec:
               psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
               UPDATE games
               SET play_url = 'https://rpsls-duel.win',
-                  api_base_url = 'https://rpsls-duel.win/api'
+                  api_base_url = 'https://rpsls-duel.win'
               WHERE slug = 'rock-paper-scissors-lizard-spock'
                  OR id = 'a1000000-0000-4000-8000-000000000001';
               "

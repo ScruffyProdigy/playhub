@@ -140,12 +140,23 @@ func (s *Signer) JWKSHandler() http.HandlerFunc {
 	}
 }
 
+const sessionTokenType = "session"
+
+func sessionTokenAudience() string {
+	return LobbyIssuer()
+}
+
 // SignUserToken issues a session JWT for the given user ID.
 func (s *Signer) SignUserToken(userID uuid.UUID, ttl time.Duration) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
+		"iss": LobbyIssuer(),
+		"aud": sessionTokenAudience(),
+		"typ": sessionTokenType,
 		"sub": userID.String(),
+		"jti": uuid.NewString(),
 		"iat": now.Unix(),
+		"nbf": now.Unix(),
 		"exp": now.Add(ttl).Unix(),
 	}
 
@@ -154,14 +165,20 @@ func (s *Signer) SignUserToken(userID uuid.UUID, ttl time.Duration) (string, err
 	return token.SignedString(s.privateKey)
 }
 
-// VerifyUserToken validates a JWT and returns the user ID.
+// VerifyUserToken validates a session JWT and returns the user ID.
 func (s *Signer) VerifyUserToken(tokenString string) (uuid.UUID, error) {
+	issuer := LobbyIssuer()
+	audience := sessionTokenAudience()
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if token.Method != jwt.SigningMethodEdDSA {
 			return nil, fmt.Errorf("auth: unexpected signing method %v", token.Header["alg"])
 		}
 		return s.publicKey, nil
-	})
+	},
+		jwt.WithIssuer(issuer),
+		jwt.WithAudience(audience),
+		jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}),
+	)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -169,6 +186,9 @@ func (s *Signer) VerifyUserToken(tokenString string) (uuid.UUID, error) {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
 		return uuid.Nil, errors.New("auth: invalid token claims")
+	}
+	if typ, _ := claims["typ"].(string); typ != sessionTokenType {
+		return uuid.Nil, errors.New("auth: token is not a session token")
 	}
 
 	sub, err := claims.GetSubject()

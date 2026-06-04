@@ -9,6 +9,7 @@ import (
 
 	"github.com/99designs/gqlgen/client"
 	"github.com/google/uuid"
+	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/email"
 )
 
@@ -89,6 +90,7 @@ func signInAdmin(t *testing.T, adminEmail string) (*client.Client, []*http.Cooki
 }
 
 func TestCatalogRegisterAndRefreshManifest(t *testing.T) {
+	t.Setenv("LOBBY_GAME_TOKEN_PEPPER", "catalog-test-pepper")
 	gameAPI := newMockGameAPIServer(t)
 	defer gameAPI.Close()
 
@@ -99,6 +101,7 @@ func TestCatalogRegisterAndRefreshManifest(t *testing.T) {
 	slug := "mock-" + uuid.NewString()
 	var registerResp struct {
 		RegisterGame struct {
+			ServiceToken  string `json:"serviceToken"`
 			WebhookSecret string `json:"webhookSecret"`
 			Game          struct {
 				ID   string  `json:"id"`
@@ -119,6 +122,7 @@ func TestCatalogRegisterAndRefreshManifest(t *testing.T) {
 
 	err := c.Post(`mutation RegisterGame($input: RegisterGameInput!) {
 		registerGame(input: $input) {
+			serviceToken
 			webhookSecret
 			game {
 				id
@@ -140,6 +144,17 @@ func TestCatalogRegisterAndRefreshManifest(t *testing.T) {
 	}
 	if registerResp.RegisterGame.WebhookSecret == "" {
 		t.Fatal("expected webhook secret")
+	}
+	gameID, err := uuid.Parse(registerResp.RegisterGame.Game.ID)
+	if err != nil {
+		t.Fatalf("parse game id: %v", err)
+	}
+	wantToken, err := auth.FormatGameServiceToken(gameID)
+	if err != nil {
+		t.Fatalf("FormatGameServiceToken: %v", err)
+	}
+	if registerResp.RegisterGame.ServiceToken != wantToken {
+		t.Fatalf("serviceToken = %q, want %q", registerResp.RegisterGame.ServiceToken, wantToken)
 	}
 	if registerResp.RegisterGame.Game.Slug == nil || *registerResp.RegisterGame.Game.Slug != slug {
 		t.Fatalf("expected slug %q, got %+v", slug, registerResp.RegisterGame.Game.Slug)

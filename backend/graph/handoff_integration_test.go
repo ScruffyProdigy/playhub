@@ -5,7 +5,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/gameclient"
+	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
 type provisionCall struct {
@@ -43,6 +46,7 @@ func TestJoinQueueProvisionsMatchOnGameServer(t *testing.T) {
 
 	t.Setenv("LOBBY_ISSUER_URL", "http://localhost:8080")
 	t.Setenv("LOBBY_PUBLIC_URL", "http://localhost:5173")
+	t.Setenv("LOBBY_GAME_TOKEN_PEPPER", "test-pepper")
 
 	provisioner := &syncProvisioner{}
 	env.resolverWithProvisioner(t, provisioner)
@@ -70,8 +74,13 @@ func TestJoinQueueProvisionsMatchOnGameServer(t *testing.T) {
 	if call.Lobby.GraphqlURL != "http://localhost:8080/graphql" {
 		t.Fatalf("lobby.graphqlUrl = %q", call.Lobby.GraphqlURL)
 	}
-	if call.Lobby.ServiceToken != "" {
-		t.Fatalf("lobby.serviceToken = %q, want empty when LOBBY_GAME_SERVICE_TOKEN unset", call.Lobby.ServiceToken)
+	gameID := uuid.MustParse(store.DemoRPSGameIDStr)
+	wantToken, err := auth.FormatGameServiceToken(gameID)
+	if err != nil {
+		t.Fatalf("FormatGameServiceToken: %v", err)
+	}
+	if call.Lobby.ServiceToken != wantToken {
+		t.Fatalf("lobby.serviceToken = %q, want %q", call.Lobby.ServiceToken, wantToken)
 	}
 	if a.ExternalMatchID == "" || len(a.Seats) != 2 {
 		t.Fatalf("expected provisioned duel with 2 seats, got %+v", a)
@@ -92,7 +101,7 @@ func TestJoinQueueProvisionsServiceTokenWhenConfigured(t *testing.T) {
 
 	t.Setenv("LOBBY_ISSUER_URL", "http://localhost:8080")
 	t.Setenv("LOBBY_PUBLIC_URL", "http://localhost:5173")
-	t.Setenv("LOBBY_GAME_SERVICE_TOKEN", "dev-lobby-svc-token")
+	t.Setenv("LOBBY_GAME_TOKEN_PEPPER", "scoped-pepper")
 
 	provisioner := &syncProvisioner{}
 	env.resolverWithProvisioner(t, provisioner)
@@ -107,7 +116,11 @@ func TestJoinQueueProvisionsServiceTokenWhenConfigured(t *testing.T) {
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
 
 	call := provisioner.lastCall()
-	if call.Lobby.ServiceToken != "dev-lobby-svc-token" {
-		t.Fatalf("lobby.serviceToken = %q, want dev-lobby-svc-token", call.Lobby.ServiceToken)
+	wantToken, err := auth.FormatGameServiceToken(uuid.MustParse(store.DemoRPSGameIDStr))
+	if err != nil {
+		t.Fatalf("FormatGameServiceToken: %v", err)
+	}
+	if call.Lobby.ServiceToken != wantToken {
+		t.Fatalf("lobby.serviceToken = %q, want scoped per-game token", call.Lobby.ServiceToken)
 	}
 }

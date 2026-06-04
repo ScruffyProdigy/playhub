@@ -22,7 +22,9 @@ Payload JSON (`internal/pubsub/events.go`):
 |----------|---------|
 | `REDIS_URL` | e.g. `redis://127.0.0.1:6379/0` — omit to use in-memory broker (single process only) |
 | `GAME_CLIENT_BASE_URL` | Fallback browser `play_url` when a game row has no `play_url` |
-| `LOBBY_GAME_SERVICE_TOKEN` | Lobby Bearer for provision + validating game `player` GraphQL; sent to games as `lobby.serviceToken` |
+| `LOBBY_GAME_TOKEN_PEPPER` | HMAC key for per-game `lobby.serviceToken` (`v1.{gameId}.{sig}`) on provision and `registerGame` |
+| `MAGIC_LINK_PEPPER` | Optional pepper for hashed magic-link tokens at rest (recommended in production) |
+| `LOBBY_GAME_SERVICE_TOKEN` | Dev-only global Bearer fallback when pepper is unset |
 | `LOBBY_ISSUER_URL` | Canonical issuer URL for seat JWT `iss` and provision `lobbyId` (falls back to `LOBBY_PUBLIC_URL`, then `http://localhost:8080`) |
 
 Match launch URLs use the protocol in [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md):

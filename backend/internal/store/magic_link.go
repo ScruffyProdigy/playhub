@@ -11,12 +11,18 @@ import (
 	"github.com/google/uuid"
 )
 
+const MaxLoginCodeAttempts = 5
+
 func scanMagicLink(row interface{ Scan(dest ...any) error }) (*MagicLink, error) {
 	var link MagicLink
 	var userID sql.NullString
+	var tokenHash sql.NullString
 	var codeHash sql.NullString
 	var usedAt sql.NullTime
-	if err := row.Scan(&link.ID, &userID, &link.Email, &link.Token, &codeHash, &link.ExpiresAt, &usedAt, &link.CreatedAt); err != nil {
+	if err := row.Scan(
+		&link.ID, &userID, &link.Email, &tokenHash, &link.FailedAttempts,
+		&codeHash, &link.ExpiresAt, &usedAt, &link.CreatedAt,
+	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -29,6 +35,9 @@ func scanMagicLink(row interface{ Scan(dest ...any) error }) (*MagicLink, error)
 		}
 		link.UserID = &id
 	}
+	if tokenHash.Valid {
+		link.TokenHash = tokenHash.String
+	}
 	if codeHash.Valid {
 		link.CodeHash = codeHash.String
 	}
@@ -39,13 +48,13 @@ func scanMagicLink(row interface{ Scan(dest ...any) error }) (*MagicLink, error)
 	return &link, nil
 }
 
-const magicLinkColumns = `id, user_id, email, token, code_hash, expires_at, used_at, created_at`
+const magicLinkColumns = `id, user_id, email, token_hash, failed_attempts, code_hash, expires_at, used_at, created_at`
 
 func (s *Store) CreateMagicLink(ctx context.Context, params CreateMagicLinkParams) (*MagicLink, error) {
 	email := strings.ToLower(strings.TrimSpace(params.Email))
-	token := strings.TrimSpace(params.Token)
-	if email == "" || token == "" {
-		return nil, fmt.Errorf("store: magic link email and token are required")
+	tokenHash := strings.TrimSpace(params.TokenHash)
+	if email == "" || tokenHash == "" {
+		return nil, fmt.Errorf("store: magic link email and token hash are required")
 	}
 	if params.ExpiresAt.IsZero() {
 		return nil, fmt.Errorf("store: magic link expiry is required")
@@ -62,20 +71,21 @@ func (s *Store) CreateMagicLink(ctx context.Context, params CreateMagicLinkParam
 	}
 
 	row := s.db.QueryRowContext(ctx, `
-		INSERT INTO magic_links (user_id, email, token, code_hash, expires_at)
+		INSERT INTO magic_links (user_id, email, token_hash, code_hash, expires_at)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING `+magicLinkColumns+`
-	`, userID, email, token, codeHash, params.ExpiresAt)
+	`, userID, email, tokenHash, codeHash, params.ExpiresAt)
 	return scanMagicLink(row)
 }
 
-func (s *Store) GetMagicLinkByToken(ctx context.Context, token string) (*MagicLink, error) {
-	row := s.db.QueryRowContext(ctx, `
-		SELECT `+magicLinkColumns+`
+func (s *Store) CountRecentMagicLinksByEmail(ctx context.Context, email string, since time.Time) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*)::int
 		FROM magic_links
-		WHERE token = $1
-	`, strings.TrimSpace(token))
-	return scanMagicLink(row)
+		WHERE email = $1 AND created_at >= $2
+	`, strings.ToLower(strings.TrimSpace(email)), since).Scan(&count)
+	return count, err
 }
 
 func (s *Store) GetLatestMagicLinkByEmail(ctx context.Context, email string) (*MagicLink, error) {
@@ -96,16 +106,59 @@ func (s *Store) GetLatestValidMagicLinkByEmail(ctx context.Context, email string
 		WHERE email = $1
 		  AND used_at IS NULL
 		  AND expires_at > $2
+		  AND failed_attempts < $3
 		ORDER BY created_at DESC
 		LIMIT 1
-	`, strings.ToLower(strings.TrimSpace(email)), now)
+	`, strings.ToLower(strings.TrimSpace(email)), now, MaxLoginCodeAttempts)
 	return scanMagicLink(row)
 }
 
-func (s *Store) MarkMagicLinkUsed(ctx context.Context, id uuid.UUID) error {
-	result, err := s.db.ExecContext(ctx, `
+// ConsumeMagicLinkByTokenHash atomically marks a link used (URL token path).
+func (s *Store) ConsumeMagicLinkByTokenHash(ctx context.Context, tokenHash string, now time.Time) (*MagicLink, error) {
+	row := s.db.QueryRowContext(ctx, `
 		UPDATE magic_links
 		SET used_at = NOW()
+		WHERE token_hash = $1
+		  AND used_at IS NULL
+		  AND expires_at > $2
+		  AND failed_attempts < $3
+		RETURNING `+magicLinkColumns+`
+	`, strings.TrimSpace(tokenHash), now, MaxLoginCodeAttempts)
+	link, err := scanMagicLink(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return link, nil
+}
+
+// ConsumeMagicLinkByID atomically marks a link used (login-code path after verification).
+func (s *Store) ConsumeMagicLinkByID(ctx context.Context, id uuid.UUID, now time.Time) (*MagicLink, error) {
+	row := s.db.QueryRowContext(ctx, `
+		UPDATE magic_links
+		SET used_at = NOW()
+		WHERE id = $1
+		  AND used_at IS NULL
+		  AND expires_at > $2
+		  AND failed_attempts < $3
+		RETURNING `+magicLinkColumns+`
+	`, id, now, MaxLoginCodeAttempts)
+	link, err := scanMagicLink(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return link, nil
+}
+
+func (s *Store) IncrementMagicLinkFailedAttempts(ctx context.Context, id uuid.UUID) error {
+	result, err := s.db.ExecContext(ctx, `
+		UPDATE magic_links
+		SET failed_attempts = failed_attempts + 1
 		WHERE id = $1 AND used_at IS NULL
 	`, id)
 	if err != nil {
@@ -116,6 +169,9 @@ func (s *Store) MarkMagicLinkUsed(ctx context.Context, id uuid.UUID) error {
 
 func (s *Store) IsMagicLinkValid(link *MagicLink, now time.Time) bool {
 	if link == nil || link.UsedAt != nil {
+		return false
+	}
+	if link.FailedAttempts >= MaxLoginCodeAttempts {
 		return false
 	}
 	return now.Before(link.ExpiresAt)

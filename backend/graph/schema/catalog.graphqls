@@ -9,6 +9,8 @@ input RegisterGameInput {
 type RegisterGamePayload {
   game: Game!
   webhookSecret: String!
+  """Per-game credential for provision + player GraphQL (derived from game id)."""
+  serviceToken: String!
 }
 
 type GameModeSeat {

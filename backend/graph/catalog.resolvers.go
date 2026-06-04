@@ -6,10 +6,13 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/graph/model"
+	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/gameurl"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
@@ -92,6 +95,13 @@ func (r *mutationResolver) RegisterGame(ctx context.Context, input model.Registe
 		return nil, err
 	}
 
+	if err := gameurl.ValidateOutboundURL(ctx, input.APIBaseURL, auth.IsProductionEnv()); err != nil {
+		return nil, fmt.Errorf("apiBaseUrl: %w", err)
+	}
+	if err := gameurl.ValidateOutboundURL(ctx, input.PlayURL, auth.IsProductionEnv()); err != nil {
+		return nil, fmt.Errorf("playUrl: %w", err)
+	}
+
 	var description *string
 	if input.Description != nil {
 		trimmed := strings.TrimSpace(*input.Description)
@@ -119,9 +129,15 @@ func (r *mutationResolver) RegisterGame(ctx context.Context, input model.Registe
 		return nil, err
 	}
 
+	serviceToken, err := auth.FormatGameServiceToken(result.Game.ID)
+	if err != nil {
+		return nil, err
+	}
+
 	return &model.RegisterGamePayload{
 		Game:          ToGraphQLGame(result.Game),
 		WebhookSecret: result.WebhookSecret,
+		ServiceToken:  serviceToken,
 	}, nil
 }
 

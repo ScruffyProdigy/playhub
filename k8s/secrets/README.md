@@ -10,13 +10,15 @@ cp k8s/secrets/pg-dsn.example.yaml        k8s/secrets/pg-dsn.yaml
 cp k8s/secrets/jwks-secret.example.yaml   k8s/secrets/jwks-secret.yaml   # or: cd backend && go run ./scripts/jwks.go -namespace joinquest -yamlout ../k8s/secrets/jwks-secret.yaml
 cp k8s/secrets/lobby-smtp.example.yaml    k8s/secrets/lobby-smtp.yaml
 cp k8s/secrets/lobby-game-service.example.yaml k8s/secrets/lobby-game-service.yaml
+cp k8s/secrets/lobby-auth-peppers.example.yaml   k8s/secrets/lobby-auth-peppers.yaml
 ```
 
 Edit each file:
 
 - **`metadata.namespace`** — must match where you deploy (`joinquest`, `playhub`, `playhub-staging`, …).
 - **`lobby-smtp.yaml`** — paste your Resend API key in `SMTP_PASSWORD`.
-- **`lobby-game-service.yaml`** — optional; sets Lobby’s `LOBBY_GAME_SERVICE_TOKEN` (sent to games as `lobby.serviceToken` on provision). Games store the token per match — no game-side env var.
+- **`lobby-auth-peppers.yaml`** — paste two generated peppers (`openssl rand -base64 32` × 2) into `MAGIC_LINK_PEPPER` and `LOBBY_GAME_TOKEN_PEPPER`. Recommended for production.
+- **`lobby-game-service.yaml`** — optional legacy global token; prefer **`lobby-auth-peppers.yaml`** for per-game `serviceToken` on provision.
 
 ## Apply to a cluster
 
@@ -31,7 +33,7 @@ Deploy scripts apply secrets from this folder and wire SMTP into `lobby-backend`
 
 ## Local dev (no Kubernetes)
 
-`./scripts/dev.sh` reads **`k8s/secrets/lobby-smtp.yaml`** and sets `SMTP_*` env vars automatically (same key as GKE). You can still override in `.env` if needed.
+`./scripts/dev.sh` reads **`k8s/secrets/lobby-smtp.yaml`** (`SMTP_*`) and **`lobby-auth-peppers.yaml`** (`MAGIC_LINK_PEPPER`, `LOBBY_GAME_TOKEN_PEPPER`) automatically — same values as GKE. Override in `.env` if needed.
 
 ## Per environment
 

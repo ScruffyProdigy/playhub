@@ -10,6 +10,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/scruffyprodigy/playhub/internal/gameurl"
+	"github.com/scruffyprodigy/playhub/internal/runtimeenv"
 )
 
 // AssignmentSeat is one seat in a Lobby-pushed roster.
@@ -66,6 +69,10 @@ func (c *Client) ProvisionMatch(ctx context.Context, req ProvisionRequest) error
 	if base == "" {
 		return errors.New("gameclient: api base URL is required")
 	}
+	if err := gameurl.ValidateOutboundURL(ctx, base, runtimeenv.IsProductionEnv()); err != nil {
+		return fmt.Errorf("gameclient: %w", err)
+	}
+	provisionURL := base + "/api/v1/matches"
 	lobbyID := strings.TrimSpace(req.LobbyID)
 	if lobbyID == "" {
 		return errors.New("gameclient: lobby id is required")
@@ -86,7 +93,7 @@ func (c *Client) ProvisionMatch(ctx context.Context, req ProvisionRequest) error
 		return err
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, base+"/api/v1/matches", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, provisionURL, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}

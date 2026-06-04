@@ -102,7 +102,9 @@ func sessionCookieOptions(cookies []*http.Cookie) []client.Option {
 }
 
 func TestAuthGraphQLFlow(t *testing.T) {
-	c, handlerWithAuth, st := newAuthGraphQLTestClient(t)
+	t.Setenv("MAGIC_LINK_BASE_URL", "http://localhost:5174/sign-in?token={token}")
+	mailer := &email.CaptureSender{}
+	c, handlerWithAuth, st := newAuthGraphQLTestClientWithMailer(t, mailer)
 	cleaner := st.NewTestCleaner(t)
 	ctx := context.Background()
 
@@ -121,9 +123,9 @@ func TestAuthGraphQLFlow(t *testing.T) {
 		t.Fatal("expected requestSignIn to return true")
 	}
 
-	link, err := st.GetLatestMagicLinkByEmail(ctx, email)
+	token, err := auth.MagicLinkTokenFromURL(mailer.Last.Link)
 	if err != nil {
-		t.Fatalf("GetLatestMagicLinkByEmail failed: %v", err)
+		t.Fatalf("MagicLinkTokenFromURL: %v", err)
 	}
 
 	completeQuery := `mutation CompleteSignInWithLink($token: ID!) {
@@ -132,7 +134,7 @@ func TestAuthGraphQLFlow(t *testing.T) {
 			displayName
 		}
 	}`
-	sessionCookies, completeBody := postGraphQLWithCookies(t, handlerWithAuth, completeQuery, map[string]any{"token": link.Token})
+	sessionCookies, completeBody := postGraphQLWithCookies(t, handlerWithAuth, completeQuery, map[string]any{"token": token})
 	if len(sessionCookieOptions(sessionCookies)) == 0 {
 		t.Fatal("expected completeSignInWithLink to set a session cookie")
 	}
@@ -298,3 +300,4 @@ func TestAuthGraphQLRejectsInvalidLoginCode(t *testing.T) {
 		t.Fatalf("expected friendly invalid code error, got: %v", err)
 	}
 }
+

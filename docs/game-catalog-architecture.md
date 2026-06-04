@@ -54,10 +54,11 @@ Game
 ## URLs
 
 - **`play_url` and `api_base_url` live on the game** (shared across modes) until a title needs per-mode URLs.
+- **`api_base_url`**: Game API **origin** only (e.g. `http://localhost:3001`, `https://rpsls-duel.win`) — same value as JWT `aud`. Lobby posts to `{api_base_url}/api/v1/matches`. Do not include the `/api` ingress prefix here.
 
 ## Provision
 
-- `lobbyId` = `LobbyIssuer()`; `lobby.returnUrl` = browser Lobby URL; `lobby.graphqlUrl` = `{issuer}/graphql`; `lobby.serviceToken` = Lobby’s `LOBBY_GAME_SERVICE_TOKEN` when set (same value on `Authorization: Bearer` for the provision POST).
+- `lobbyId` = `LobbyIssuer()`; `lobby.returnUrl` = browser Lobby URL; `lobby.graphqlUrl` = `{issuer}/graphql`; `lobby.serviceToken` = per-game credential `v1.{gameUUID}.{hmac}` from `LOBBY_GAME_TOKEN_PEPPER` (also returned by admin `registerGame.serviceToken`). Games store it per match; provision POST uses `Authorization: Bearer` with the same value. Legacy global `LOBBY_GAME_SERVICE_TOKEN` is dev-only fallback.
 - `gameMode` = mode’s `mode_key` (game server resolves mode-specific rules locally).
 - Pass `team` / `role` on seats from the cached template when applicable.
 - Player display names via `player(id)` at `lobby.graphqlUrl` using `lobby.serviceToken` from provision.

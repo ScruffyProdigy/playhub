@@ -9,6 +9,8 @@ cd "$ROOT"
 . "$ROOT/scripts/lib/lobby-smtp.sh"
 # shellcheck source=lib/lobby-game-service.sh
 . "$ROOT/scripts/lib/lobby-game-service.sh"
+# shellcheck source=lib/lobby-auth-peppers.sh
+. "$ROOT/scripts/lib/lobby-auth-peppers.sh"
 
 NAMESPACE="joinquest"
 CONTEXT="${KUBE_CONTEXT:-}"
@@ -69,6 +71,7 @@ kubectl apply -f k8s/env/joinquest.yaml
 
 echo "Configuring backend for browser auth at $LOBBY_PUBLIC_URL ..."
 kubectl set env deployment/lobby-backend -n "$NAMESPACE" \
+  APP_ENV=production \
   CORS_ALLOWED_ORIGINS="$LOBBY_PUBLIC_URL" \
   MAGIC_LINK_BASE_URL="${LOBBY_PUBLIC_URL}/auth/complete?token=" \
   LOBBY_ISSUER_URL="${LOBBY_ISSUER_URL:-$LOBBY_PUBLIC_URL}" \
@@ -76,6 +79,7 @@ kubectl set env deployment/lobby-backend -n "$NAMESPACE" \
   LOBBY_ADMIN_EMAILS="${LOBBY_ADMIN_EMAILS:-ryan.c.kohler@gmail.com}" \
   --containers=backend
 apply_lobby_smtp_secret
+apply_lobby_auth_peppers_secret
 apply_lobby_game_service_secret
 
 echo "Waiting for Postgres..."

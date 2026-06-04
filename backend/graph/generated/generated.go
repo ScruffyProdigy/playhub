@@ -158,6 +158,7 @@ type ComplexityRoot struct {
 
 	RegisterGamePayload struct {
 		Game          func(childComplexity int) int
+		ServiceToken  func(childComplexity int) int
 		WebhookSecret func(childComplexity int) int
 	}
 
@@ -772,6 +773,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.RegisterGamePayload.Game(childComplexity), true
+	case "RegisterGamePayload.serviceToken":
+		if e.complexity.RegisterGamePayload.ServiceToken == nil {
+			break
+		}
+
+		return e.complexity.RegisterGamePayload.ServiceToken(childComplexity), true
 	case "RegisterGamePayload.webhookSecret":
 		if e.complexity.RegisterGamePayload.WebhookSecret == nil {
 			break
@@ -1000,6 +1007,8 @@ extend type Mutation {
 type RegisterGamePayload {
   game: Game!
   webhookSecret: String!
+  """Per-game credential for provision + player GraphQL (derived from game id)."""
+  serviceToken: String!
 }
 
 type GameModeSeat {
@@ -3082,6 +3091,8 @@ func (ec *executionContext) fieldContext_Mutation_registerGame(ctx context.Conte
 				return ec.fieldContext_RegisterGamePayload_game(ctx, field)
 			case "webhookSecret":
 				return ec.fieldContext_RegisterGamePayload_webhookSecret(ctx, field)
+			case "serviceToken":
+				return ec.fieldContext_RegisterGamePayload_serviceToken(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type RegisterGamePayload", field.Name)
 		},
@@ -4115,6 +4126,35 @@ func (ec *executionContext) _RegisterGamePayload_webhookSecret(ctx context.Conte
 }
 
 func (ec *executionContext) fieldContext_RegisterGamePayload_webhookSecret(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RegisterGamePayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RegisterGamePayload_serviceToken(ctx context.Context, field graphql.CollectedField, obj *model.RegisterGamePayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RegisterGamePayload_serviceToken,
+		func(ctx context.Context) (any, error) {
+			return obj.ServiceToken, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RegisterGamePayload_serviceToken(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "RegisterGamePayload",
 		Field:      field,
@@ -7081,6 +7121,11 @@ func (ec *executionContext) _RegisterGamePayload(ctx context.Context, sel ast.Se
 			}
 		case "webhookSecret":
 			out.Values[i] = ec._RegisterGamePayload_webhookSecret(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "serviceToken":
+			out.Values[i] = ec._RegisterGamePayload_serviceToken(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

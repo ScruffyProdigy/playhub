@@ -62,7 +62,10 @@ if [ -f "$ROOT/.env" ]; then
 fi
 # shellcheck source=lib/lobby-smtp.sh
 . "$ROOT/scripts/lib/lobby-smtp.sh"
+# shellcheck source=lib/lobby-auth-peppers.sh
+. "$ROOT/scripts/lib/lobby-auth-peppers.sh"
 load_lobby_smtp_env_from_file
+load_lobby_auth_peppers_env_from_file
 
 # Start shared PostgreSQL for local development
 if command -v docker &> /dev/null; then
@@ -82,7 +85,8 @@ if command -v docker &> /dev/null; then
     export LOBBY_ADMIN_EMAILS="${LOBBY_ADMIN_EMAILS:-ryan.c.kohler@gmail.com}"
     export LOBBY_ISSUER_URL="${LOBBY_ISSUER_URL:-http://localhost:8080}"
     export LOBBY_PUBLIC_URL="${LOBBY_PUBLIC_URL:-http://localhost:5173}"
-    # Optional: set LOBBY_GAME_SERVICE_TOKEN in .env to test provision auth + GraphQL player lookup with the game API.
+    # Optional: k8s/secrets/lobby-auth-peppers.yaml or .env for MAGIC_LINK_PEPPER / LOBBY_GAME_TOKEN_PEPPER.
+    # Legacy dev fallback: LOBBY_GAME_SERVICE_TOKEN in .env (global token; production uses per-game tokens).
 else
     print_warning "Docker not found. Set DATABASE_URL manually or the backend will use mock data."
 fi

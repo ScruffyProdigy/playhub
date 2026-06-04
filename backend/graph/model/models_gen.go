@@ -103,6 +103,8 @@ type RegisterGameInput struct {
 type RegisterGamePayload struct {
 	Game          *Game  `json:"game"`
 	WebhookSecret string `json:"webhookSecret"`
+	// Per-game credential for provision + player GraphQL (derived from game id).
+	ServiceToken string `json:"serviceToken"`
 }
 
 type Session struct {

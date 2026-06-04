@@ -246,6 +246,17 @@ func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, us
 		return false, err
 	}
 
+	// Legacy rows may be waiting on game_id only (mode_queue_id NULL) or another queue;
+	// idx_game_queues_one_waiting_per_user blocks a second INSERT and aborts the tx on conflict.
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE game_queues
+		SET status = 'cancelled'
+		WHERE game_id = $1 AND user_id = $2 AND status = 'waiting'
+		  AND (mode_queue_id IS NULL OR mode_queue_id <> $3)
+	`, gameID, userID, modeQueueID); err != nil {
+		return false, err
+	}
+
 	row := tx.QueryRowContext(ctx, `
 		SELECT `+queueColumns+`
 		FROM game_queues
@@ -259,6 +270,9 @@ func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, us
 		return false, err
 	}
 
+	if _, err := tx.ExecContext(ctx, "SAVEPOINT gq_enqueue"); err != nil {
+		return false, err
+	}
 	row = tx.QueryRowContext(ctx, `
 		INSERT INTO game_queues (game_id, user_id, status, mode_queue_id)
 		VALUES ($1, $2, 'waiting', $3)
@@ -266,18 +280,24 @@ func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, us
 	`, gameID, userID, modeQueueID)
 	if _, err := scanQueueEntry(row); err != nil {
 		if isUniqueViolation(err) {
+			if _, rbErr := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT gq_enqueue"); rbErr != nil {
+				return false, err
+			}
 			row = tx.QueryRowContext(ctx, `
 				SELECT `+queueColumns+`
 				FROM game_queues
-				WHERE mode_queue_id = $1 AND user_id = $2 AND status = 'waiting'
+				WHERE game_id = $1 AND user_id = $2 AND status = 'waiting'
 				ORDER BY joined_at DESC
 				LIMIT 1
-			`, modeQueueID, userID)
+			`, gameID, userID)
 			if _, err := scanQueueEntry(row); err != nil {
 				return false, err
 			}
 			return true, nil
 		}
+		return false, err
+	}
+	if _, err := tx.ExecContext(ctx, "RELEASE SAVEPOINT gq_enqueue"); err != nil {
 		return false, err
 	}
 	return false, nil

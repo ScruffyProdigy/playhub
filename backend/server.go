@@ -61,7 +61,13 @@ func main() {
 	gql := graph.NewGraphQLServer(signer, resolver)
 
 	mux.Handle("/graphql", auth.Middleware(signer, gql))
-	mux.Handle("/", playground.Handler("GraphQL", "/graphql"))
+	if !auth.IsProductionEnv() {
+		mux.Handle("/", playground.Handler("GraphQL", "/graphql"))
+	} else {
+		mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+			http.NotFound(w, nil)
+		})
+	}
 
 	mux.Handle("/.well-known/jwks.json", signer.JWKSHandler())
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })

@@ -147,7 +147,7 @@ and a `playUrl` (browser) for each game in your catalog.
 | Claim | `POST {apiBaseUrl}/api/v1/matches/{externalMatchId}/claim` + `Authorization: Bearer <jwt>` | game uses the token's `seatKey` |
 | Play | WebSocket `GET /api/v1/ws` (or REST `POST /matches/:ref/move`) | game-internal transport |
 
-**Lobby block:** `returnUrl` sends players back to the Lobby UI after a match; `graphqlUrl` is the Lobby GraphQL endpoint; `serviceToken` is optional — when Lobby sets `LOBBY_GAME_SERVICE_TOKEN`, games store it for `player` lookup and future callbacks.
+**Lobby block:** `returnUrl` sends players back to the Lobby UI after a match; `graphqlUrl` is the Lobby GraphQL endpoint; `serviceToken` is a per-game HMAC token (`v1.{gameId}.{sig}`) when `LOBBY_GAME_TOKEN_PEPPER` is set — games store it on the match for `player` lookup and future callbacks. Omit in local dev when no pepper is configured.
 
 **Assignment seat shape:** `{ seatKey, lobbyUserId, team?, role? }`. Resolve display names via `player(id)` at `lobby.graphqlUrl`.
 
