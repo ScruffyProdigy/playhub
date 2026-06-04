@@ -48,8 +48,8 @@ describe('LoginForm', () => {
     await waitFor(() => {
       expect(auth.requestSignIn).toHaveBeenCalledWith('player@example.com')
       expect(screen.getByRole('heading', { name: 'Enter your code' })).toBeInTheDocument()
-      expect(screen.getByLabelText('Sign-in code')).toBeInTheDocument()
     })
+    expect(screen.getByLabelText('Sign-in code')).not.toBeDisabled()
   })
 
   it('shows an error when the sign-in email request fails', async () => {
@@ -80,8 +80,9 @@ describe('LoginForm', () => {
     await userEvent.type(screen.getByLabelText('Email'), 'player@example.com')
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
-    await screen.findByLabelText('Sign-in code')
-    await userEvent.type(screen.getByLabelText('Sign-in code'), '123456')
+    const codeInput = await screen.findByLabelText('Sign-in code')
+    expect(codeInput).not.toBeDisabled()
+    await userEvent.type(codeInput, '123456')
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
     await waitFor(() => {
@@ -102,8 +103,9 @@ describe('LoginForm', () => {
     await userEvent.type(screen.getByLabelText('Email'), 'player@example.com')
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
-    await screen.findByLabelText('Sign-in code')
-    await userEvent.type(screen.getByLabelText('Sign-in code'), '123456')
+    const codeInput = await screen.findByLabelText('Sign-in code')
+    expect(codeInput).not.toBeDisabled()
+    await userEvent.type(codeInput, '123456')
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(
