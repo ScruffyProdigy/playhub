@@ -21,6 +21,7 @@ var (
 	ErrInvalidLoginCode      = errors.New("Invalid or expired code. Try again or use the sign-in link in your email.")
 	ErrMagicLinkRateLimit    = errors.New("Too many sign-in emails requested. Please wait and try again.")
 	ErrTooManyLoginAttempts  = errors.New("Too many incorrect codes. Request a new sign-in email.")
+	ErrSignInEmailNotSent    = errors.New("Could not send sign-in email. Please try again in a few minutes.")
 )
 
 const (
@@ -115,7 +116,7 @@ func (s *Service) RequestMagicLink(ctx context.Context, emailAddr string) error 
 	}
 
 	token := uuid.NewString()
-	_, err = s.store.CreateMagicLink(ctx, store.CreateMagicLinkParams{
+	link, err := s.store.CreateMagicLink(ctx, store.CreateMagicLinkParams{
 		Email:     normalized,
 		TokenHash: hashMagicLinkToken(token),
 		CodeHash:  hashLoginCode(code),
@@ -125,7 +126,12 @@ func (s *Service) RequestMagicLink(ctx context.Context, emailAddr string) error 
 		return err
 	}
 
-	s.deliverLoginEmail(ctx, normalized, token, code)
+	if err := s.deliverLoginEmail(ctx, normalized, token, code); err != nil {
+		if delErr := s.store.DeleteMagicLink(ctx, link.ID); delErr != nil {
+			log.Printf("auth: rollback magic link %s after email failure: %v", link.ID, delErr)
+		}
+		return err
+	}
 	return nil
 }
 
@@ -243,8 +249,11 @@ func (s *Service) Logout(ctx context.Context) {
 	}
 }
 
-func (s *Service) deliverLoginEmail(ctx context.Context, recipient, token, code string) {
+func (s *Service) deliverLoginEmail(ctx context.Context, recipient, token, code string) error {
 	link := s.magicLinkURL(token)
+	if link == "" {
+		return fmt.Errorf("%w: MAGIC_LINK_BASE_URL is not configured", ErrSignInEmailNotSent)
+	}
 	if err := s.mailer.SendMagicLink(ctx, email.MagicLinkEmail{
 		To:   recipient,
 		Link: link,
@@ -252,7 +261,9 @@ func (s *Service) deliverLoginEmail(ctx context.Context, recipient, token, code 
 		TTL:  s.magicLinkTTL,
 	}); err != nil {
 		log.Printf("auth: failed to send sign-in email to %s: %v", recipient, err)
+		return fmt.Errorf("%w: %v", ErrSignInEmailNotSent, err)
 	}
+	return nil
 }
 
 func (s *Service) magicLinkURL(token string) string {

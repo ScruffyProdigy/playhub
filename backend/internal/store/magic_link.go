@@ -78,6 +78,15 @@ func (s *Store) CreateMagicLink(ctx context.Context, params CreateMagicLinkParam
 	return scanMagicLink(row)
 }
 
+// DeleteMagicLink removes an unused magic link row (e.g. when outbound email fails after insert).
+func (s *Store) DeleteMagicLink(ctx context.Context, id uuid.UUID) error {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM magic_links WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	return ensureRowsAffected(result, ErrNotFound)
+}
+
 func (s *Store) CountRecentMagicLinksByEmail(ctx context.Context, email string, since time.Time) (int, error) {
 	var count int
 	err := s.db.QueryRowContext(ctx, `

@@ -3,9 +3,12 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
@@ -175,6 +178,38 @@ func TestRequestMagicLinkRejectsInvalidEmail(t *testing.T) {
 	err := service.RequestMagicLink(context.Background(), "not-an-email")
 	if err != ErrInvalidEmail {
 		t.Fatalf("expected ErrInvalidEmail, got %v", err)
+	}
+}
+
+type failingMailer struct{}
+
+func (failingMailer) SendMagicLink(context.Context, email.MagicLinkEmail) error {
+	return fmt.Errorf("smtp rate limit exceeded")
+}
+
+func TestRequestMagicLinkFailsWhenEmailDeliveryFails(t *testing.T) {
+	t.Setenv("MAGIC_LINK_BASE_URL", "http://localhost:5173/auth/complete?token={token}")
+	service := openAuthTestServiceWithMailer(t, failingMailer{})
+	cleaner := service.store.NewTestCleaner(t)
+	ctx := context.Background()
+
+	emailAddr := "mailfail-" + uuid.NewString() + "@example.com"
+	cleaner.TrackEmail(emailAddr)
+
+	err := service.RequestMagicLink(ctx, emailAddr)
+	if err == nil {
+		t.Fatal("expected error when mailer fails")
+	}
+	if !errors.Is(err, ErrSignInEmailNotSent) {
+		t.Fatalf("expected ErrSignInEmailNotSent, got %v", err)
+	}
+
+	count, err := service.store.CountRecentMagicLinksByEmail(ctx, emailAddr, time.Now().Add(-time.Hour))
+	if err != nil {
+		t.Fatalf("CountRecentMagicLinksByEmail: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected magic link rolled back, count=%d", count)
 	}
 }
 
