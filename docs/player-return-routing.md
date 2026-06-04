@@ -1,0 +1,96 @@
+# Player return routing
+
+Games send players to a **stable return hub** after a match. Lobby resolves **where each player goes next** from context stored at match time.
+
+**Related:** [lobby-protocol-handoff.md](./lobby-protocol-handoff.md) · [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md)
+
+---
+
+## Contract (games)
+
+| Field | Value |
+|-------|--------|
+| `lobby.returnUrl` on provision | `{LOBBY_PUBLIC_URL}/return` (e.g. `https://joinquest.cc/return`) |
+| Player exit link | `{returnUrl}?match={externalMatchId}` |
+
+Games store `returnUrl` from provision once per match. When a player leaves, link them to the URL above. Lobby’s `/return` page loads signed-in, reads `returnDestination(matchId)`, and redirects.
+
+**Do not** embed per-player paths in the game — Lobby owns routing.
+
+---
+
+## Return context (Lobby DB)
+
+When a player is seated for a match, Lobby stores JSON on `game_session_participants.return_context`:
+
+```json
+{
+  "kind": "catalog_lfg",
+  "path": "/",
+  "gameId": "…",
+  "modeQueueId": "…"
+}
+```
+
+| `kind` | Meaning | Typical `path` |
+|--------|---------|----------------|
+| `catalog_lfg` | Joined via catalog queue | `/` (home / catalog) |
+| `room` (future) | Friend room / party | `/room/{id}` |
+
+New entry paths set context at join/match time. The return hub only reads it.
+
+---
+
+## GraphQL
+
+**Player (session cookie):**
+
+```graphql
+query ReturnDestination($matchId: ID) {
+  returnDestination(matchId: $matchId) {
+    path
+    kind
+  }
+}
+```
+
+**Game server (Bearer `serviceToken` from provision):** see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md).
+
+---
+
+## Environment
+
+| Variable | Role |
+|----------|------|
+| `LOBBY_PUBLIC_URL` | Browser origin (e.g. `https://joinquest.cc`) |
+| `LOBBY_RETURN_URL` | Optional full return hub URL override (must include `/return` path if set) |
+
+If unset, return hub = `LOBBY_PUBLIC_URL` + `/return`.
+
+---
+
+## Building the player exit link
+
+Games receive `lobby.returnUrl` (the hub base) on provision. Append the Lobby session id (`externalMatchId`) when linking players back:
+
+```
+{returnUrl}?match={externalMatchId}
+```
+
+**Reference implementations** (keep in sync):
+
+| Language | Location |
+|----------|----------|
+| Go | `backend/internal/returnlink.AppendMatchID` (also `auth.LobbyReturnURLForMatch`) |
+| TypeScript | `demo-game-rps/client/src/lobbyReturn.ts` → `buildLobbyReturnLink` |
+
+The JoinQuest frontend does not build this link — only games do. The `/return` hub resolves routing via `returnDestination`.
+
+---
+
+## Implementation status
+
+- Return hub route: `/return` (frontend)
+- `returnDestination` query
+- `return_context` on session participants (`catalog_lfg` at match create)
+- `reportPlayerFinished` / `reportMatchResult` mutations

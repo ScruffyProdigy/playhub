@@ -76,7 +76,7 @@ func ConfigFromEnv() (Config, bool, error) {
 	}, true, nil
 }
 
-// SenderFromEnv returns an SMTP sender when configured, otherwise LogSender.
+// SenderFromEnv returns Resend HTTP API when configured (default), SMTP if RESEND_USE_SMTP=true, otherwise LogSender.
 func SenderFromEnv() (Sender, error) {
 	cfg, ok, err := ConfigFromEnv()
 	if err != nil {
@@ -85,5 +85,22 @@ func SenderFromEnv() (Sender, error) {
 	if !ok {
 		return LogSender{}, nil
 	}
+
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("RESEND_USE_SMTP")), "true") {
+		return NewSMTPSender(cfg)
+	}
+
+	apiKey := strings.TrimSpace(os.Getenv("RESEND_API_KEY"))
+	if apiKey == "" {
+		apiKey = strings.TrimSpace(cfg.Password)
+	}
+	if apiKey != "" {
+		return NewResendSender(ResendConfig{
+			APIKey:   apiKey,
+			From:     cfg.From,
+			FromName: cfg.FromName,
+		})
+	}
+
 	return NewSMTPSender(cfg)
 }

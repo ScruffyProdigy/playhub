@@ -263,6 +263,7 @@ func (s *Service) deliverLoginEmail(ctx context.Context, recipient, token, code 
 		log.Printf("auth: failed to send sign-in email to %s: %v", recipient, err)
 		return fmt.Errorf("%w: %v", ErrSignInEmailNotSent, err)
 	}
+	log.Printf("auth: sent sign-in email to %s", recipient)
 	return nil
 }
 

@@ -1,4 +1,5 @@
 import CompleteSignInPage from './components/auth/CompleteSignInPage'
+import ReturnPage from './components/auth/ReturnPage'
 import AuthPanel from './components/auth/AuthPanel'
 import ActiveQueueBanner from './components/games/ActiveQueueBanner'
 import GameLobby from './components/games/GameLobby'
@@ -33,6 +34,8 @@ function App() {
     <AuthProvider>
       {window.location.pathname.startsWith('/auth/complete') ? (
         <CompleteSignInPage />
+      ) : window.location.pathname.startsWith('/return') ? (
+        <ReturnPage />
       ) : (
         <HomePage />
       )}

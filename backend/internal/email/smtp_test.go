@@ -132,11 +132,27 @@ func TestFormatAddress(t *testing.T) {
 	}
 }
 
+func TestSenderFromEnvPrefersResendAPI(t *testing.T) {
+	t.Setenv("SMTP_HOST", "smtp.resend.com")
+	t.Setenv("SMTP_PASSWORD", "re_test_key")
+	t.Setenv("SMTP_FROM", "noreply@example.com")
+	t.Setenv("RESEND_USE_SMTP", "")
+
+	sender, err := SenderFromEnv()
+	if err != nil {
+		t.Fatalf("SenderFromEnv() error: %v", err)
+	}
+	if _, ok := sender.(*ResendSender); !ok {
+		t.Fatalf("expected ResendSender, got %T", sender)
+	}
+}
+
 func TestSenderFromEnvUsesSMTPWhenConfigured(t *testing.T) {
 	t.Setenv("SMTP_HOST", "smtp.example.com")
 	t.Setenv("SMTP_PORT", "2525")
 	t.Setenv("SMTP_FROM", "noreply@example.com")
 	t.Setenv("SMTP_FROM_NAME", "JoinQuest")
+	t.Setenv("RESEND_USE_SMTP", "true")
 
 	sender, err := SenderFromEnv()
 	if err != nil {

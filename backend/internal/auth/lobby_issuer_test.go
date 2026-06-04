@@ -11,8 +11,16 @@ func TestLobbyGraphQLURL(t *testing.T) {
 func TestLobbyReturnURLPrefersPublicURL(t *testing.T) {
 	t.Setenv("LOBBY_ISSUER_URL", "http://localhost:8080")
 	t.Setenv("LOBBY_PUBLIC_URL", "http://localhost:5173")
-	if got := LobbyReturnURL(); got != "http://localhost:5173" {
+	if got := LobbyReturnURL(); got != "http://localhost:5173/return" {
 		t.Fatalf("LobbyReturnURL() = %q", got)
+	}
+}
+
+func TestLobbyReturnURLForMatch(t *testing.T) {
+	t.Setenv("LOBBY_PUBLIC_URL", "https://joinquest.cc")
+	got := LobbyReturnURLForMatch("550e8400-e29b-41d4-a716-446655440000")
+	if got != "https://joinquest.cc/return?match=550e8400-e29b-41d4-a716-446655440000" {
+		t.Fatalf("LobbyReturnURLForMatch() = %q", got)
 	}
 }
 

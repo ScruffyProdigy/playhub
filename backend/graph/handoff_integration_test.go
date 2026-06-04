@@ -68,7 +68,7 @@ func TestJoinQueueProvisionsMatchOnGameServer(t *testing.T) {
 	if call.LobbyID != "http://localhost:8080" {
 		t.Fatalf("lobbyId = %q, want http://localhost:8080", call.LobbyID)
 	}
-	if call.Lobby.ReturnURL != "http://localhost:5173" {
+	if call.Lobby.ReturnURL != "http://localhost:5173/return" {
 		t.Fatalf("lobby.returnUrl = %q", call.Lobby.ReturnURL)
 	}
 	if call.Lobby.GraphqlURL != "http://localhost:8080/graphql" {

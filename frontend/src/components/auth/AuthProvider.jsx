@@ -9,6 +9,16 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const acceptSessionUser = useCallback((signedInUser) => {
+    if (!signedInUser) {
+      return
+    }
+    clearSubscriptionAuthCache()
+    setUser(signedInUser)
+    setError('')
+    void prefetchSubscriptionAuth().catch(() => {})
+  }, [])
+
   const refreshSession = useCallback(async (options = {}) => {
     const { silent = false } = options
     clearSubscriptionAuthCache()
@@ -18,13 +28,17 @@ export function AuthProvider({ children }) {
     setError('')
     try {
       const currentUser = await fetchCurrentUser()
-      setUser(currentUser)
       if (currentUser) {
+        setUser(currentUser)
         void prefetchSubscriptionAuth().catch(() => {})
+      } else if (!silent) {
+        setUser(null)
       }
     } catch (err) {
-      setError(err.message || 'Could not load session')
-      setUser(null)
+      if (!silent) {
+        setError(err.message || 'Could not load session')
+        setUser(null)
+      }
     } finally {
       if (!silent) {
         setLoading(false)
@@ -48,9 +62,10 @@ export function AuthProvider({ children }) {
       loading,
       error,
       refreshSession,
+      acceptSessionUser,
       clearSession,
     }),
-    [user, loading, error, refreshSession, clearSession],
+    [user, loading, error, refreshSession, acceptSessionUser, clearSession],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

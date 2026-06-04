@@ -53,11 +53,19 @@ func markQueueEntryMatchedTx(ctx context.Context, tx *sql.Tx, entryID uuid.UUID)
 	return ensureRowsAffected(result, ErrNotFound)
 }
 
-func addSessionParticipantTx(ctx context.Context, tx *sql.Tx, sessionID, userID uuid.UUID, role string) error {
-	_, err := tx.ExecContext(ctx, `
-		INSERT INTO game_session_participants (session_id, user_id, role)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (session_id, user_id) DO NOTHING
-	`, sessionID, userID, role)
+func addSessionParticipantTx(ctx context.Context, tx *sql.Tx, sessionID, userID uuid.UUID, role string, returnCtx ReturnContext) error {
+	raw, err := encodeReturnContext(returnCtx)
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO game_session_participants (session_id, user_id, role, return_context)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (session_id, user_id) DO UPDATE SET
+			role = EXCLUDED.role,
+			return_context = EXCLUDED.return_context,
+			left_at = NULL,
+			finished_at = NULL
+	`, sessionID, userID, role, raw)
 	return err
 }

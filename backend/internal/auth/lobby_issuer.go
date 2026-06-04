@@ -4,7 +4,14 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/scruffyprodigy/playhub/internal/returnlink"
 )
+
+// LobbyReturnURLForMatch builds the return hub link for a provisioned match.
+func LobbyReturnURLForMatch(externalMatchID string) string {
+	return returnlink.AppendMatchID(LobbyReturnURL(), externalMatchID)
+}
 
 const defaultLobbyIssuer = "http://localhost:8080"
 
@@ -21,16 +28,30 @@ func LobbyIssuer() string {
 	return defaultLobbyIssuer
 }
 
-// LobbyReturnURL is where games send players after a match (browser-facing Lobby URL).
-// Resolution order: LOBBY_RETURN_URL, LOBBY_PUBLIC_URL, LobbyIssuer().
+// LobbyReturnURL is the stable return hub games link to after a match.
+// Games should append ?match={externalMatchId} so Lobby can route per player.
+// Resolution order: LOBBY_RETURN_URL (must include path if set), else public URL + /return.
 func LobbyReturnURL() string {
 	if v := normalizeIssuerURL(os.Getenv("LOBBY_RETURN_URL")); v != "" {
 		return v
 	}
+	base := LobbyPublicURL()
+	if base == "" {
+		base = LobbyIssuer()
+	}
+	return base + "/return"
+}
+
+// LobbyPublicURL is the browser-facing JoinQuest origin without a path.
+func LobbyPublicURL() string {
 	if v := normalizeIssuerURL(os.Getenv("LOBBY_PUBLIC_URL")); v != "" {
 		return v
 	}
-	return LobbyIssuer()
+	issuer := LobbyIssuer()
+	if strings.Contains(issuer, "localhost:8080") {
+		return "http://localhost:5173"
+	}
+	return issuer
 }
 
 // LobbyGraphQLURL is the Lobby GraphQL endpoint (player lookup, match reporting, etc.).

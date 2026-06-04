@@ -104,6 +104,7 @@ func (s *Store) getUserMatchedModeQueueAny(ctx context.Context, userID uuid.UUID
 	session, err := s.GetMatchedSessionForUserAndModeQueue(ctx, modeQueueID, userID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
+			_ = s.cancelUserMatchedModeQueue(ctx, modeQueueID, userID)
 			return nil, uuid.Nil, nil
 		}
 		return nil, uuid.Nil, err

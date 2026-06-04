@@ -117,6 +117,11 @@ type RegisterGamePayload struct {
 	ServiceToken string `json:"serviceToken"`
 }
 
+type ReturnDestination struct {
+	Path string `json:"path"`
+	Kind string `json:"kind"`
+}
+
 type Session struct {
 	ID        string        `json:"id"`
 	Game      *Game         `json:"game"`
@@ -134,6 +139,122 @@ type User struct {
 	DisplayName *string   `json:"displayName,omitempty"`
 	CreatedAt   time.Time `json:"createdAt"`
 	IsAdmin     bool      `json:"isAdmin"`
+}
+
+type MatchResultStatus string
+
+const (
+	MatchResultStatusCompleted MatchResultStatus = "COMPLETED"
+	MatchResultStatusCancelled MatchResultStatus = "CANCELLED"
+	MatchResultStatusAbandoned MatchResultStatus = "ABANDONED"
+)
+
+var AllMatchResultStatus = []MatchResultStatus{
+	MatchResultStatusCompleted,
+	MatchResultStatusCancelled,
+	MatchResultStatusAbandoned,
+}
+
+func (e MatchResultStatus) IsValid() bool {
+	switch e {
+	case MatchResultStatusCompleted, MatchResultStatusCancelled, MatchResultStatusAbandoned:
+		return true
+	}
+	return false
+}
+
+func (e MatchResultStatus) String() string {
+	return string(e)
+}
+
+func (e *MatchResultStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = MatchResultStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid MatchResultStatus", str)
+	}
+	return nil
+}
+
+func (e MatchResultStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *MatchResultStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e MatchResultStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type PlayerFinishReason string
+
+const (
+	PlayerFinishReasonCompleted  PlayerFinishReason = "COMPLETED"
+	PlayerFinishReasonEliminated PlayerFinishReason = "ELIMINATED"
+	PlayerFinishReasonForfeit    PlayerFinishReason = "FORFEIT"
+	PlayerFinishReasonDisconnect PlayerFinishReason = "DISCONNECT"
+)
+
+var AllPlayerFinishReason = []PlayerFinishReason{
+	PlayerFinishReasonCompleted,
+	PlayerFinishReasonEliminated,
+	PlayerFinishReasonForfeit,
+	PlayerFinishReasonDisconnect,
+}
+
+func (e PlayerFinishReason) IsValid() bool {
+	switch e {
+	case PlayerFinishReasonCompleted, PlayerFinishReasonEliminated, PlayerFinishReasonForfeit, PlayerFinishReasonDisconnect:
+		return true
+	}
+	return false
+}
+
+func (e PlayerFinishReason) String() string {
+	return string(e)
+}
+
+func (e *PlayerFinishReason) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PlayerFinishReason(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PlayerFinishReason", str)
+	}
+	return nil
+}
+
+func (e PlayerFinishReason) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PlayerFinishReason) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PlayerFinishReason) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type QueueStatus string

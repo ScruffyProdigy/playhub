@@ -5,7 +5,7 @@ GraphQL API for **JoinQuest** — the player shell and control plane for registe
 | Client | Typical use |
 |--------|-------------|
 | **JoinQuest frontend** | Sign-in, browse games, `joinQueue`, subscriptions |
-| **Game server** | `player(id)` with provision `serviceToken`; future match callbacks |
+| **Game server** | `player(id)` with provision `serviceToken`; `reportPlayerFinished`, `reportMatchResult` |
 | **Admin** | `registerGame`, manifest sync |
 
 Platform goals and integration overview: [`vision.md`](./vision.md). Game handoff is not GraphQL — see [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md).
@@ -17,6 +17,7 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 - **Catalog & matchmaking**: `registerGame`, mode queues, `joinQueue(queueId)`, handoff to game servers
 - **Database-backed queries**: `games`, `game`, `session`, `goods`, `myInventory`, `player` (game service)
 - **Real-time**: `queueUpdated` subscription via Redis pub/sub
+- **Post-game**: `returnDestination`, `reportPlayerFinished`, `reportMatchResult` — see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md), [player-return-routing.md](./player-return-routing.md)
 - **System**: `version`, `healthz`
 
 ### 🚧 In Development
@@ -25,7 +26,6 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 
 ### 📋 Planned
 - **File uploads**: game assets and user avatars
-- **Post-game callbacks** (game server): `reportPlayerFinished`, `reportMatchResult` — see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md)
 - **`seatTemplate`** manifest + LFG matchmaking — see [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md); games still publish flat `seats[]` today
 
 ## Base URL

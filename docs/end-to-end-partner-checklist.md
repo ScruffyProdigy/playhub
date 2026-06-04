@@ -26,8 +26,8 @@ Use this to verify the **“sign in → queue → play → return”** story on 
 5. **Match** — both receive `joinUrl` (subscription or `myQueueStatus` / `myActiveQueue`).
 6. **Launch** — each player opens `joinUrl`, game claims `seatKey` from JWT.
 7. **Play** — match runs on the game origin (not JoinQuest).
-8. **Return** — game sends player to `lobby.returnUrl` from provision (configure `LOBBY_RETURN_URL` in deploy).
-9. **Callbacks** (when implemented) — game reports per-player finish and final match result; see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md).
+8. **Return** — game sends player to `{lobby.returnUrl}?match={externalMatchId}`; Lobby `/return` resolves per-player destination. See [player-return-routing.md](./player-return-routing.md).
+9. **Callbacks** — game calls `reportMatchResult` (and optionally `reportPlayerFinished`); see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md).
 
 ---
 

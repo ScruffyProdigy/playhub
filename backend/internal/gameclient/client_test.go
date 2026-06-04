@@ -31,7 +31,7 @@ func TestProvisionMatchSendsLobbyBlock(t *testing.T) {
 		ServiceToken: "lobby-svc-secret",
 		LobbyID:      "https://joinquest.cc",
 		Lobby: LobbyInfo{
-			ReturnURL:    "https://joinquest.cc",
+			ReturnURL:    "https://joinquest.cc/return",
 			GraphqlURL:   "https://joinquest.cc/graphql",
 			ServiceToken: "lobby-svc-secret",
 		},
@@ -53,7 +53,7 @@ func TestProvisionMatchSendsLobbyBlock(t *testing.T) {
 	if !ok {
 		t.Fatalf("lobby missing: %#v", gotBody)
 	}
-	if lobby["returnUrl"] != "https://joinquest.cc" {
+	if lobby["returnUrl"] != "https://joinquest.cc/return" {
 		t.Fatalf("returnUrl = %v", lobby["returnUrl"])
 	}
 	if lobby["graphqlUrl"] != "https://joinquest.cc/graphql" {
@@ -80,7 +80,7 @@ func TestProvisionMatchRequiresLobbyID(t *testing.T) {
 		APIBaseURL: "http://127.0.0.1:1",
 		LobbyID:    "  ",
 		Lobby: LobbyInfo{
-			ReturnURL:  "https://joinquest.cc",
+			ReturnURL:  "https://joinquest.cc/return",
 			GraphqlURL: "https://joinquest.cc/graphql",
 		},
 	})

@@ -1,0 +1,42 @@
+enum PlayerFinishReason {
+  COMPLETED
+  ELIMINATED
+  FORFEIT
+  DISCONNECT
+}
+
+enum MatchResultStatus {
+  COMPLETED
+  CANCELLED
+  ABANDONED
+}
+
+# Where the return hub should send the signed-in player (relative path on JoinQuest).
+type ReturnDestination {
+  path: String!
+  kind: String!
+}
+
+extend type Query {
+  # Player return hub: resolves stored return context for the current user.
+  # Pass match (externalMatchId / session id) when returning from a game.
+  returnDestination(matchId: ID): ReturnDestination!
+}
+
+extend type Mutation {
+  # Game server (Bearer serviceToken from provision).
+  reportPlayerFinished(
+    matchId: ID!
+    lobbyUserId: ID!
+    reason: PlayerFinishReason!
+    placement: Int
+    metadata: JSON
+  ): Boolean!
+
+  reportMatchResult(
+    matchId: ID!
+    status: MatchResultStatus!
+    winnerLobbyUserIds: [ID!]
+    metadata: JSON
+  ): Boolean!
+}

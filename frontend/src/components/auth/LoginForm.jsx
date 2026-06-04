@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { completeSignInWithCode, requestSignIn } from '../../lib/auth'
+import { notifyAuthComplete } from '../../lib/authBroadcast'
 import { useAuth } from './AuthProvider'
 import useWaitForSignIn from './useWaitForSignIn'
 import { focusCodeInput } from './focusCodeInput'
@@ -10,7 +11,7 @@ function normalizeCode(value) {
 }
 
 export default function LoginForm() {
-  const { refreshSession, user } = useAuth()
+  const { refreshSession, acceptSessionUser, user } = useAuth()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState('email')
@@ -18,6 +19,7 @@ export default function LoginForm() {
   const [message, setMessage] = useState('')
   const codeInputRef = useRef(null)
   const emailRequestStarted = useRef(false)
+  const codeSubmitStarted = useRef(false)
   const onVerifyStep = step === 'verify'
   const isSigningIn = status === 'loading' && normalizeCode(code).length === 6
 
@@ -30,23 +32,29 @@ export default function LoginForm() {
     onSignedIn: handleSignedInElsewhere,
   })
 
-  function showVerifyStep() {
+  function focusCodeField() {
+    focusCodeInput(codeInputRef.current)
+  }
+
+  const emailSentMessage =
+    'We sent a 6-digit code and sign-in link. Delivery can take a few minutes—check spam if nothing arrives.'
+
+  /** Show the code field in the same click turn as Continue so focus/autofill stay user-activated. */
+  function showVerifyStepForEmailRequest() {
     flushSync(() => {
       setStep('verify')
       setCode('')
       setStatus('loading')
       setMessage('Sending sign-in email…')
     })
+    focusCodeField()
   }
 
-  function focusCodeField() {
-    focusCodeInput(codeInputRef.current)
-  }
-
-  /** Show the code step and focus the visible 123456 field (enabled so iOS autofill can attach). */
-  function prepareCodeEntry() {
-    if (step === 'verify') return
-    showVerifyStep()
+  function completeEmailRequestSuccess() {
+    flushSync(() => {
+      setStatus('idle')
+      setMessage(emailSentMessage)
+    })
     focusCodeField()
   }
 
@@ -57,15 +65,17 @@ export default function LoginForm() {
     }
   }, [onVerifyStep, status])
 
-  async function sendSignInEmail() {
+  async function handleEmailContinue(event) {
+    event.preventDefault()
     const trimmedEmail = email.trim()
-    if (!trimmedEmail) return
+    if (trimmedEmail === '' || emailRequestStarted.current) return
 
+    showVerifyStepForEmailRequest()
+
+    emailRequestStarted.current = true
     try {
       await requestSignIn(trimmedEmail)
-      setStatus('idle')
-      setMessage('We sent a 6-digit code and sign-in link to your email.')
-      focusCodeField()
+      completeEmailRequestSuccess()
     } catch (error) {
       emailRequestStarted.current = false
       flushSync(() => {
@@ -73,19 +83,45 @@ export default function LoginForm() {
         setStatus('error')
         setMessage(error.message || 'Could not send sign-in email')
       })
+    } finally {
+      emailRequestStarted.current = false
     }
   }
 
-  async function handleEmailContinue(event) {
-    event.preventDefault()
-    if (email.trim() === '' || emailRequestStarted.current) return
+  async function submitCodeSignIn(normalizedCode) {
+    if (codeSubmitStarted.current || status !== 'idle') {
+      return
+    }
 
-    prepareCodeEntry()
+    codeSubmitStarted.current = true
+    setStatus('loading')
+    setMessage('')
 
-    emailRequestStarted.current = true
-    await sendSignInEmail().finally(() => {
-      emailRequestStarted.current = false
-    })
+    try {
+      const signedInUser = await completeSignInWithCode(email.trim(), normalizedCode)
+      acceptSessionUser(signedInUser)
+      notifyAuthComplete()
+      void refreshSession({ silent: true })
+    } catch (error) {
+      setStatus('error')
+      setMessage(error.message || 'Invalid or expired code')
+      focusCodeField()
+    } finally {
+      setStatus('idle')
+      codeSubmitStarted.current = false
+    }
+  }
+
+  function handleCodeChange(event) {
+    const next = normalizeCode(event.target.value)
+    setCode(next)
+    if (next.length < 6) {
+      codeSubmitStarted.current = false
+      return
+    }
+    if (status === 'idle') {
+      void submitCodeSignIn(next)
+    }
   }
 
   async function handleFormSubmit(event) {
@@ -103,28 +139,19 @@ export default function LoginForm() {
       return
     }
 
-    setStatus('loading')
-    setMessage('')
-
-    try {
-      await completeSignInWithCode(email.trim(), normalizedCode)
-      await refreshSession({ silent: true })
-    } catch (error) {
-      setStatus('error')
-      setMessage(error.message || 'Invalid or expired code')
-      focusCodeField()
-    }
+    await submitCodeSignIn(normalizedCode)
   }
 
   function handleUseDifferentEmail() {
     emailRequestStarted.current = false
+    codeSubmitStarted.current = false
     setStep('email')
     setCode('')
     setStatus('idle')
     setMessage('')
   }
 
-  const emailContinueDisabled = (status === 'loading' && !onVerifyStep) || email.trim() === ''
+  const emailContinueDisabled = status === 'loading' || email.trim() === ''
 
   if (onVerifyStep) {
     return (
@@ -149,6 +176,7 @@ export default function LoginForm() {
             name="code"
             type="text"
             inputMode="numeric"
+            autoFocus
             autoComplete="one-time-code"
             autoCapitalize="off"
             autoCorrect="off"
@@ -158,12 +186,15 @@ export default function LoginForm() {
             maxLength={6}
             required
             value={code}
-            onChange={(event) => setCode(normalizeCode(event.target.value))}
+            onChange={handleCodeChange}
             placeholder="123456"
             disabled={isSigningIn}
             className="auth-code-input"
           />
-          <button type="submit" disabled={isSigningIn || normalizeCode(code).length !== 6}>
+          <button
+            type="submit"
+            disabled={isSigningIn || status === 'loading' || normalizeCode(code).length !== 6}
+          >
             {isSigningIn ? 'Signing in…' : 'Continue'}
           </button>
         </form>
@@ -204,14 +235,7 @@ export default function LoginForm() {
           placeholder="you@example.com"
           disabled={status === 'loading'}
         />
-        <button
-          type="submit"
-          disabled={emailContinueDisabled}
-          onTouchStart={() => {
-            if (email.trim() === '') return
-            prepareCodeEntry()
-          }}
-        >
+        <button type="submit" disabled={emailContinueDisabled}>
           {status === 'loading' ? 'Sending…' : 'Continue'}
         </button>
       </form>

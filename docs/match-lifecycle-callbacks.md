@@ -2,7 +2,7 @@
 
 Games run on their own origin after provision. Lobby still needs **lifecycle signals** so the player shell, stats, and queue rules stay correct.
 
-**Related:** provision + `returnUrl` in [lobby-protocol-handoff.md](./lobby-protocol-handoff.md).
+**Related:** provision + `returnUrl` in [lobby-protocol-handoff.md](./lobby-protocol-handoff.md) · [player-return-routing.md](./player-return-routing.md).
 
 ---
 
@@ -24,12 +24,12 @@ A synchronous 1v1 might only call `reportMatchResult` when both sides are done.
 ## Why both matter
 
 - **Player UX** — JoinQuest can show “You placed 2nd” and enable re-queue while others are still racing.
-- **Queue rules** — A player who is **finished** should not block “one queue at a time” as if they were still in an active match; Lobby can clear or downgrade their `matched` row when the game reports finish.
+- **Queue rules** — A player who is **finished** should not block “one queue at a time” as if they were still in an active match; Lobby clears their `matched` queue row when the game reports finish.
 - **Integrity** — Final `reportMatchResult` is the authoritative outcome for leaderboards and disputes.
 
 ---
 
-## Proposed GraphQL (game server, Bearer `serviceToken`)
+## GraphQL (game server, Bearer `serviceToken`)
 
 ```graphql
 enum PlayerFinishReason {
@@ -46,7 +46,7 @@ enum MatchResultStatus {
 }
 
 mutation reportPlayerFinished(
-  matchId: ID!           # Lobby externalMatchId
+  matchId: ID!           # Lobby externalMatchId (session id)
   lobbyUserId: ID!
   reason: PlayerFinishReason!
   placement: Int         # optional, e.g. 1 = first
@@ -61,21 +61,13 @@ mutation reportMatchResult(
 ): Boolean!
 ```
 
-Lobby validates `matchId` + `serviceToken` game id, idempotency via `jti` or monotonic event ids (TBD in implementation).
+Lobby validates `matchId` against the game id embedded in `serviceToken`. Optional fields (`reason`, `placement`, `metadata`, `winnerLobbyUserIds`) are accepted but not yet persisted.
 
 ---
 
-## Lobby behavior (target)
+## Lobby behavior
 
-1. **`reportPlayerFinished`** — mark participant finished; if all players finished or match ended, transition session; clear user’s `matched` queue row so they can join another queue.
-2. **`reportMatchResult`** — set session `ended`, publish any subscriber updates, optional stats pipeline.
+1. **`reportPlayerFinished`** — mark participant finished; if all players finished, complete session; clear user’s `matched` queue row so they can join another queue.
+2. **`reportMatchResult`** — mark session completed, release all `matched` queue rows for seated players.
 
-Until these exist, games should still use **`returnUrl`** so players can navigate back manually; queue expiry handles stuck `matched` rows.
-
----
-
-## Implementation status
-
-**Planned** — not yet in the GraphQL schema. Listed in [development.md](./development.md) and [api.md](./api.md).
-
-Recommended order: **`reportPlayerFinished`** first (unblocks re-queue + race UX), then **`reportMatchResult`** (authoritative close).
+Recommended order for games: call **`reportMatchResult`** when the match ends (clears matched queue rows), optionally **`reportPlayerFinished`** for early exits; always link players to **`{returnUrl}?match={externalMatchId}`** (see [player-return-routing.md](./player-return-routing.md)).

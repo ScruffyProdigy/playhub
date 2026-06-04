@@ -99,7 +99,9 @@ func (s *Store) AddSessionParticipant(ctx context.Context, sessionID, userID uui
 	return err
 }
 
-// GetMatchedSessionForUserAndModeQueue returns an active session for a matched mode-queue row.
+// GetMatchedSessionForUserAndModeQueue returns the active session for a matched mode-queue row.
+// When multiple active sessions exist (e.g. reportMatchResult failed on an earlier match),
+// the newest session for this mode queue wins.
 func (s *Store) GetMatchedSessionForUserAndModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID) (*Session, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT gs.id, gs.game_id, gs.mode_id, gs.mode_queue_id, gs.status, gs.started_at, gs.ended_at
@@ -109,11 +111,12 @@ func (s *Store) GetMatchedSessionForUserAndModeQueue(ctx context.Context, modeQu
 		INNER JOIN game_sessions gs
 			ON gs.id = p.session_id
 			AND gs.game_id = q.game_id
+			AND gs.mode_queue_id = q.mode_queue_id
 			AND gs.status = 'active'
 		WHERE q.mode_queue_id = $1
 		  AND q.user_id = $2
 		  AND q.status = 'matched'
-		ORDER BY q.matched_at DESC NULLS LAST, q.joined_at DESC
+		ORDER BY gs.started_at DESC, q.matched_at DESC NULLS LAST, q.joined_at DESC
 		LIMIT 1
 	`, modeQueueID, userID)
 	return scanSessionRow(row)

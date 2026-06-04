@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -186,6 +187,9 @@ func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID
 	if err != nil {
 		return nil, err
 	}
+	if err := completePriorActiveSessionsForModeQueueTx(ctx, tx, modeQueueID, session.ID, time.Now()); err != nil {
+		return nil, err
+	}
 
 	seatKeys := joinCtx.SeatKeys[:playersToStart]
 	notifyIDs := make([]uuid.UUID, 0, len(matched))
@@ -194,7 +198,8 @@ func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID
 		if err := markQueueEntryMatchedTx(ctx, tx, entry.ID); err != nil {
 			return nil, err
 		}
-		if err := addSessionParticipantTx(ctx, tx, session.ID, entry.UserID, seatKeys[i]); err != nil {
+		returnCtx := CatalogLFGReturnContext(joinCtx.Game.ID, modeQueueID)
+		if err := addSessionParticipantTx(ctx, tx, session.ID, entry.UserID, seatKeys[i], returnCtx); err != nil {
 			return nil, err
 		}
 		if _, ok := seenNotify[entry.UserID]; !ok {
