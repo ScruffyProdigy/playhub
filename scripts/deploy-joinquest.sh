@@ -91,6 +91,9 @@ sed 's/namespace: playhub/namespace: joinquest/g' k8s/jobs/migration.yaml | kube
 kubectl wait --for=condition=complete --timeout=120s job/playhub-db-migrate -n "$NAMESPACE"
 kubectl logs job/playhub-db-migrate -n "$NAMESPACE"
 
+echo "Applying stale session cleanup CronJob..."
+sed 's/namespace: playhub/namespace: joinquest/g' k8s/jobs/stale-session-cleanup.yaml | kubectl apply -f -
+
 echo "Patching RPS catalog handoff URLs for production..."
 run_patch_rps_handoff_urls_job "$NAMESPACE"
 

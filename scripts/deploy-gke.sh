@@ -11,6 +11,9 @@
 # Usage:
 #   ./scripts/deploy-gke.sh              # build, push, deploy both
 #   BUILD_PUSH=false ./scripts/deploy-gke.sh   # deploy only (images already on registry)
+#
+# RPS images default to docker.io/scruffyprodigy (see demo-game-rps k8s/base). Override:
+#   RPS_REGISTRY=ghcr.io RPS_IMAGE_OWNER=playhub ./scripts/deploy-gke.sh
 
 set -e
 
@@ -46,8 +49,9 @@ if [ ! -f "$RPS_SECRETS/pg-dsn.yaml" ]; then
 fi
 
 if [ "$BUILD_PUSH" = "true" ]; then
-  echo "Building and pushing RPS game images..."
-  "$DEMO_GAME_RPS/scripts/build-and-push.sh" --push
+  echo "Building and pushing RPS game images (Docker Hub)..."
+  REGISTRY="${RPS_REGISTRY:-docker.io}" IMAGE_OWNER="${RPS_IMAGE_OWNER:-scruffyprodigy}" \
+    "$DEMO_GAME_RPS/scripts/build-and-push.sh" --push
 fi
 
 echo "Deploying demo-game-rps (namespace rps-game, host rpsls-duel.win)..."

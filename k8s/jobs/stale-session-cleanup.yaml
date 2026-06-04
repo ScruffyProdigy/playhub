@@ -1,0 +1,45 @@
+# Retire orphaned active game_sessions when a newer active session exists for the
+# same mode queue (e.g. reportMatchResult failed on an earlier match).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: lobby-stale-session-cleanup
+  namespace: playhub
+spec:
+  schedule: "0 */6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: cleanup
+              image: postgres:16-alpine
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: pg-dsn
+                      key: DATABASE_URL
+              command:
+                - sh
+                - -ec
+                - |
+                  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+                  WITH newest AS (
+                    SELECT DISTINCT ON (mode_queue_id) id AS keep_id, mode_queue_id
+                    FROM game_sessions
+                    WHERE status = 'active' AND mode_queue_id IS NOT NULL
+                    ORDER BY mode_queue_id, started_at DESC
+                  )
+                  UPDATE game_sessions gs
+                  SET status = 'completed', ended_at = NOW()
+                  FROM newest n
+                  WHERE gs.mode_queue_id = n.mode_queue_id
+                    AND gs.status = 'active'
+                    AND gs.id <> n.keep_id;
+                  SQL
