@@ -1,5 +1,7 @@
 # Frontend Testing Guide
 
+Tests for the JoinQuest player UI (see [product vision](../docs/vision.md)). Repo-wide testing: [docs/testing.md](../docs/testing.md).
+
 This document describes the comprehensive testing setup for the React frontend application.
 
 ## Testing Stack

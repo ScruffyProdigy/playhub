@@ -1,6 +1,6 @@
 # Kubernetes secrets (local only — never commit)
 
-All `*.yaml` here except `*.example.yaml` are **gitignored**. Copy examples, fill in real values, keep them on your machine (backup via 1Password, etc.).
+Deploy secrets for the JoinQuest platform ([docs/vision.md](../../docs/vision.md)). All `*.yaml` here except `*.example.yaml` are **gitignored**. Copy examples, fill in real values, keep them on your machine (backup via 1Password, etc.).
 
 ## First-time setup
 

@@ -1,6 +1,24 @@
 # Architecture Overview
 
-JoinQuest is a gaming lobby platform built with a modern microservices architecture.
+JoinQuest is the **player-facing platform** and **integration layer** for third-party web games: accounts, catalog, queues, matchmaking, provision handoff, and digital goods. Game authors keep their own `play_url` and game servers; we connect players to them with a stable seat contract.
+
+**Why this exists:** [Product vision](./vision.md).
+
+## Platform vs game responsibilities
+
+| JoinQuest (this repo) | Third-party game |
+|----------------------|------------------|
+| Sign-in, sessions, player profile | Game rules, rendering, realtime play |
+| Catalog, queues, seat assignment (LFG) | Seat manifest, accept/reject roster |
+| `POST` provision + JWT link-out | Claim seat, run match |
+| Shared commerce / inventory (roadmap) | Optional own storefront |
+
+```text
+Browser (JoinQuest UI) ──GraphQL──► Go API ──► PostgreSQL / Redis
+                                        │
+                                        ├── provision ──► Game API (your origin)
+                                        └── redirect ──► Your play_url + seat JWT
+```
 
 ## System Architecture
 

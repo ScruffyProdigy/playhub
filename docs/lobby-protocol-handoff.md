@@ -1,13 +1,12 @@
 # Lobby ↔ Game Protocol — Hand-off & Rationale
 
-A brief for whoever implements the **Lobby** side of the integration. It documents
-the wire contract, **why each part of the contract is shaped the way it is**, and
-how the same contract scales to bigger games and a fleet of game servers.
+A brief for **game developers** integrating with JoinQuest and for contributors implementing the **Lobby** side.
 
-For the step-by-step wire format with full request/response bodies, see the
-**Provision payload** section below and the `demo-game-rps` reference implementation.
-This doc is the
-*reasoning* companion — read it so contract decisions don't look arbitrary.
+**Product context:** Most teams should not rebuild cross-origin auth, push provisioning, and banlist recovery. JoinQuest sends you players and a **final seat map**; you focus on the game client and server. Read [`vision.md`](./vision.md) for the full “build the game, we handle the lobby” story.
+
+This document covers the wire contract, **why each part is shaped the way it is**, and how the same contract scales from 1v1 to larger modes.
+
+For step-by-step request/response bodies, see the **Provision payload** section below and the `demo-game-rps` reference implementation. This doc is the *reasoning* companion — read it so contract decisions don't look arbitrary.
 
 ---
 
@@ -149,9 +148,16 @@ and a `playUrl` (browser) for each game in your catalog.
 
 **Lobby block:** `returnUrl` sends players back to the Lobby UI after a match; `graphqlUrl` is the Lobby GraphQL endpoint; `serviceToken` is a per-game HMAC token (`v1.{gameId}.{sig}`) when `LOBBY_GAME_TOKEN_PEPPER` is set — games store it on the match for `player` lookup and future callbacks. Omit in local dev when no pepper is configured.
 
-**Assignment seat shape:** `{ seatKey, lobbyUserId, team?, role? }`. Resolve display names via `player(id)` at `lobby.graphqlUrl`.
+**Assignment seat shape:** `{ seatKey, lobbyUserId, team?, role? }`. The `seatKey` is the
+expanded name from the game’s `seatTemplate` (derivation rules in
+[`seat-templates-and-matchmaking.md`](./seat-templates-and-matchmaking.md#seat-key-expansion)).
+Resolve display names via `player(id)` at `lobby.graphqlUrl`.
 
-**Token claims:** `iss`=`LobbyIssuer()`, `aud`=game `api_base_url`, `sub`=lobby user id, `jti`=unique token id, `matchId`=`externalMatchId`, `seatKey`, optional `name`, `nbf`/`iat`/`exp`. Games should reject tokens whose `iss` does not match provision `lobbyId` or whose `aud` does not match their API base URL.
+**Token claims:** `iss`=`LobbyIssuer()`, `aud`=game `api_base_url`, `sub`=lobby user id,
+`jti`=unique token id, `matchId`=`externalMatchId`, **`seatKey`** (same string as provision
+and session assignment), optional `name`, `nbf`/`iat`/`exp`. Games should reject tokens
+whose `iss` does not match provision `lobbyId`, whose `aud` does not match their API base
+URL, or whose `seatKey` does not match the seat Lobby assigned that player.
 
 **Status codes:** `200/201` ok · `400` bad input/illegal move · `401` bad/missing
 token · `403` **banned** (`bannedLobbyUserIds[]`) **or** seat-reservation violation

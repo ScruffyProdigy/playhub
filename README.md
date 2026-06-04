@@ -1,6 +1,26 @@
 # JoinQuest
 
-JoinQuest is a gaming lobby platform that connects players to games and enables trading of digital goods and currency.
+**Build the game. We handle the lobby.**
+
+JoinQuest is a gaming platform for web developers who want to ship a multiplayer title without spending months on accounts, matchmaking, storefronts, and payments first. Players discover games here, queue up, and get sent to **your** game on **your** URL with a signed seat assignment. You keep your own site and codebase; we provide the plumbing — and aim to do it better than a solo dev would have time to.
+
+→ **[Product vision](docs/vision.md)** — why this exists, who it’s for, how integration fits together.
+
+## For game developers
+
+| You build | JoinQuest provides |
+|-----------|-------------------|
+| Game logic, UI, servers on your domain | Sign-in, catalog, queues, matchmaking (LFG) |
+| Seat manifest (`seatTemplate`) | Seat map assignment + provision push + JWT `seatKey` |
+| Accept or reject rosters | Player traffic and (roadmap) shop / entitlements |
+
+**Integration docs:** [Lobby ↔ game handoff](docs/lobby-protocol-handoff.md) · [Game catalog](docs/game-catalog-architecture.md) · [Seat templates & LFG](docs/seat-templates-and-matchmaking.md)
+
+Reference game: `demo-game-rps` (sibling repo / deploy scripts in this project).
+
+## For players (today)
+
+Browse the catalog, sign in, join mode queues, and launch into registered third-party games when a match is ready.
 
 ## Features
 
@@ -17,6 +37,7 @@ JoinQuest is a gaming lobby platform that connects players to games and enables 
 
 ### 🚧 In Development
 - **Digital trading**: Player-facing purchase and trade flows
+- **Seat-template LFG**: Party-aware matchmaking (see [spec](docs/seat-templates-and-matchmaking.md))
 
 ### 📋 Planned
 - **Payment Processing**: Integration with payment providers
@@ -27,8 +48,10 @@ JoinQuest is a gaming lobby platform that connects players to games and enables 
 This project consists of:
 
 - **Backend**: Go-based GraphQL API with gqlgen
-- **Frontend**: React + Vite application
+- **Frontend**: React + Vite application (JoinQuest player shell)
 - **Database**: PostgreSQL with connection management
+
+See [Architecture Overview](docs/architecture.md) and [Vision](docs/vision.md).
 
 ## Getting Started
 
@@ -123,10 +146,12 @@ See [Environment Configuration](docs/environment-configuration.md) for detailed 
 
 ## Documentation
 
+- **[Product vision](docs/vision.md)** — Why JoinQuest exists; indie dev + integration story
 - **[Development Guide](docs/development.md)** — Setup and development workflow
 - **[Architecture Overview](docs/architecture.md)** — System design and components
 - **[Game Catalog Architecture](docs/game-catalog-architecture.md)** — Modes, queues, manifest sync
 - **[Lobby ↔ Game Handoff](docs/lobby-protocol-handoff.md)** — Provision, JWT, integration protocol
+- **[Seat templates & LFG](docs/seat-templates-and-matchmaking.md)** — Manifest, seat map, matchmaking spec
 - **[API Documentation](docs/api.md)** — GraphQL API reference
 - **[Testing Guide](docs/testing.md)** — Testing strategies and running tests
 - **[Database Migrations](docs/database-migrations.md)** — Schema migrations

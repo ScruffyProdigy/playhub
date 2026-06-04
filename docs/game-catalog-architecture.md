@@ -1,30 +1,37 @@
 # Game catalog, modes, and queues
 
-Locked architecture decisions for third-party game integration. Wire protocol details
-remain in [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md).
+Locked architecture decisions for **third-party game integration** on JoinQuest.
+
+**Why this matters for game authors:** Players discover your title in our catalog and queue here; we fill seats and hand off to your `play_url`. You publish modes and a seat layout; we own matchmaking. Product story: [`vision.md`](./vision.md). Wire protocol: [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md).
 
 ## Model
 
 ```text
 Game
   └── GameMode (many)
-        ├── seat template (from cached game-modes manifest)
+        ├── seatTemplate (from cached game-modes manifest; expanded to leaf seats)
         └── Queue (many)
-              └── players_to_start (fixed N before a match starts)
+              ├── fifo: one default bucket; `sizeForQueue` when variable size
+              └── composition: one bucket per queueable role (DPS, Tank, …)
 ```
 
 - **Game** — `slug`, `play_url`, `api_base_url`, sync metadata.
 - **GameMode** — one way to play; identified by `mode_key` sent on provision.
   A two-player mode is a mode with two seats, not a special “duel” type.
-- **Queue** — one matchmaking bucket for a mode; starts a match when
-  `players_to_start` distinct players are waiting.
+- **Queue** — matchmaking bucket scoped to `queue_id` (fifo default or role-specific).
 - **Session** — `game_id`, `mode_id`, optional `queue_id` (null for non-queue starts later).
 
-## Seat fill
+**Full spec (game authors + Lobby LFG):** [`seat-templates-and-matchmaking.md`](./seat-templates-and-matchmaking.md) —
+`seatTemplate` → seat map (game contract); constraint-based LFG fills the map before provision.
 
-- **Mode owns the seat template** (from `GET {apiBaseUrl}/api/v1/game-modes`, cached in lobby).
-- **Queue sets `players_to_start` only** — assign the first N seats from the mode template in order.
-- Queue-specific seat subsets are out of scope until a game needs them.
+## Seat fill (current implementation vs target)
+
+**Today (shipped):** flat `seats[]` in manifest; one default queue per mode; FIFO assigns
+the first N `seat_key`s by `sort_order`.
+
+**Target:** template-only manifest; expanded **seat map**; **forming match** filled by
+constraint-based LFG (parties, gaps, weighted dequeue); games receive final `seatKey`
+assignments only. See the linked doc.
 
 ## Admin registration
 
@@ -47,9 +54,12 @@ Game
 
 ## Queues
 
-- **Hybrid creation:** on register, auto-create one default queue per mode; admin may add named queues later.
+- **Hybrid creation:** on register, auto-create queue(s) from template (default fifo, or
+  one row per `queue: true` role dimension).
 - Matchmaking is **scoped to `queue_id`**, not `game_id`.
-- v1 matchmaking: **FIFO** within a queue; one waiting entry per user per queue.
+- **Fifo:** FIFO within one queue until `players_to_start` (default `max`).
+- **Composition:** match fires when every role bucket reaches `required`; coordinator
+  assigns teams (see seat-templates doc).
 
 ## URLs
 
@@ -67,10 +77,18 @@ Game
 ## Player API (target)
 
 ```graphql
-games { modes { queues { id name playersToStart waitingCount } } }
-joinQueue(queueId: ID!): JoinResult!
+games {
+  modes {
+    composition { slotKind required waitingCount }
+    queues { id name slotKind requiredTotal playersToStart waitingCount }
+    seats { seatKey affinityKey slotKind }
+  }
+}
+joinQueue(queueId: ID!, party: PartyInput): JoinResult!
 queueUpdated(queueId: ID!): QueueUpdate!  # include message/reason when kicked
 ```
+
+Details in [`seat-templates-and-matchmaking.md`](./seat-templates-and-matchmaking.md).
 
 Non-queue start paths (party, direct) are **v2**; schema keeps `queue_id` nullable on sessions.
 
@@ -88,3 +106,4 @@ Non-queue start paths (party, direct) are **v2**; schema keeps `queue_id` nullab
 - Signed provision requests (allowlist `lobbyId` + shared Bearer today).
 - Webhook when manifest changes.
 - Populate `team` / `role` on provision seats from manifest.
+- Seat map LFG engine (`seat-templates-and-matchmaking.md`).

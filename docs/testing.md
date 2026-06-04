@@ -1,6 +1,6 @@
 # Testing Guide
 
-This guide covers the testing strategies and how to run tests for JoinQuest.
+Testing strategies for the JoinQuest platform ([product vision](./vision.md)): API, player UI, and game-integration paths (catalog, queues, handoff).
 
 ## Testing Status
 

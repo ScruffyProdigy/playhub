@@ -1,6 +1,6 @@
 # Database Migrations
 
-This document describes the database migration system for JoinQuest.
+Schema migrations for JoinQuest (users, games, queues, sessions, goods — the platform data model behind [vision](./vision.md)).
 
 ## Overview
 

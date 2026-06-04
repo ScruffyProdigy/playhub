@@ -1,6 +1,10 @@
 # Contributing to JoinQuest
 
-Thank you for your interest in contributing to JoinQuest! This guide will help you get started.
+Thank you for your interest in contributing to JoinQuest!
+
+We are building infrastructure so indie web developers can **ship multiplayer games** without getting stuck on lobby, auth, and commerce first. If that mission resonates, you are in the right place. Background: **[Product vision](vision.md)**.
+
+This guide will help you get started technically.
 
 ## Getting Started
 

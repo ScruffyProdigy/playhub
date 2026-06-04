@@ -1,6 +1,14 @@
 # API Documentation
 
-This document describes the GraphQL API for JoinQuest.
+GraphQL API for **JoinQuest** — the player shell and control plane for registered games.
+
+| Client | Typical use |
+|--------|-------------|
+| **JoinQuest frontend** | Sign-in, browse games, `joinQueue`, subscriptions |
+| **Game server** | `player(id)` with provision `serviceToken`; future match callbacks |
+| **Admin** | `registerGame`, manifest sync |
+
+Platform goals and integration overview: [`vision.md`](./vision.md). Game handoff is not GraphQL — see [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md).
 
 ## Implementation Status
 

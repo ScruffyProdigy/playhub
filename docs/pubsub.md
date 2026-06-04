@@ -1,6 +1,6 @@
 # Pub/Sub and queue notifications
 
-Lobby uses Redis pub/sub so every API instance can deliver queue match events to subscribed clients.
+JoinQuest uses Redis pub/sub so every API instance can deliver queue match events to subscribed clients (part of the shared lobby experience — see [vision](./vision.md)).
 
 ## Channels
 

@@ -1,6 +1,8 @@
 # JoinQuest Environment Configuration
 
-This document explains how environment configuration works in JoinQuest, particularly for the frontend application across different deployment environments.
+How runtime configuration works for the JoinQuest frontend and deployments ([platform overview](./vision.md)).
+
+This document explains environment injection across local, staging, and production.
 
 ## Overview
 
