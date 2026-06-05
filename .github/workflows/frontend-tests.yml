@@ -215,10 +215,11 @@ jobs:
         echo "Auth E2E stack failed to become ready"
         exit 1
 
-    - name: Run auth E2E tests
+    - name: Run auth and game loop E2E tests
       run: |
         cd frontend
         npm run test:e2e:auth
+        npm run test:e2e:game-loop
 
     - name: Stop auth E2E stack
       if: always()
