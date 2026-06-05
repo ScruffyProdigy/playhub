@@ -79,6 +79,120 @@ describe('GameListItem', () => {
     )
   })
 
+  it('refreshes the active-queue banner after joining', async () => {
+    const onQueueChange = vi.fn()
+    vi.mocked(queue.joinQueue).mockResolvedValue({ queued: true, queuedCount: 1 })
+
+    render(
+      <ul>
+        <GameListItem game={catalogGame} activeQueue={null} onQueueChange={onQueueChange} />
+      </ul>,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Look for group' }))
+
+    await waitFor(() => expect(onQueueChange).toHaveBeenCalled())
+  })
+
+  it('shows a Look for group panel for fifo modes with empty queuePaths', () => {
+    const fifoGame = {
+      ...catalogGame,
+      modes: [
+        {
+          modeKey: 'duel',
+          queuePaths: [{ queuePath: '', displayName: '', playersToStart: 2 }],
+          seats: [{ queuePath: null }, { queuePath: null }],
+          queues: [{ id: 'queue-1', name: 'Default', status: 'active' }],
+        },
+      ],
+    }
+
+    render(
+      <ul>
+        <GameListItem game={fifoGame} activeQueue={null} onQueueChange={vi.fn()} />
+      </ul>,
+    )
+
+    expect(screen.getByRole('region', { name: 'Look for group' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Look for group' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Join as' })).not.toBeInTheDocument()
+  })
+
+  it('keeps fifo join panel visible while waiting in this queue', async () => {
+    vi.mocked(queue.fetchMyQueueStatus).mockResolvedValue({
+      queued: true,
+      queuedCount: 1,
+    })
+
+    render(
+      <ul>
+        <GameListItem
+          game={catalogGame}
+          activeQueue={{
+            queueId: 'queue-1',
+            gameName: 'Rock Paper Scissors Lizard Spock',
+            status: 'WAITING',
+            queuedCount: 1,
+          }}
+          onQueueChange={vi.fn()}
+        />
+      </ul>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole('region', { name: 'Look for group' })).toBeInTheDocument()
+    })
+    expect(screen.getByText('Looking…')).toBeInTheDocument()
+    expect(screen.queryByText('Use the banner above')).not.toBeInTheDocument()
+  })
+
+  it('keeps composition join actions visible while waiting in this queue', async () => {
+    const wordHuntGame = {
+      id: 'game-wh',
+      name: 'Word Hunt',
+      activeSessions: [],
+      modes: [
+        {
+          modeKey: 'party',
+          queuePaths: [
+            { queuePath: 'ClueGiver', displayName: 'Clue Giver' },
+            { queuePath: 'Guesser', displayName: 'Guesser' },
+          ],
+          seats: [{ queuePath: 'ClueGiver' }, { queuePath: 'Guesser' }],
+          queues: [{ id: 'queue-wh', name: 'Default', status: 'active' }],
+        },
+      ],
+    }
+
+    vi.mocked(queue.fetchMyQueueStatus).mockResolvedValue({
+      queued: true,
+      queuedCount: 2,
+      queuePath: 'ClueGiver',
+    })
+
+    render(
+      <ul>
+        <GameListItem
+          game={wordHuntGame}
+          activeQueue={{
+            queueId: 'queue-wh',
+            gameName: 'Word Hunt',
+            status: 'WAITING',
+            queuedCount: 2,
+            queuePath: 'ClueGiver',
+          }}
+          onQueueChange={vi.fn()}
+        />
+      </ul>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Looking as Clue Giver…')).toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: 'Join as Guesser' })).toBeInTheDocument()
+    expect(screen.queryByText('Use the banner above')).not.toBeInTheDocument()
+  })
+
   it('shows composition join buttons inside a Look for group panel', () => {
     const compositionGame = {
       ...catalogGame,

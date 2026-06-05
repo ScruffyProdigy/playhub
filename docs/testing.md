@@ -44,6 +44,8 @@ backend/
 │   ├── handoff_integration_test.go    # Provision payload to game API
 │   ├── games_integration_test.go      # Catalog games + sessions
 │   └── player_integration_test.go     # Game-service player lookup
+├── cmd/
+│   └── syncmanifest/                  # One-off: pull manifest from game api_base_url
 ├── internal/
 │   ├── store/*_test.go                # Store layer (uses playhub_test DB)
 │   └── auth/*_test.go                 # JWT, cookies, issuer URLs
@@ -99,7 +101,7 @@ GitHub Actions run backend tests, frontend unit tests, gqlgen drift checks, and 
 ## Best Practices
 
 1. **Backend integration tests** must not mutate the dev `playhub` database — use `playhub_test` via `./scripts/test-backend.sh`.
-2. **Queue/handoff tests** restore seeded demo game URLs after runs (`RestoreDemoGameHandoffURLs`).
+2. **Queue/handoff tests** restore seeded game 001 handoff URLs after runs (`RestorePrimaryGameHandoffURLs`).
 3. After GraphQL schema changes, run `go run github.com/99designs/gqlgen@v0.17.81 generate` in `backend/` and commit generated files.
 4. **Frontend tests** mock `fetch` / GraphQL in `src/test/setup.js`; E2E uses the real API.
 

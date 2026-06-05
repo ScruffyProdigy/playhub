@@ -127,6 +127,17 @@ cd backend
 go run github.com/99designs/gqlgen@v0.17.81 generate
 ```
 
+### Catalog manifest sync (ops)
+
+Refresh a catalog game's cached modes/seats from its live `api_base_url` (same logic as admin manifest sync):
+
+```bash
+export DATABASE_URL="postgres://..."
+cd backend && go run ./cmd/syncmanifest <game-uuid>
+```
+
+Production deploys also run `k8s/jobs/patch-game-handoff-urls.yaml` via `./scripts/deploy-joinquest.sh` to align handoff URLs and seed demo game rows.
+
 ### Testing
 
 - **Backend tests**: `./scripts/test-backend.sh` (uses isolated `playhub_test` DB; does not touch dev `playhub`)

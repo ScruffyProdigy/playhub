@@ -8,6 +8,39 @@ import {
   waitingAsRoleLine,
 } from '../../lib/playerCopy'
 
+function pathOption(path) {
+  if (typeof path === 'string') {
+    return { queuePath: path, displayName: path }
+  }
+  return {
+    queuePath: path.queuePath,
+    displayName: path.displayName || path.queuePath,
+  }
+}
+
+function JoinPathButton({ path, busy, disabled, onJoin }) {
+  const { queuePath, displayName } = pathOption(path)
+  return (
+    <button
+      type="button"
+      className="game-list-button"
+      onClick={() => onJoin(queuePath)}
+      disabled={busy || disabled}
+    >
+      {busy ? LOOKING_FOR_GROUP : joinAsLabel(displayName)}
+    </button>
+  )
+}
+
+function JoinGroupPanel({ children }) {
+  return (
+    <section className="join-group-panel" aria-label={LOOK_FOR_GROUP}>
+      <p className="join-group-panel__label">{LOOK_FOR_GROUP}</p>
+      <div className="join-group-panel__actions">{children}</div>
+    </section>
+  )
+}
+
 export default function GameQueueActions({
   joinOptions,
   queueState,
@@ -31,49 +64,76 @@ export default function GameQueueActions({
     )
   }
 
-  if (joinOptions?.kind === 'composition') {
+  const compositionPaths =
+    joinOptions?.kind === 'composition'
+      ? joinOptions.paths.filter((path) => (pathOption(path).queuePath?.trim() ?? '') !== '')
+      : []
+
+  const selectedDisplayName = compositionPaths
+    .map(pathOption)
+    .find(({ queuePath }) => queuePath === selectedQueuePath)?.displayName
+
+  if (compositionPaths.length > 0) {
+    const alternatePaths = compositionPaths.filter(
+      (path) => pathOption(path).queuePath !== selectedQueuePath,
+    )
+
     return (
-      <section className="join-group-panel" aria-label={LOOK_FOR_GROUP}>
-        <p className="join-group-panel__label">{LOOK_FOR_GROUP}</p>
+      <JoinGroupPanel>
         {queueState === 'waiting' ? (
-          <div className="join-group-panel__actions">
+          <>
             <p className="join-group-panel__status">
-              {selectedQueuePath ? waitingAsRoleLine(selectedQueuePath) : LOOKING_FOR_GROUP}
+              {selectedQueuePath
+                ? waitingAsRoleLine(selectedDisplayName || selectedQueuePath)
+                : LOOKING_FOR_GROUP}
             </p>
+            {alternatePaths.map((path) => (
+              <JoinPathButton
+                key={pathOption(path).queuePath}
+                path={path}
+                busy={busy}
+                disabled={disabled}
+                onJoin={onJoin}
+              />
+            ))}
             <button type="button" className="game-list-button" onClick={onLeave} disabled={busy}>
               {STOP_LOOKING}
             </button>
-          </div>
+          </>
         ) : (
-          <div className="join-group-panel__actions">
-            {joinOptions.paths.map((path) => (
-              <button
-                key={path}
-                type="button"
-                className="game-list-button"
-                onClick={() => onJoin(path)}
-                disabled={busy || disabled}
-              >
-                {busy ? LOOKING_FOR_GROUP : joinAsLabel(path)}
-              </button>
-            ))}
-          </div>
+          compositionPaths.map((path) => (
+            <JoinPathButton
+              key={pathOption(path).queuePath}
+              path={path}
+              busy={busy}
+              disabled={disabled}
+              onJoin={onJoin}
+            />
+          ))
         )}
-      </section>
+      </JoinGroupPanel>
     )
   }
 
   return (
-    <div className="game-list-actions">
+    <JoinGroupPanel>
       {queueState === 'waiting' ? (
-        <button type="button" className="game-list-button" onClick={onLeave} disabled={busy}>
-          {STOP_LOOKING}
-        </button>
+        <>
+          <p className="join-group-panel__status">{LOOKING_FOR_GROUP}</p>
+          <button type="button" className="game-list-button" onClick={onLeave} disabled={busy}>
+            {STOP_LOOKING}
+          </button>
+        </>
       ) : (
-        <button type="button" className="game-list-button" onClick={() => onJoin()} disabled={busy || disabled}>
+        <button
+          type="button"
+          className="game-list-button"
+          onClick={() => onJoin()}
+          disabled={busy || disabled}
+        >
           {busy ? LOOKING_FOR_GROUP : LOOK_FOR_GROUP}
         </button>
       )}
-    </div>
+    </JoinGroupPanel>
   )
 }

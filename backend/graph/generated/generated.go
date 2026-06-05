@@ -54,13 +54,14 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	ActiveQueue struct {
-		GameID      func(childComplexity int) int
-		GameName    func(childComplexity int) int
-		JoinURL     func(childComplexity int) int
-		QueueID     func(childComplexity int) int
-		QueuePath   func(childComplexity int) int
-		QueuedCount func(childComplexity int) int
-		Status      func(childComplexity int) int
+		GameID               func(childComplexity int) int
+		GameName             func(childComplexity int) int
+		JoinURL              func(childComplexity int) int
+		QueueID              func(childComplexity int) int
+		QueuePath            func(childComplexity int) int
+		QueuePathDisplayName func(childComplexity int) int
+		QueuedCount          func(childComplexity int) int
+		Status               func(childComplexity int) int
 	}
 
 	DigitalGood struct {
@@ -97,9 +98,18 @@ type ComplexityRoot struct {
 		MaxPlayers  func(childComplexity int) int
 		MinPlayers  func(childComplexity int) int
 		ModeKey     func(childComplexity int) int
+		QueuePaths  func(childComplexity int) int
 		Queues      func(childComplexity int) int
 		Seats       func(childComplexity int) int
 		Status      func(childComplexity int) int
+	}
+
+	GameModeQueuePath struct {
+		DisplayName    func(childComplexity int) int
+		MaxPlayers     func(childComplexity int) int
+		MinPlayers     func(childComplexity int) int
+		PlayersToStart func(childComplexity int) int
+		QueuePath      func(childComplexity int) int
 	}
 
 	GameModeSeat struct {
@@ -212,6 +222,7 @@ type GameResolver interface {
 }
 type GameModeResolver interface {
 	Seats(ctx context.Context, obj *model.GameMode) ([]*model.GameModeSeat, error)
+	QueuePaths(ctx context.Context, obj *model.GameMode) ([]*model.GameModeQueuePath, error)
 	Queues(ctx context.Context, obj *model.GameMode) ([]*model.ModeQueue, error)
 }
 type ModeQueueResolver interface {
@@ -307,6 +318,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ActiveQueue.QueuePath(childComplexity), true
+	case "ActiveQueue.queuePathDisplayName":
+		if e.complexity.ActiveQueue.QueuePathDisplayName == nil {
+			break
+		}
+
+		return e.complexity.ActiveQueue.QueuePathDisplayName(childComplexity), true
 	case "ActiveQueue.queuedCount":
 		if e.complexity.ActiveQueue.QueuedCount == nil {
 			break
@@ -472,6 +489,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.GameMode.ModeKey(childComplexity), true
+	case "GameMode.queuePaths":
+		if e.complexity.GameMode.QueuePaths == nil {
+			break
+		}
+
+		return e.complexity.GameMode.QueuePaths(childComplexity), true
 	case "GameMode.queues":
 		if e.complexity.GameMode.Queues == nil {
 			break
@@ -490,6 +513,37 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.GameMode.Status(childComplexity), true
+
+	case "GameModeQueuePath.displayName":
+		if e.complexity.GameModeQueuePath.DisplayName == nil {
+			break
+		}
+
+		return e.complexity.GameModeQueuePath.DisplayName(childComplexity), true
+	case "GameModeQueuePath.maxPlayers":
+		if e.complexity.GameModeQueuePath.MaxPlayers == nil {
+			break
+		}
+
+		return e.complexity.GameModeQueuePath.MaxPlayers(childComplexity), true
+	case "GameModeQueuePath.minPlayers":
+		if e.complexity.GameModeQueuePath.MinPlayers == nil {
+			break
+		}
+
+		return e.complexity.GameModeQueuePath.MinPlayers(childComplexity), true
+	case "GameModeQueuePath.playersToStart":
+		if e.complexity.GameModeQueuePath.PlayersToStart == nil {
+			break
+		}
+
+		return e.complexity.GameModeQueuePath.PlayersToStart(childComplexity), true
+	case "GameModeQueuePath.queuePath":
+		if e.complexity.GameModeQueuePath.QueuePath == nil {
+			break
+		}
+
+		return e.complexity.GameModeQueuePath.QueuePath(childComplexity), true
 
 	case "GameModeSeat.queuePath":
 		if e.complexity.GameModeSeat.QueuePath == nil {
@@ -1159,6 +1213,15 @@ type GameModeSeat {
   sortOrder: Int!
 }
 
+"""One join bucket from seatTemplate (composition modes)."""
+type GameModeQueuePath {
+  queuePath: String!
+  displayName: String!
+  minPlayers: Int!
+  maxPlayers: Int!
+  playersToStart: Int!
+}
+
 type GameMode {
   id: ID!
   modeKey: String!
@@ -1167,6 +1230,8 @@ type GameMode {
   maxPlayers: Int!
   status: String!
   seats: [GameModeSeat!]!
+  """Join options with human labels and per-cohort fire sizes."""
+  queuePaths: [GameModeQueuePath!]!
   queues: [ModeQueue!]!
 }
 
@@ -1264,6 +1329,8 @@ type ActiveQueue {
   status: QueueStatus!
   queuedCount: Int
   queuePath: String
+  """Human label for queuePath from the mode seatTemplate (e.g. Clue Giver)."""
+  queuePathDisplayName: String
   joinUrl: String
 }
 
@@ -1887,6 +1954,35 @@ func (ec *executionContext) _ActiveQueue_queuePath(ctx context.Context, field gr
 }
 
 func (ec *executionContext) fieldContext_ActiveQueue_queuePath(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActiveQueue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ActiveQueue_queuePathDisplayName(ctx context.Context, field graphql.CollectedField, obj *model.ActiveQueue) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ActiveQueue_queuePathDisplayName,
+		func(ctx context.Context) (any, error) {
+			return obj.QueuePathDisplayName, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ActiveQueue_queuePathDisplayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ActiveQueue",
 		Field:      field,
@@ -2548,6 +2644,8 @@ func (ec *executionContext) fieldContext_Game_modes(_ context.Context, field gra
 				return ec.fieldContext_GameMode_status(ctx, field)
 			case "seats":
 				return ec.fieldContext_GameMode_seats(ctx, field)
+			case "queuePaths":
+				return ec.fieldContext_GameMode_queuePaths(ctx, field)
 			case "queues":
 				return ec.fieldContext_GameMode_queues(ctx, field)
 			}
@@ -2772,6 +2870,47 @@ func (ec *executionContext) fieldContext_GameMode_seats(_ context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _GameMode_queuePaths(ctx context.Context, field graphql.CollectedField, obj *model.GameMode) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GameMode_queuePaths,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.GameMode().QueuePaths(ctx, obj)
+		},
+		nil,
+		ec.marshalNGameModeQueuePath2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGameModeQueuePathᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_GameMode_queuePaths(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GameMode",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "queuePath":
+				return ec.fieldContext_GameModeQueuePath_queuePath(ctx, field)
+			case "displayName":
+				return ec.fieldContext_GameModeQueuePath_displayName(ctx, field)
+			case "minPlayers":
+				return ec.fieldContext_GameModeQueuePath_minPlayers(ctx, field)
+			case "maxPlayers":
+				return ec.fieldContext_GameModeQueuePath_maxPlayers(ctx, field)
+			case "playersToStart":
+				return ec.fieldContext_GameModeQueuePath_playersToStart(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GameModeQueuePath", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _GameMode_queues(ctx context.Context, field graphql.CollectedField, obj *model.GameMode) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2808,6 +2947,151 @@ func (ec *executionContext) fieldContext_GameMode_queues(_ context.Context, fiel
 				return ec.fieldContext_ModeQueue_waitingCount(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ModeQueue", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GameModeQueuePath_queuePath(ctx context.Context, field graphql.CollectedField, obj *model.GameModeQueuePath) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GameModeQueuePath_queuePath,
+		func(ctx context.Context) (any, error) {
+			return obj.QueuePath, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_GameModeQueuePath_queuePath(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GameModeQueuePath",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GameModeQueuePath_displayName(ctx context.Context, field graphql.CollectedField, obj *model.GameModeQueuePath) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GameModeQueuePath_displayName,
+		func(ctx context.Context) (any, error) {
+			return obj.DisplayName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_GameModeQueuePath_displayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GameModeQueuePath",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GameModeQueuePath_minPlayers(ctx context.Context, field graphql.CollectedField, obj *model.GameModeQueuePath) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GameModeQueuePath_minPlayers,
+		func(ctx context.Context) (any, error) {
+			return obj.MinPlayers, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_GameModeQueuePath_minPlayers(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GameModeQueuePath",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GameModeQueuePath_maxPlayers(ctx context.Context, field graphql.CollectedField, obj *model.GameModeQueuePath) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GameModeQueuePath_maxPlayers,
+		func(ctx context.Context) (any, error) {
+			return obj.MaxPlayers, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_GameModeQueuePath_maxPlayers(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GameModeQueuePath",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GameModeQueuePath_playersToStart(ctx context.Context, field graphql.CollectedField, obj *model.GameModeQueuePath) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GameModeQueuePath_playersToStart,
+		func(ctx context.Context) (any, error) {
+			return obj.PlayersToStart, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_GameModeQueuePath_playersToStart(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GameModeQueuePath",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4319,6 +4603,8 @@ func (ec *executionContext) fieldContext_Query_myActiveQueue(_ context.Context, 
 				return ec.fieldContext_ActiveQueue_queuedCount(ctx, field)
 			case "queuePath":
 				return ec.fieldContext_ActiveQueue_queuePath(ctx, field)
+			case "queuePathDisplayName":
+				return ec.fieldContext_ActiveQueue_queuePathDisplayName(ctx, field)
 			case "joinUrl":
 				return ec.fieldContext_ActiveQueue_joinUrl(ctx, field)
 			}
@@ -6899,6 +7185,8 @@ func (ec *executionContext) _ActiveQueue(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = ec._ActiveQueue_queuedCount(ctx, field, obj)
 		case "queuePath":
 			out.Values[i] = ec._ActiveQueue_queuePath(ctx, field, obj)
+		case "queuePathDisplayName":
+			out.Values[i] = ec._ActiveQueue_queuePathDisplayName(ctx, field, obj)
 		case "joinUrl":
 			out.Values[i] = ec._ActiveQueue_joinUrl(ctx, field, obj)
 		default:
@@ -7236,6 +7524,42 @@ func (ec *executionContext) _GameMode(ctx context.Context, sel ast.SelectionSet,
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "queuePaths":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._GameMode_queuePaths(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "queues":
 			field := field
 
@@ -7272,6 +7596,65 @@ func (ec *executionContext) _GameMode(ctx context.Context, sel ast.SelectionSet,
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var gameModeQueuePathImplementors = []string{"GameModeQueuePath"}
+
+func (ec *executionContext) _GameModeQueuePath(ctx context.Context, sel ast.SelectionSet, obj *model.GameModeQueuePath) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, gameModeQueuePathImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GameModeQueuePath")
+		case "queuePath":
+			out.Values[i] = ec._GameModeQueuePath_queuePath(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "displayName":
+			out.Values[i] = ec._GameModeQueuePath_displayName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "minPlayers":
+			out.Values[i] = ec._GameModeQueuePath_minPlayers(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "maxPlayers":
+			out.Values[i] = ec._GameModeQueuePath_maxPlayers(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "playersToStart":
+			out.Values[i] = ec._GameModeQueuePath_playersToStart(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8916,6 +9299,60 @@ func (ec *executionContext) marshalNGameMode2ᚖgithubᚗcomᚋscruffyprodigyᚋ
 		return graphql.Null
 	}
 	return ec._GameMode(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNGameModeQueuePath2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGameModeQueuePathᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.GameModeQueuePath) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNGameModeQueuePath2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGameModeQueuePath(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNGameModeQueuePath2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGameModeQueuePath(ctx context.Context, sel ast.SelectionSet, v *model.GameModeQueuePath) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._GameModeQueuePath(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNGameModeSeat2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGameModeSeatᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.GameModeSeat) graphql.Marshaler {

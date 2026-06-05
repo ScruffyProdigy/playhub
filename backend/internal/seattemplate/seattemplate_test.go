@@ -91,6 +91,47 @@ func TestExpandRejectsFlatSeats(t *testing.T) {
 	}
 }
 
+func TestExpandNameArray(t *testing.T) {
+	leaves := mustExpand(t, `{"ClueGiver":{"name":["Red","Blue","Green"]}}`)
+	want := []string{"ClueGiver-Red", "ClueGiver-Blue", "ClueGiver-Green"}
+	got := seatKeys(leaves)
+	if len(got) != len(want) {
+		t.Fatalf("got %v", got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("seat[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestExpandWordHuntPartyTemplate(t *testing.T) {
+	leaves := mustExpand(t, `{
+		"ClueGiver":{"displayName":"Clue Giver","name":["Red","Blue","Green"],"min":2,"max":3,"sizeForQueue":2},
+		"Guesser":{"count":6,"min":2,"max":6,"sizeForQueue":4}
+	}`)
+	want := []string{
+		"ClueGiver-Red", "ClueGiver-Blue", "ClueGiver-Green",
+		"Guesser-1", "Guesser-2", "Guesser-3", "Guesser-4", "Guesser-5", "Guesser-6",
+	}
+	got := seatKeys(leaves)
+	if len(got) != len(want) {
+		t.Fatalf("got %d seats %v, want %d", len(got), got, len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("seat[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+	paths := map[string]int{}
+	for _, leaf := range leaves {
+		paths[leaf.QueuePath]++
+	}
+	if paths["ClueGiver"] != 3 || paths["Guesser"] != 6 {
+		t.Fatalf("unexpected queue paths: %+v", paths)
+	}
+}
+
 func TestExpandSiegeOffenseDefense(t *testing.T) {
 	leaves := mustExpand(t, `{
 		"Offense":{"Wizard":{},"Warrior":{"count":2}},

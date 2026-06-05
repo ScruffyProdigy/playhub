@@ -24,7 +24,7 @@ func TestJoinModeQueueSwitchesFromOtherQueueWhileWaiting(t *testing.T) {
 		INSERT INTO game_modes (id, game_id, mode_key, display_name, min_players, max_players, status)
 		VALUES ($1, $2, 'alt', 'Alt mode', 2, 2, 'active')
 		ON CONFLICT (game_id, mode_key) DO NOTHING
-	`, secondModeID, DemoRPSGameID)
+	`, secondModeID, DemoPrimaryGameID)
 	if err != nil {
 		t.Fatalf("insert mode: %v", err)
 	}

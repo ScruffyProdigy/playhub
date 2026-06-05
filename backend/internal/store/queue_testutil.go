@@ -6,27 +6,27 @@ import (
 	"github.com/google/uuid"
 )
 
-// DemoDefaultQueueIDStr is the seeded default queue for the local RPS demo game.
+// DemoDefaultQueueIDStr is the seeded default mode queue for demo game 001.
 const DemoDefaultQueueIDStr = "a3000000-0000-4000-8000-000000000001"
 
 // DemoDefaultQueueID is the parsed form of DemoDefaultQueueIDStr.
 var DemoDefaultQueueID = uuid.MustParse(DemoDefaultQueueIDStr)
 
-// DemoRPSGameIDStr is the seeded RPS demo game (migrations 000003 / 000004 / 000009).
-// Integration tests must not leave api_base_url pointing at ephemeral httptest ports.
-const DemoRPSGameIDStr = "a1000000-0000-4000-8000-000000000001"
+// DemoPrimaryGameIDStr is seeded catalog game 001 (migrations 000003 / 000009).
+// Production uses this row for Word Hunt; integration tests repoint handoff URLs to localhost.
+const DemoPrimaryGameIDStr = "a1000000-0000-4000-8000-000000000001"
 
-// DemoRPSGameID is the parsed form of DemoRPSGameIDStr.
-var DemoRPSGameID = uuid.MustParse(DemoRPSGameIDStr)
+// DemoPrimaryGameID is the parsed form of DemoPrimaryGameIDStr.
+var DemoPrimaryGameID = uuid.MustParse(DemoPrimaryGameIDStr)
 
 const (
 	DemoGamePlayURL    = "http://localhost:5174"
 	DemoGameAPIBaseURL = "http://localhost:3001"
 )
 
-// RestoreDemoGameHandoffURLs resets the seeded demo game to local RPS defaults.
-func (s *Store) RestoreDemoGameHandoffURLs(ctx context.Context) error {
-	return s.SetGameHandoffURLsForTest(ctx, DemoRPSGameID, DemoGamePlayURL, DemoGameAPIBaseURL)
+// RestorePrimaryGameHandoffURLs resets game 001 to local dev handoff URLs after tests.
+func (s *Store) RestorePrimaryGameHandoffURLs(ctx context.Context) error {
+	return s.SetGameHandoffURLsForTest(ctx, DemoPrimaryGameID, DemoGamePlayURL, DemoGameAPIBaseURL)
 }
 
 // SetGameHandoffURLsForTest updates play/api URLs on a game row (integration tests only).

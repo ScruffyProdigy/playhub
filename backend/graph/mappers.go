@@ -1,7 +1,10 @@
 package graph
 
 import (
+	"encoding/json"
+
 	"github.com/scruffyprodigy/playhub/graph/model"
+	"github.com/scruffyprodigy/playhub/internal/seattemplate"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
@@ -84,6 +87,27 @@ func ToGraphQLGameMode(mode *store.GameMode) *model.GameMode {
 		Status:      mode.Status,
 	}
 	return result
+}
+
+func ToGraphQLQueuePaths(template json.RawMessage) ([]*model.GameModeQueuePath, error) {
+	specs, err := seattemplate.PathSpecs(template)
+	if err != nil {
+		return nil, err
+	}
+	if len(specs) == 1 && specs[0].QueuePath == "" {
+		return []*model.GameModeQueuePath{}, nil
+	}
+	result := make([]*model.GameModeQueuePath, len(specs))
+	for i, spec := range specs {
+		result[i] = &model.GameModeQueuePath{
+			QueuePath:      spec.QueuePath,
+			DisplayName:    spec.DisplayName,
+			MinPlayers:     spec.Min,
+			MaxPlayers:     spec.Max,
+			PlayersToStart: spec.PlayersToStart(),
+		}
+	}
+	return result, nil
 }
 
 func ToGraphQLGameModeSeats(seats []store.GameModeSeat) []*model.GameModeSeat {

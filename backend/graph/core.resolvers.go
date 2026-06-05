@@ -336,6 +336,11 @@ func (r *queryResolver) MyActiveQueue(ctx context.Context) (*model.ActiveQueue, 
 		count := active.QueuedCount
 		resp.QueuedCount = &count
 		resp.QueuePath = joinResultQueuePath(active.QueuePath)
+		if modeQueue, mqErr := st.GetModeQueueByID(ctx, active.ModeQueueID); mqErr == nil {
+			if mode, mErr := st.GetGameModeByID(ctx, modeQueue.ModeID); mErr == nil {
+				resp.QueuePathDisplayName = queuePathDisplayName(mode.SeatTemplate, active.QueuePath)
+			}
+		}
 		return resp, nil
 	}
 

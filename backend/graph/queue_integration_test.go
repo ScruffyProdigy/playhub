@@ -68,10 +68,10 @@ func newQueueIntegrationEnv(t *testing.T) *queueIntegrationEnv {
 	// Integration tests share the seeded demo game row; restore handoff URLs so we never
 	// persist httptest ports (e.g. :50624) into api_base_url for local dev.
 	ctx := context.Background()
-	if err := st.RestoreDemoGameHandoffURLs(ctx); err != nil {
+	if err := st.RestorePrimaryGameHandoffURLs(ctx); err != nil {
 		t.Fatalf("restore demo game handoff urls: %v", err)
 	}
-	t.Cleanup(func() { _ = st.RestoreDemoGameHandoffURLs(context.Background()) })
+	t.Cleanup(func() { _ = st.RestorePrimaryGameHandoffURLs(context.Background()) })
 
 	resolver := NewResolver(st, authService, pubsub.NewMemory(), store.DemoGamePlayURL)
 	env := &queueIntegrationEnv{

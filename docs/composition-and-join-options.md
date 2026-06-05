@@ -14,7 +14,35 @@ That is **lobby-side queue selection**, similar to picking a role in a MOBA queu
 
 For **single-bucket** modes (simple 1v1 / FFA — one `queuePath`, usually `""`), the JoinQuest UI shows a single **“Look for group”** button; omit `queuePath` on `joinQueue`.
 
-For **composition** modes, role choices appear **inside a “Look for group” panel** — e.g. “Join as DPS”, “Join as Tank” — so the player is still “looking for a group”, just in a specific role bucket.
+For **composition** modes, role choices appear **inside a “Look for group” panel** — e.g. “Join as Clue Giver”, “Join as Guesser” — so the player is still “looking for a group”, just in a specific role bucket.
+
+While waiting, the player can **switch roles** in the same game by clicking another **Join as …** button; Lobby updates their `queue_path` without leaving the queue. The sticky banner shows **`queuePathDisplayName`** (from `seatTemplate`) so the active cohort is always visible.
+
+---
+
+## GraphQL surface (catalog UI)
+
+The games list reads **`GameMode.queuePaths`** — one entry per join bucket with `queuePath`, `displayName`, `minPlayers`, `maxPlayers`, and per-cohort **`playersToStart`** (from `sizeForQueue` when set).
+
+```graphql
+query {
+  game(id: "…") {
+    modes {
+      queuePaths {
+        queuePath
+        displayName
+        playersToStart
+      }
+    }
+  }
+}
+```
+
+**Fifo modes** return an empty `queuePaths` list; the UI shows a single **Look for group** control inside the same panel chrome.
+
+**`myActiveQueue`** returns `queuePath` and `queuePathDisplayName` while **WAITING** so the banner can say e.g. “Looking for a group in Word Hunt as Clue Giver”.
+
+See [api.md](./api.md) for `joinQueue` path switching and subscription fields.
 
 ---
 
@@ -63,8 +91,9 @@ So: **not** replacing the game’s character select — **optional** pre-queue e
 ## v1 scope
 
 - **Shipped:** `seatTemplate` manifest sync; one default queue per mode; **Look for group** UI;
-  composition modes show **Join as …** from expanded `queuePath` values; `joinQueue(queueId, queuePath)`
-  and path-aware matchmaking.
+  **`GameMode.queuePaths`** with display names; composition modes show **Join as …** from that metadata;
+  in-queue **role switching**; sticky banner cohort label; `joinQueue(queueId, queuePath)`
+  and path-aware matchmaking with per-path **`sizeForQueue`** fire thresholds.
 - **Deferred:** LFG forming map (parties, affinity), game `queue-options` API, DLC-aware polling,
   unlock progression, `PartyInput` on join.
 

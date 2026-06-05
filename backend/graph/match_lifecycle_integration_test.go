@@ -88,7 +88,7 @@ func TestReportMatchResultCompletesSession(t *testing.T) {
 		t.Fatalf("parse session id: %v", err)
 	}
 
-	gameID := uuid.MustParse(store.DemoRPSGameIDStr)
+	gameID := uuid.MustParse(store.DemoPrimaryGameIDStr)
 	serviceToken, err := auth.FormatGameServiceToken(gameID)
 	if err != nil {
 		t.Fatalf("FormatGameServiceToken: %v", err)

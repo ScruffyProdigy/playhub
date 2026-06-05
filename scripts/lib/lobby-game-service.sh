@@ -18,10 +18,10 @@ apply_lobby_game_service_secret() {
   fi
 }
 
-run_patch_rps_handoff_urls_job() {
+run_patch_game_handoff_urls_job() {
   local ns="${1:-joinquest}"
-  kubectl delete job lobby-patch-rps-handoff-urls -n "$ns" --ignore-not-found
-  sed 's/namespace: playhub/namespace: '"$ns"'/g' k8s/jobs/patch-rps-handoff-urls.yaml | kubectl apply -f -
-  kubectl wait --for=condition=complete --timeout=120s "job/lobby-patch-rps-handoff-urls" -n "$ns"
-  kubectl logs "job/lobby-patch-rps-handoff-urls" -n "$ns"
+  kubectl delete job lobby-patch-game-handoff-urls -n "$ns" --ignore-not-found
+  sed 's/namespace: playhub/namespace: '"$ns"'/g' k8s/jobs/patch-game-handoff-urls.yaml | kubectl apply -f -
+  kubectl wait --for=condition=complete --timeout=120s "job/lobby-patch-game-handoff-urls" -n "$ns"
+  kubectl logs "job/lobby-patch-game-handoff-urls" -n "$ns"
 }

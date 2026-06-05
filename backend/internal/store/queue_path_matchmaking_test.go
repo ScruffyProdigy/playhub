@@ -82,6 +82,43 @@ func TestTryFormMatchCompositionRequiresMatchingPaths(t *testing.T) {
 	}
 }
 
+func TestMatchSeatsFromTemplateWordHunt(t *testing.T) {
+	seats := []GameModeSeat{
+		{SeatKey: "ClueGiver-Red", QueuePath: strPtr("ClueGiver"), SortOrder: 0},
+		{SeatKey: "ClueGiver-Blue", QueuePath: strPtr("ClueGiver"), SortOrder: 1},
+		{SeatKey: "ClueGiver-Green", QueuePath: strPtr("ClueGiver"), SortOrder: 2},
+		{SeatKey: "Guesser-1", QueuePath: strPtr("Guesser"), SortOrder: 3},
+		{SeatKey: "Guesser-2", QueuePath: strPtr("Guesser"), SortOrder: 4},
+		{SeatKey: "Guesser-3", QueuePath: strPtr("Guesser"), SortOrder: 5},
+		{SeatKey: "Guesser-4", QueuePath: strPtr("Guesser"), SortOrder: 6},
+		{SeatKey: "Guesser-5", QueuePath: strPtr("Guesser"), SortOrder: 7},
+		{SeatKey: "Guesser-6", QueuePath: strPtr("Guesser"), SortOrder: 8},
+	}
+	template := []byte(`{
+		"ClueGiver":{"displayName":"Clue Giver","name":["Red","Blue","Green"],"min":2,"max":3,"sizeForQueue":2},
+		"Guesser":{"count":6,"min":2,"max":6,"sizeForQueue":4}
+	}`)
+	matchSeats, err := matchSeatsFromTemplate(seats, template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(matchSeats) != 6 {
+		t.Fatalf("got %d match seats, want 6", len(matchSeats))
+	}
+	keys := make([]string, len(matchSeats))
+	for i, seat := range matchSeats {
+		keys[i] = seat.SeatKey
+	}
+	want := []string{"ClueGiver-Red", "ClueGiver-Blue", "Guesser-1", "Guesser-2", "Guesser-3", "Guesser-4"}
+	for i, key := range want {
+		if keys[i] != key {
+			t.Fatalf("seat[%d] = %q, want %q (all=%v)", i, keys[i], key, keys)
+		}
+	}
+}
+
+func strPtr(s string) *string { return &s }
+
 func TestValidateJoinQueuePath(t *testing.T) {
 	dps := "DPS"
 	seats := []GameModeSeat{{SeatKey: "1"}}

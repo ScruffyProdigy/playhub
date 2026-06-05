@@ -207,7 +207,14 @@ func applyManifestTx(ctx context.Context, tx *sql.Tx, game *Game, manifest *game
 			return nil, false, err
 		}
 
-		playersToStart := leafCount
+		pathSpecs, err := seattemplate.PathSpecs(modeDef.SeatTemplate)
+		if err != nil {
+			return nil, false, fmt.Errorf("store: mode %q path specs: %w", modeKey, err)
+		}
+		playersToStart := seattemplate.TotalPlayersToStart(pathSpecs)
+		if playersToStart < 1 {
+			playersToStart = leafCount
+		}
 		if _, err := ensureDefaultModeQueueTx(ctx, tx, mode.ID, playersToStart); err != nil {
 			return nil, false, err
 		}
@@ -367,7 +374,7 @@ func upsertGameModeTx(ctx context.Context, tx *sql.Tx, gameID uuid.UUID, modeKey
 			seat_template = EXCLUDED.seat_template,
 			status = 'active',
 			updated_at = NOW()
-		RETURNING id, game_id, mode_key, display_name, min_players, max_players, status, created_at, updated_at
+		RETURNING id, game_id, mode_key, display_name, min_players, max_players, seat_template, status, created_at, updated_at
 	`, gameID, modeKey, displayName, minPlayers, maxPlayers, seatTemplate)
 	return scanGameModeRow(row)
 }
@@ -376,7 +383,7 @@ func scanGameModeRow(row *sql.Row) (*GameMode, error) {
 	var mode GameMode
 	if err := row.Scan(
 		&mode.ID, &mode.GameID, &mode.ModeKey, &mode.DisplayName,
-		&mode.MinPlayers, &mode.MaxPlayers, &mode.Status,
+		&mode.MinPlayers, &mode.MaxPlayers, &mode.SeatTemplate, &mode.Status,
 		&mode.CreatedAt, &mode.UpdatedAt,
 	); err != nil {
 		return nil, err

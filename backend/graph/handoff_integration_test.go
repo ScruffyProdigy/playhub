@@ -74,7 +74,7 @@ func TestJoinQueueProvisionsMatchOnGameServer(t *testing.T) {
 	if call.Lobby.GraphqlURL != "http://localhost:8080/graphql" {
 		t.Fatalf("lobby.graphqlUrl = %q", call.Lobby.GraphqlURL)
 	}
-	gameID := uuid.MustParse(store.DemoRPSGameIDStr)
+	gameID := uuid.MustParse(store.DemoPrimaryGameIDStr)
 	wantToken, err := auth.FormatGameServiceToken(gameID)
 	if err != nil {
 		t.Fatalf("FormatGameServiceToken: %v", err)
@@ -116,7 +116,7 @@ func TestJoinQueueProvisionsServiceTokenWhenConfigured(t *testing.T) {
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
 
 	call := provisioner.lastCall()
-	wantToken, err := auth.FormatGameServiceToken(uuid.MustParse(store.DemoRPSGameIDStr))
+	wantToken, err := auth.FormatGameServiceToken(uuid.MustParse(store.DemoPrimaryGameIDStr))
 	if err != nil {
 		t.Fatalf("FormatGameServiceToken: %v", err)
 	}

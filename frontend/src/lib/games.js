@@ -12,6 +12,11 @@ const GAMES_QUERY = `
       modes {
         modeKey
         displayName
+        queuePaths {
+          queuePath
+          displayName
+          playersToStart
+        }
         seats {
           queuePath
         }
@@ -55,6 +60,19 @@ export function defaultModeForGame(game) {
  * @returns {{ kind: 'fifo', paths: [] } | { kind: 'composition', paths: string[] }}
  */
 export function joinGroupOptionsForMode(mode) {
+  const queuePaths = (mode?.queuePaths ?? []).filter(
+    (entry) => (entry.queuePath?.trim() ?? '') !== '',
+  )
+  if (queuePaths.length > 0) {
+    return {
+      kind: 'composition',
+      paths: queuePaths.map((entry) => ({
+        queuePath: entry.queuePath,
+        displayName: entry.displayName || entry.queuePath,
+      })),
+    }
+  }
+
   const paths = new Set()
   for (const seat of mode?.seats ?? []) {
     const path = seat.queuePath?.trim() ?? ''
@@ -66,7 +84,10 @@ export function joinGroupOptionsForMode(mode) {
   if (sorted.length === 0) {
     return { kind: 'fifo', paths: [] }
   }
-  return { kind: 'composition', paths: sorted }
+  return {
+    kind: 'composition',
+    paths: sorted.map((queuePath) => ({ queuePath, displayName: queuePath })),
+  }
 }
 
 export function joinGroupOptionsForGame(game) {

@@ -94,8 +94,8 @@ kubectl logs job/playhub-db-migrate -n "$NAMESPACE"
 echo "Applying stale session cleanup CronJob..."
 sed 's/namespace: playhub/namespace: joinquest/g' k8s/jobs/stale-session-cleanup.yaml | kubectl apply -f -
 
-echo "Patching RPS catalog handoff URLs for production..."
-run_patch_rps_handoff_urls_job "$NAMESPACE"
+echo "Patching game catalog handoff URLs for production..."
+run_patch_game_handoff_urls_job "$NAMESPACE"
 
 echo "Waiting for app deployments..."
 kubectl wait --for=condition=available --timeout=300s deployment/lobby-backend -n "$NAMESPACE"

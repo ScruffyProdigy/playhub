@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -56,15 +57,16 @@ type Game struct {
 }
 
 type GameMode struct {
-	ID          uuid.UUID
-	GameID      uuid.UUID
-	ModeKey     string
-	DisplayName string
-	MinPlayers  int
-	MaxPlayers  int
-	Status      string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID           uuid.UUID
+	GameID       uuid.UUID
+	ModeKey      string
+	DisplayName  string
+	MinPlayers   int
+	MaxPlayers   int
+	SeatTemplate json.RawMessage
+	Status       string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type GameModeSeat struct {

@@ -100,7 +100,7 @@ func TestGetMatchedSessionForUserAndModeQueuePicksNewestSession(t *testing.T) {
 	}
 	cleaner.TrackUser(user.ID)
 
-	modes, err := st.ListGameModesByGameID(ctx, DemoRPSGameID)
+	modes, err := st.ListGameModesByGameID(ctx, DemoPrimaryGameID)
 	if err != nil {
 		t.Fatalf("ListGameModesByGameID: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestGetMatchedSessionForUserAndModeQueuePicksNewestSession(t *testing.T) {
 			INSERT INTO game_sessions (game_id, status, mode_id, mode_queue_id, started_at)
 			VALUES ($1, 'active', $2, $3, $4)
 			RETURNING id
-		`, DemoRPSGameID, modeID, queueID, startedAt).Scan(&id)
+		`, DemoPrimaryGameID, modeID, queueID, startedAt).Scan(&id)
 		if err != nil {
 			t.Fatalf("insert session: %v", err)
 		}
@@ -132,7 +132,7 @@ func TestGetMatchedSessionForUserAndModeQueuePicksNewestSession(t *testing.T) {
 	_, err = st.db.ExecContext(ctx, `
 		INSERT INTO game_queues (game_id, user_id, mode_queue_id, status, matched_at)
 		VALUES ($1, $2, $3, 'matched', NOW())
-	`, DemoRPSGameID, user.ID, queueID)
+	`, DemoPrimaryGameID, user.ID, queueID)
 	if err != nil {
 		t.Fatalf("insert matched queue row: %v", err)
 	}

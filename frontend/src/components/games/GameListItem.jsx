@@ -13,8 +13,7 @@ export default function GameListItem({ game, activeQueue, onQueueChange }) {
   const queue = useGameQueue(defaultQueue?.id, {
     skipSubscription: Boolean(isThisQueue && activeQueue),
   })
-  const showRowActions =
-    !isThisQueue || (queue.queueState !== 'waiting' && queue.queueState !== 'matched')
+  const showRowActions = !isThisQueue || queue.queueState !== 'matched'
   const blockedActiveMatch =
     activeQueue &&
     defaultQueue?.id &&
@@ -51,8 +50,10 @@ export default function GameListItem({ game, activeQueue, onQueueChange }) {
           queueState={queue.queueState}
           joinUrl={queue.joinUrl}
           busy={queue.busy}
-          selectedQueuePath={queue.selectedQueuePath}
-          onJoin={queue.handleJoin}
+          selectedQueuePath={
+            queue.selectedQueuePath || (isThisQueue ? activeQueue?.queuePath : '') || ''
+          }
+          onJoin={handleJoin}
           onLeave={handleLeave}
           disabled={!defaultQueue || blockedActiveMatch}
         />

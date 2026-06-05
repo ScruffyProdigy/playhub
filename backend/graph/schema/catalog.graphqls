@@ -22,6 +22,15 @@ type GameModeSeat {
   sortOrder: Int!
 }
 
+"""One join bucket from seatTemplate (composition modes)."""
+type GameModeQueuePath {
+  queuePath: String!
+  displayName: String!
+  minPlayers: Int!
+  maxPlayers: Int!
+  playersToStart: Int!
+}
+
 type GameMode {
   id: ID!
   modeKey: String!
@@ -30,6 +39,8 @@ type GameMode {
   maxPlayers: Int!
   status: String!
   seats: [GameModeSeat!]!
+  """Join options with human labels and per-cohort fire sizes."""
+  queuePaths: [GameModeQueuePath!]!
   queues: [ModeQueue!]!
 }
 

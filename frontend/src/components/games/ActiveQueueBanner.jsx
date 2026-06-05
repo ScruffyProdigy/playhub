@@ -19,7 +19,11 @@ export default function ActiveQueueBanner({ activeQueue, busy, onLeave }) {
         <p className="active-queue-banner__title">
           {isMatched
             ? bannerMatchedLine(activeQueue.gameName)
-            : bannerWaitingLine(activeQueue.gameName, activeQueue.queuedCount)}
+            : bannerWaitingLine(
+                activeQueue.gameName,
+                activeQueue.queuedCount,
+                activeQueue.queuePathDisplayName,
+              )}
         </p>
         {isMatched ? (
           <p className="active-queue-banner__hint">Launch when you are ready — your seat is reserved.</p>

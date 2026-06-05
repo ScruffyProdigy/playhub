@@ -24,7 +24,36 @@ describe('joinGroupOptionsForMode', () => {
     }
     expect(joinGroupOptionsForMode(mode)).toEqual({
       kind: 'composition',
-      paths: ['DPS', 'Support', 'Tank'],
+      paths: [
+        { queuePath: 'DPS', displayName: 'DPS' },
+        { queuePath: 'Support', displayName: 'Support' },
+        { queuePath: 'Tank', displayName: 'Tank' },
+      ],
+    })
+  })
+
+  it('treats empty queuePaths as fifo (single-bucket modes)', () => {
+    const mode = {
+      queuePaths: [{ queuePath: '', displayName: '', playersToStart: 2 }],
+      seats: [{ queuePath: null }, { queuePath: null }],
+    }
+    expect(joinGroupOptionsForMode(mode)).toEqual({ kind: 'fifo', paths: [] })
+  })
+
+  it('prefers queuePaths metadata when present', () => {
+    const mode = {
+      queuePaths: [
+        { queuePath: 'ClueGiver', displayName: 'Clue Giver', playersToStart: 2 },
+        { queuePath: 'Guesser', displayName: 'Guesser', playersToStart: 4 },
+      ],
+      seats: [{ queuePath: 'ClueGiver' }, { queuePath: 'Guesser' }],
+    }
+    expect(joinGroupOptionsForMode(mode)).toEqual({
+      kind: 'composition',
+      paths: [
+        { queuePath: 'ClueGiver', displayName: 'Clue Giver' },
+        { queuePath: 'Guesser', displayName: 'Guesser' },
+      ],
     })
   })
 })
@@ -46,7 +75,10 @@ describe('joinGroupOptionsForGame', () => {
     expect(defaultModeForGame(game).queues[0].status).toBe('active')
     expect(joinGroupOptionsForGame(game)).toEqual({
       kind: 'composition',
-      paths: ['DPS', 'Tank'],
+      paths: [
+        { queuePath: 'DPS', displayName: 'DPS' },
+        { queuePath: 'Tank', displayName: 'Tank' },
+      ],
     })
   })
 })

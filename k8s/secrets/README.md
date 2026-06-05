@@ -26,7 +26,7 @@ Edit each file:
 kubectl config use-context YOUR_CONTEXT
 kubectl apply -f k8s/secrets/
 ./scripts/deploy-joinquest.sh    # Lobby only
-./scripts/deploy-gke.sh          # Lobby + demo-game-rps (GKE)
+./scripts/deploy-gke.sh          # Lobby + Word Hunt + RPSLS (GKE)
 ```
 
 Deploy scripts apply secrets from this folder and wire SMTP into `lobby-backend` when `lobby-smtp.yaml` exists.

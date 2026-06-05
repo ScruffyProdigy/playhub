@@ -1,8 +1,11 @@
 package store
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/scruffyprodigy/playhub/internal/seattemplate"
 )
 
 type seatAssignment struct {
@@ -58,6 +61,36 @@ func validateJoinQueuePath(seats []GameModeSeat, queuePath string) error {
 		return fmt.Errorf("store: invalid queue path %q", queuePath)
 	}
 	return nil
+}
+
+// matchSeatsFromTemplate returns the subset of seats required to fire (per-path sizeForQueue).
+func matchSeatsFromTemplate(seats []GameModeSeat, template json.RawMessage) ([]GameModeSeat, error) {
+	if len(template) == 0 {
+		return seats, nil
+	}
+	specs, err := seattemplate.PathSpecs(template)
+	if err != nil {
+		return nil, err
+	}
+	byPath := make(map[string][]GameModeSeat)
+	for _, seat := range seats {
+		path := seatQueuePathValue(seat)
+		byPath[path] = append(byPath[path], seat)
+	}
+
+	out := make([]GameModeSeat, 0, len(seats))
+	for _, spec := range specs {
+		bucket := byPath[spec.QueuePath]
+		need := spec.PlayersToStart()
+		if need > len(bucket) {
+			need = len(bucket)
+		}
+		out = append(out, bucket[:need]...)
+	}
+	if len(out) == 0 {
+		return seats, nil
+	}
+	return out, nil
 }
 
 // tryFormMatch pairs waiting players to mode seats by queue_path (fifo within each path).

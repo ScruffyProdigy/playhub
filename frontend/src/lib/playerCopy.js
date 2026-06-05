@@ -30,9 +30,14 @@ export function activeMatchBlockedLine(gameName) {
   return `You have an active match in ${gameName}. Finish or leave it before looking for another group.`
 }
 
-export function bannerWaitingLine(gameName, count) {
+export function bannerWaitingLine(gameName, count, queuePathDisplayName) {
   const n = count ?? 0
-  return `Looking for a group in ${gameName} · ${n} ${n === 1 ? 'player' : 'players'} looking`
+  const players = `${n} ${n === 1 ? 'player' : 'players'} looking`
+  const role = queuePathDisplayName?.trim()
+  if (role) {
+    return `Looking for a group in ${gameName} as ${role} · ${players}`
+  }
+  return `Looking for a group in ${gameName} · ${players}`
 }
 
 export function bannerMatchedLine(gameName) {

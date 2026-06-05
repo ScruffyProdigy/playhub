@@ -114,22 +114,11 @@ func (s *Store) GetGameModeByID(ctx context.Context, modeID uuid.UUID) (*GameMod
 
 func getGameModeByID(ctx context.Context, q sqlQueryRowContext, modeID uuid.UUID) (*GameMode, error) {
 	row := q.QueryRowContext(ctx, `
-		SELECT id, game_id, mode_key, display_name, min_players, max_players, status, created_at, updated_at
+		SELECT id, game_id, mode_key, display_name, min_players, max_players, seat_template, status, created_at, updated_at
 		FROM game_modes
 		WHERE id = $1
 	`, modeID)
-	var mode GameMode
-	if err := row.Scan(
-		&mode.ID, &mode.GameID, &mode.ModeKey, &mode.DisplayName,
-		&mode.MinPlayers, &mode.MaxPlayers, &mode.Status,
-		&mode.CreatedAt, &mode.UpdatedAt,
-	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	return &mode, nil
+	return scanGameModeRow(row)
 }
 
 // JoinModeQueue enqueues the user in a mode queue and starts a session when full.
@@ -148,9 +137,17 @@ func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID
 		return nil, err
 	}
 
-	playersToStart := joinCtx.ModeQueue.PlayersToStart
+	matchSeats, err := matchSeatsFromTemplate(joinCtx.Seats, joinCtx.Mode.SeatTemplate)
+	if err != nil {
+		return nil, err
+	}
+	playersToStart := len(matchSeats)
 	if playersToStart < 1 {
-		playersToStart = len(joinCtx.Seats)
+		playersToStart = joinCtx.ModeQueue.PlayersToStart
+		if playersToStart < 1 {
+			playersToStart = len(joinCtx.Seats)
+		}
+		matchSeats = joinCtx.Seats[:playersToStart]
 	}
 	if playersToStart > len(joinCtx.Seats) {
 		return nil, fmt.Errorf("store: queue requires %d players but mode only defines %d seats", playersToStart, len(joinCtx.Seats))
@@ -166,7 +163,7 @@ func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID
 		return nil, err
 	}
 
-	assignments, ok := tryFormMatch(joinCtx.Seats[:playersToStart], waiting)
+	assignments, ok := tryFormMatch(matchSeats, waiting)
 	if !ok {
 		if err := tx.Commit(); err != nil {
 			return nil, err

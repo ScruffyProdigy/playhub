@@ -135,15 +135,26 @@ query {
     slug
     modes {
       modeKey
+      displayName
+      queuePaths {
+        queuePath
+        displayName
+        minPlayers
+        maxPlayers
+        playersToStart
+      }
       queues {
         id
         name
+        playersToStart
         waitingCount
       }
     }
   }
 }
 ```
+
+**`GameMode.queuePaths`** — join buckets derived from `seatTemplate` (empty for fifo / single-bucket modes). The games list UI uses `displayName` for **Join as …** labels and `playersToStart` per cohort when present.
 
 ### Session Queries
 
@@ -235,12 +246,14 @@ query {
     gameName
     status    # WAITING | MATCHED
     queuedCount
+    queuePath
+    queuePathDisplayName   # human label from seatTemplate (e.g. "Clue Giver")
     joinUrl   # when MATCHED
   }
 }
 ```
 
-Returns `null` when not in a queue.
+Returns `null` when not in a queue. When **WAITING** in a composition mode, `queuePath` / `queuePathDisplayName` identify which cohort bucket the player joined (banner copy uses the display name).
 
 #### `myQueueStatus(queueId)` ✅
 Status for a specific mode queue (per-game row sync).
@@ -249,7 +262,8 @@ Status for a specific mode queue (per-game row sync).
 Start **looking for a group** in a mode queue (`queueId` from `game.modes.queues`). Requires authentication.
 
 - **Fifo modes** (no seat `queuePath` on the mode): omit `queuePath`.
-- **Composition modes**: pass the role bucket from the template (e.g. `queuePath: "DPS"`). Required when the mode defines multiple queue paths.
+- **Composition modes**: pass the role bucket from the template (e.g. `queuePath: "ClueGiver"`). Required when the mode defines multiple queue paths.
+- **Same game, different role**: if already **waiting** in that mode queue, calling `joinQueue` again with another valid `queuePath` **updates** the player's bucket (does not create a second row).
 - Only one **waiting** queue per player globally. Joining another game **leaves** the previous wait list and sets **`message`** explaining the switch.
 - Still **blocked** while **matched** in another queue until the player leaves or the match ends.
 

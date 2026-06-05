@@ -1,19 +1,14 @@
 #!/bin/bash
-# Deploy JoinQuest Lobby + demo-game-rps to GKE (joinquest.cc + rpsls-duel.win).
+# Deploy JoinQuest Lobby + Word Hunt + RPSLS demo to GKE.
 #
 # Prereqs:
 #   - kubectl context pointing at your GKE cluster
 #   - k8s/secrets/*.yaml filled in for lobby (joinquest namespace)
-#   - ../demo-game-rps/k8s/secrets/pg-dsn.yaml for the game DB
-#   - Recommended: k8s/secrets/lobby-auth-peppers.yaml (MAGIC_LINK_PEPPER, LOBBY_GAME_TOKEN_PEPPER)
-#   - Optional legacy: lobby-game-service.yaml (global LOBBY_GAME_SERVICE_TOKEN for dev)
+#   - ../wordhunt/k8s/secrets/pg-dsn.yaml and ../demo-game-rps/k8s/secrets/pg-dsn.yaml
 #
 # Usage:
-#   ./scripts/deploy-gke.sh              # build, push, deploy both
+#   ./scripts/deploy-gke.sh              # build, push, deploy all
 #   BUILD_PUSH=false ./scripts/deploy-gke.sh   # deploy only (images already on registry)
-#
-# RPS images default to docker.io/scruffyprodigy (see demo-game-rps k8s/base). Override:
-#   RPS_REGISTRY=ghcr.io RPS_IMAGE_OWNER=playhub ./scripts/deploy-gke.sh
 
 set -e
 
@@ -21,6 +16,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 BUILD_PUSH="${BUILD_PUSH:-true}"
+WORDHUNT="${WORDHUNT:-$ROOT/../wordhunt}"
 DEMO_GAME_RPS="${DEMO_GAME_RPS:-$ROOT/../demo-game-rps}"
 
 echo "=== JoinQuest GKE deploy ==="
@@ -33,36 +29,51 @@ fi
 echo "Deploying Lobby (namespace joinquest)..."
 "$ROOT/scripts/deploy-joinquest.sh"
 
-if [ ! -d "$DEMO_GAME_RPS" ]; then
-  echo "demo-game-rps not found at $DEMO_GAME_RPS — skipping game deploy" >&2
-  exit 1
+ensure_game_secret() {
+  local game_dir="$1"
+  local namespace="$2"
+  local secrets="$game_dir/k8s/secrets"
+  if [ ! -f "$secrets/pg-dsn.yaml" ]; then
+    echo "Creating $secrets/pg-dsn.yaml from example (in-cluster Postgres)..."
+    PW="$(openssl rand -hex 12)"
+    sed -e "s/namespace: rps-game/namespace: ${namespace}/" \
+        -e "s/namespace: rpsls-duel/namespace: ${namespace}/" \
+        -e "s/CHANGE_ME/${PW}/g" \
+        "$secrets/pg-dsn.example.yaml" > "$secrets/pg-dsn.yaml"
+    echo "  (new Postgres password written to pg-dsn.yaml — back up locally)"
+  fi
+}
+
+if [ -d "$WORDHUNT" ]; then
+  ensure_game_secret "$WORDHUNT" "rps-game"
+  if [ "$BUILD_PUSH" = "true" ]; then
+    echo "Building and pushing Word Hunt images (tag: wordhunt)..."
+    TAG=wordhunt "$WORDHUNT/scripts/build-and-push.sh" --push
+  fi
+  echo "Deploying Word Hunt (namespace rps-game, host word-hunt-arena.win)..."
+  IMAGE_TAG=wordhunt "$WORDHUNT/scripts/deploy-gke.sh"
+else
+  echo "wordhunt not found at $WORDHUNT — skipping" >&2
 fi
 
-RPS_SECRETS="$DEMO_GAME_RPS/k8s/secrets"
-if [ ! -f "$RPS_SECRETS/pg-dsn.yaml" ]; then
-  echo "Creating $RPS_SECRETS/pg-dsn.yaml from example (in-cluster Postgres)..."
-  PW="$(openssl rand -hex 12)"
-  sed -e "s/namespace: rps-game/namespace: rps-game/" \
-      -e "s/CHANGE_ME/${PW}/g" \
-      "$RPS_SECRETS/pg-dsn.example.yaml" > "$RPS_SECRETS/pg-dsn.yaml"
-  echo "  (new Postgres password written to pg-dsn.yaml — back up locally)"
+if [ -d "$DEMO_GAME_RPS" ]; then
+  ensure_game_secret "$DEMO_GAME_RPS" "rpsls-duel"
+  if [ "$BUILD_PUSH" = "true" ]; then
+    echo "Building and pushing RPSLS images (tag: rpsls)..."
+    TAG=rpsls "$DEMO_GAME_RPS/scripts/build-and-push.sh" --push
+  fi
+  echo "Deploying RPSLS (namespace rpsls-duel, host rpsls-duel.win)..."
+  IMAGE_TAG=rpsls GAME_NAMESPACE=rpsls-duel "$DEMO_GAME_RPS/scripts/deploy-gke.sh"
+else
+  echo "demo-game-rps not found at $DEMO_GAME_RPS — skipping" >&2
 fi
-
-if [ "$BUILD_PUSH" = "true" ]; then
-  echo "Building and pushing RPS game images (Docker Hub)..."
-  REGISTRY="${RPS_REGISTRY:-docker.io}" IMAGE_OWNER="${RPS_IMAGE_OWNER:-scruffyprodigy}" \
-    "$DEMO_GAME_RPS/scripts/build-and-push.sh" --push
-fi
-
-echo "Deploying demo-game-rps (namespace rps-game, host rpsls-duel.win)..."
-"$DEMO_GAME_RPS/scripts/deploy-gke.sh"
 
 echo ""
 echo "=== Done ==="
-echo "Lobby:  https://joinquest.cc"
-echo "Game:   https://rpsls-duel.win"
+echo "Lobby:     https://joinquest.cc"
+echo "Word Hunt: https://word-hunt-arena.win"
+echo "RPSLS:     https://rpsls-duel.win"
 echo ""
 kubectl get ingress -n joinquest
-kubectl get ingress -n rps-game
-echo ""
-echo "DNS: joinquest.cc and rpsls-duel.win -> ingress ADDRESS (kubectl get ingress -A)"
+kubectl get ingress -n rps-game 2>/dev/null || true
+kubectl get ingress -n rpsls-duel 2>/dev/null || true

@@ -17,7 +17,9 @@ type ActiveQueue struct {
 	Status      QueueStatus `json:"status"`
 	QueuedCount *int        `json:"queuedCount,omitempty"`
 	QueuePath   *string     `json:"queuePath,omitempty"`
-	JoinURL     *string     `json:"joinUrl,omitempty"`
+	// Human label for queuePath from the mode seatTemplate (e.g. Clue Giver).
+	QueuePathDisplayName *string `json:"queuePathDisplayName,omitempty"`
+	JoinURL              *string `json:"joinUrl,omitempty"`
 }
 
 type DigitalGood struct {
@@ -56,7 +58,18 @@ type GameMode struct {
 	MaxPlayers  int             `json:"maxPlayers"`
 	Status      string          `json:"status"`
 	Seats       []*GameModeSeat `json:"seats"`
-	Queues      []*ModeQueue    `json:"queues"`
+	// Join options with human labels and per-cohort fire sizes.
+	QueuePaths []*GameModeQueuePath `json:"queuePaths"`
+	Queues     []*ModeQueue         `json:"queues"`
+}
+
+// One join bucket from seatTemplate (composition modes).
+type GameModeQueuePath struct {
+	QueuePath      string `json:"queuePath"`
+	DisplayName    string `json:"displayName"`
+	MinPlayers     int    `json:"minPlayers"`
+	MaxPlayers     int    `json:"maxPlayers"`
+	PlayersToStart int    `json:"playersToStart"`
 }
 
 type GameModeSeat struct {

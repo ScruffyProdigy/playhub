@@ -9,6 +9,7 @@ const MY_ACTIVE_QUEUE_QUERY = `
       status
       queuedCount
       queuePath
+      queuePathDisplayName
       joinUrl
     }
   }

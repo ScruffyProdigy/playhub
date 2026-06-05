@@ -50,6 +50,23 @@ func (r *gameModeResolver) Seats(ctx context.Context, obj *model.GameMode) ([]*m
 	return ToGraphQLGameModeSeats(seats), nil
 }
 
+// QueuePaths is the resolver for the queuePaths field.
+func (r *gameModeResolver) QueuePaths(ctx context.Context, obj *model.GameMode) ([]*model.GameModeQueuePath, error) {
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+	modeID, err := parseUUID(obj.ID, "mode id")
+	if err != nil {
+		return nil, err
+	}
+	mode, err := st.GetGameModeByID(ctx, modeID)
+	if err != nil {
+		return nil, err
+	}
+	return ToGraphQLQueuePaths(mode.SeatTemplate)
+}
+
 // Queues is the resolver for the queues field.
 func (r *gameModeResolver) Queues(ctx context.Context, obj *model.GameMode) ([]*model.ModeQueue, error) {
 	st, err := r.requireStore()

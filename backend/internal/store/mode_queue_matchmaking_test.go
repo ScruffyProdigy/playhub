@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -54,7 +55,7 @@ func TestJoinModeQueueReplacesStaleWaitingRowForSameGame(t *testing.T) {
 	_, err = st.db.ExecContext(ctx, `
 		INSERT INTO game_queues (game_id, user_id, status)
 		VALUES ($1, $2, 'waiting')
-	`, DemoRPSGameID, user.ID)
+	`, DemoPrimaryGameID, user.ID)
 	if err != nil {
 		t.Fatalf("insert legacy queue row: %v", err)
 	}
@@ -190,5 +191,96 @@ func TestJoinModeQueueCompositionMatchmaking(t *testing.T) {
 	}
 	if _, ok := seatKeys["Team-1-Tank-1"]; !ok {
 		t.Fatalf("expected Tank seat, got %+v", seatKeys)
+	}
+}
+
+func TestJoinModeQueueWordHuntFiresAtPartialCohortSizes(t *testing.T) {
+	st := openTestStore(t)
+	cleaner := st.NewTestCleaner(t)
+	ctx := context.Background()
+
+	slug := "wordhunt-" + uuid.NewString()
+	manifest := &gameclient.Manifest{
+		Modes: []gameclient.ModeManifest{{
+			Key:         "party",
+			DisplayName: "Word Hunt Party",
+			Min:         4,
+			Max:         9,
+			SeatTemplate: json.RawMessage(`{
+				"ClueGiver":{"displayName":"Clue Giver","name":["Red","Blue","Green"],"min":2,"max":3,"sizeForQueue":2},
+				"Guesser":{"count":6,"min":2,"max":6,"sizeForQueue":4}
+			}`),
+		}},
+		Status:     gameclient.StatusResponse{Game: "Word Hunt", Version: "1.0.0"},
+		ETag:       `"wh"`,
+		RawJSON:    []byte(`{"modes":[{"key":"party"}]}`),
+		SHA256Hash: uuid.NewString(),
+	}
+	result, err := st.RegisterGame(ctx, RegisterGameParams{
+		Slug:       slug,
+		PlayURL:    "https://play.example.com/" + slug,
+		APIBaseURL: "https://api.example.com/" + slug,
+	}, manifest)
+	if err != nil {
+		t.Fatalf("RegisterGame: %v", err)
+	}
+	cleaner.TrackGame(result.Game.ID)
+
+	modes, err := st.ListGameModesByGameID(ctx, result.Game.ID)
+	if err != nil {
+		t.Fatalf("ListGameModesByGameID: %v", err)
+	}
+	queues, err := st.ListModeQueuesByModeID(ctx, modes[0].ID)
+	if err != nil {
+		t.Fatalf("ListModeQueuesByModeID: %v", err)
+	}
+	if queues[0].PlayersToStart != 6 {
+		t.Fatalf("players_to_start = %d, want 6", queues[0].PlayersToStart)
+	}
+	queueID := queues[0].ID
+
+	users := make([]uuid.UUID, 6)
+	for i := range users {
+		user, err := st.CreateUser(ctx, CreateUserParams{Email: fmt.Sprintf("wh-%d-%s@example.com", i, uuid.NewString())})
+		if err != nil {
+			t.Fatalf("CreateUser: %v", err)
+		}
+		cleaner.TrackUser(user.ID)
+		users[i] = user.ID
+	}
+
+	paths := []string{"ClueGiver", "ClueGiver", "Guesser", "Guesser", "Guesser", "Guesser"}
+	var last *QueueJoinResult
+	for i, path := range paths {
+		last, err = st.JoinModeQueue(ctx, queueID, users[i], path)
+		if err != nil {
+			t.Fatalf("join %d (%s): %v", i, path, err)
+		}
+		if i < len(paths)-1 && last.Status != QueueStatusWaiting {
+			t.Fatalf("expected waiting after join %d, got %s", i, last.Status)
+		}
+	}
+	if last.Status != QueueStatusMatched || last.SessionID == nil {
+		t.Fatalf("expected match on 6th join, got %+v", last)
+	}
+
+	participants, err := st.ListSessionSeatAssignments(ctx, *last.SessionID)
+	if err != nil {
+		t.Fatalf("ListSessionSeatAssignments: %v", err)
+	}
+	if len(participants) != 6 {
+		t.Fatalf("expected 6 participants, got %d", len(participants))
+	}
+	seatKeys := map[string]struct{}{}
+	for _, p := range participants {
+		seatKeys[p.SeatKey] = struct{}{}
+	}
+	for _, key := range []string{"ClueGiver-Red", "ClueGiver-Blue", "Guesser-1", "Guesser-2", "Guesser-3", "Guesser-4"} {
+		if _, ok := seatKeys[key]; !ok {
+			t.Fatalf("missing seat %q, got %+v", key, seatKeys)
+		}
+	}
+	if _, ok := seatKeys["ClueGiver-Green"]; ok {
+		t.Fatalf("Green should not be assigned at fire size 2 CG")
 	}
 }

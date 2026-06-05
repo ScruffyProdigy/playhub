@@ -36,6 +36,8 @@ type ActiveQueue {
   status: QueueStatus!
   queuedCount: Int
   queuePath: String
+  """Human label for queuePath from the mode seatTemplate (e.g. Clue Giver)."""
+  queuePathDisplayName: String
   joinUrl: String
 }
 

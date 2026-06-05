@@ -87,6 +87,13 @@ func expandRoot(root map[string]any) ([]leafBuild, error) {
 		if err != nil {
 			return nil, err
 		}
+		if len(pascal) > 1 {
+			for i := range sub {
+				if sub[i].queuePath == "" {
+					sub[i].queuePath = kind
+				}
+			}
+		}
 		out = append(out, sub...)
 	}
 	return out, nil
@@ -179,6 +186,15 @@ func expandMultiChildren(pascal []string, node map[string]any, prefix []string) 
 }
 
 func expandLeafDimension(kind string, node map[string]any, prefix []string) ([]leafBuild, error) {
+	if names, ok := nodeNames(node); ok {
+		out := make([]leafBuild, len(names))
+		for i, name := range names {
+			segments := append(append([]string{}, prefix...), kind, name)
+			out[i] = leafBuild{segments: segments}
+		}
+		return out, nil
+	}
+
 	n, err := nodeCount(node)
 	if err != nil {
 		return nil, err
@@ -213,13 +229,36 @@ func hasCountKey(node map[string]any) bool {
 	return ok
 }
 
+func nodeNames(node map[string]any) ([]string, bool) {
+	raw, ok := node["name"]
+	if !ok {
+		return nil, false
+	}
+	items, ok := raw.([]any)
+	if !ok || len(items) == 0 {
+		return nil, false
+	}
+	names := make([]string, len(items))
+	for i, item := range items {
+		s, ok := item.(string)
+		if !ok || strings.TrimSpace(s) == "" {
+			return nil, false
+		}
+		names[i] = strings.TrimSpace(s)
+	}
+	return names, true
+}
+
 func nodeCount(node map[string]any) (int, error) {
+	if _, ok := nodeNames(node); ok {
+		return 0, fmt.Errorf("seattemplate: node uses name and must not also use count")
+	}
 	raw, ok := node["count"]
 	if !ok {
 		if isEmptyObject(node) {
 			return 1, nil
 		}
-		return 0, fmt.Errorf("seattemplate: node requires count or must be {}")
+		return 0, fmt.Errorf("seattemplate: node requires count, name, or must be {}")
 	}
 	switch v := raw.(type) {
 	case float64:

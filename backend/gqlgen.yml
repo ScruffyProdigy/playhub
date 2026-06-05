@@ -25,6 +25,8 @@ models:
     fields:
       seats:
         resolver: true
+      queuePaths:
+        resolver: true
       queues:
         resolver: true
   ModeQueue:
