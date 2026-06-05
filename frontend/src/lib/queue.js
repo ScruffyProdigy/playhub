@@ -3,10 +3,11 @@ import { getGraphQLWsUrl } from './env'
 import { graphqlRequest } from './graphql'
 
 const JOIN_QUEUE_MUTATION = `
-  mutation JoinQueue($queueId: ID!) {
-    joinQueue(queueId: $queueId) {
+  mutation JoinQueue($queueId: ID!, $queuePath: String) {
+    joinQueue(queueId: $queueId, queuePath: $queuePath) {
       queued
       queuedCount
+      queuePath
       sessionId
       joinUrl
       message
@@ -21,6 +22,7 @@ const MY_QUEUE_STATUS_QUERY = `
       sessionId
       joinUrl
       queuedCount
+      queuePath
     }
   }
 `
@@ -112,8 +114,12 @@ export function clearSubscriptionAuthCache() {
   }
 }
 
-export async function joinQueue(queueId) {
-  const data = await graphqlRequest(JOIN_QUEUE_MUTATION, { queueId })
+export async function joinQueue(queueId, queuePath) {
+  const variables = { queueId }
+  if (typeof queuePath === 'string' && queuePath.trim()) {
+    variables.queuePath = queuePath.trim()
+  }
+  const data = await graphqlRequest(JOIN_QUEUE_MUTATION, variables)
   return data.joinQueue
 }
 

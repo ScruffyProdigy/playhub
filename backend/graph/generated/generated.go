@@ -58,6 +58,7 @@ type ComplexityRoot struct {
 		GameName    func(childComplexity int) int
 		JoinURL     func(childComplexity int) int
 		QueueID     func(childComplexity int) int
+		QueuePath   func(childComplexity int) int
 		QueuedCount func(childComplexity int) int
 		Status      func(childComplexity int) int
 	}
@@ -102,6 +103,7 @@ type ComplexityRoot struct {
 	}
 
 	GameModeSeat struct {
+		QueuePath func(childComplexity int) int
 		Role      func(childComplexity int) int
 		SeatKey   func(childComplexity int) int
 		SortOrder func(childComplexity int) int
@@ -111,6 +113,7 @@ type ComplexityRoot struct {
 	JoinResult struct {
 		JoinURL     func(childComplexity int) int
 		Message     func(childComplexity int) int
+		QueuePath   func(childComplexity int) int
 		Queued      func(childComplexity int) int
 		QueuedCount func(childComplexity int) int
 		SessionID   func(childComplexity int) int
@@ -128,7 +131,7 @@ type ComplexityRoot struct {
 		CompleteSignInWithCode func(childComplexity int, email string, code string) int
 		CompleteSignInWithLink func(childComplexity int, token string) int
 		GrantGood              func(childComplexity int, userID string, goodID string, quantity *int) int
-		JoinQueue              func(childComplexity int, queueID string) int
+		JoinQueue              func(childComplexity int, queueID string, queuePath *string) int
 		LeaveQueue             func(childComplexity int, queueID string) int
 		Logout                 func(childComplexity int) int
 		RefreshGameManifest    func(childComplexity int, gameID string) int
@@ -215,7 +218,7 @@ type ModeQueueResolver interface {
 	WaitingCount(ctx context.Context, obj *model.ModeQueue) (int, error)
 }
 type MutationResolver interface {
-	JoinQueue(ctx context.Context, queueID string) (*model.JoinResult, error)
+	JoinQueue(ctx context.Context, queueID string, queuePath *string) (*model.JoinResult, error)
 	LeaveQueue(ctx context.Context, queueID string) (bool, error)
 	GrantGood(ctx context.Context, userID string, goodID string, quantity *int) (bool, error)
 	RevokeGood(ctx context.Context, userID string, goodID string, quantity *int) (bool, error)
@@ -298,6 +301,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ActiveQueue.QueueID(childComplexity), true
+	case "ActiveQueue.queuePath":
+		if e.complexity.ActiveQueue.QueuePath == nil {
+			break
+		}
+
+		return e.complexity.ActiveQueue.QueuePath(childComplexity), true
 	case "ActiveQueue.queuedCount":
 		if e.complexity.ActiveQueue.QueuedCount == nil {
 			break
@@ -482,6 +491,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.GameMode.Status(childComplexity), true
 
+	case "GameModeSeat.queuePath":
+		if e.complexity.GameModeSeat.QueuePath == nil {
+			break
+		}
+
+		return e.complexity.GameModeSeat.QueuePath(childComplexity), true
 	case "GameModeSeat.role":
 		if e.complexity.GameModeSeat.Role == nil {
 			break
@@ -519,6 +534,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.JoinResult.Message(childComplexity), true
+	case "JoinResult.queuePath":
+		if e.complexity.JoinResult.QueuePath == nil {
+			break
+		}
+
+		return e.complexity.JoinResult.QueuePath(childComplexity), true
 	case "JoinResult.queued":
 		if e.complexity.JoinResult.Queued == nil {
 			break
@@ -612,7 +633,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.JoinQueue(childComplexity, args["queueId"].(string)), true
+		return e.complexity.Mutation.JoinQueue(childComplexity, args["queueId"].(string), args["queuePath"].(*string)), true
 	case "Mutation.leaveQueue":
 		if e.complexity.Mutation.LeaveQueue == nil {
 			break
@@ -1133,6 +1154,8 @@ type GameModeSeat {
   seatKey: String!
   team: String
   role: String
+  """Lobby join bucket derived from seatTemplate (empty for fifo modes)."""
+  queuePath: String
   sortOrder: Int!
 }
 
@@ -1195,7 +1218,7 @@ type Subscription {
 
 type Mutation {
   # Games & sessions
-  joinQueue(queueId: ID!): JoinResult!
+  joinQueue(queueId: ID!, queuePath: String): JoinResult!
   leaveQueue(queueId: ID!): Boolean!
 
   # Digital goods (simple entitlement grant)
@@ -1228,6 +1251,7 @@ type JoinResult {
   sessionId: ID
   joinUrl: String
   queuedCount: Int
+  queuePath: String
   # Set when the player was removed from another game's queue to join this one.
   message: String
 }
@@ -1239,6 +1263,7 @@ type ActiveQueue {
   gameName: String!
   status: QueueStatus!
   queuedCount: Int
+  queuePath: String
   joinUrl: String
 }
 
@@ -1403,6 +1428,11 @@ func (ec *executionContext) field_Mutation_joinQueue_args(ctx context.Context, r
 		return nil, err
 	}
 	args["queueId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "queuePath", ec.unmarshalOString2ᚖstring)
+	if err != nil {
+		return nil, err
+	}
+	args["queuePath"] = arg1
 	return args, nil
 }
 
@@ -1835,6 +1865,35 @@ func (ec *executionContext) fieldContext_ActiveQueue_queuedCount(_ context.Conte
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ActiveQueue_queuePath(ctx context.Context, field graphql.CollectedField, obj *model.ActiveQueue) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ActiveQueue_queuePath,
+		func(ctx context.Context) (any, error) {
+			return obj.QueuePath, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ActiveQueue_queuePath(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActiveQueue",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2702,6 +2761,8 @@ func (ec *executionContext) fieldContext_GameMode_seats(_ context.Context, field
 				return ec.fieldContext_GameModeSeat_team(ctx, field)
 			case "role":
 				return ec.fieldContext_GameModeSeat_role(ctx, field)
+			case "queuePath":
+				return ec.fieldContext_GameModeSeat_queuePath(ctx, field)
 			case "sortOrder":
 				return ec.fieldContext_GameModeSeat_sortOrder(ctx, field)
 			}
@@ -2827,6 +2888,35 @@ func (ec *executionContext) _GameModeSeat_role(ctx context.Context, field graphq
 }
 
 func (ec *executionContext) fieldContext_GameModeSeat_role(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GameModeSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GameModeSeat_queuePath(ctx context.Context, field graphql.CollectedField, obj *model.GameModeSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GameModeSeat_queuePath,
+		func(ctx context.Context) (any, error) {
+			return obj.QueuePath, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_GameModeSeat_queuePath(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "GameModeSeat",
 		Field:      field,
@@ -2979,6 +3069,35 @@ func (ec *executionContext) fieldContext_JoinResult_queuedCount(_ context.Contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _JoinResult_queuePath(ctx context.Context, field graphql.CollectedField, obj *model.JoinResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_JoinResult_queuePath,
+		func(ctx context.Context) (any, error) {
+			return obj.QueuePath, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_JoinResult_queuePath(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "JoinResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3166,7 +3285,7 @@ func (ec *executionContext) _Mutation_joinQueue(ctx context.Context, field graph
 		ec.fieldContext_Mutation_joinQueue,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().JoinQueue(ctx, fc.Args["queueId"].(string))
+			return ec.resolvers.Mutation().JoinQueue(ctx, fc.Args["queueId"].(string), fc.Args["queuePath"].(*string))
 		},
 		nil,
 		ec.marshalNJoinResult2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐJoinResult,
@@ -3191,6 +3310,8 @@ func (ec *executionContext) fieldContext_Mutation_joinQueue(ctx context.Context,
 				return ec.fieldContext_JoinResult_joinUrl(ctx, field)
 			case "queuedCount":
 				return ec.fieldContext_JoinResult_queuedCount(ctx, field)
+			case "queuePath":
+				return ec.fieldContext_JoinResult_queuePath(ctx, field)
 			case "message":
 				return ec.fieldContext_JoinResult_message(ctx, field)
 			}
@@ -4140,6 +4261,8 @@ func (ec *executionContext) fieldContext_Query_myQueueStatus(ctx context.Context
 				return ec.fieldContext_JoinResult_joinUrl(ctx, field)
 			case "queuedCount":
 				return ec.fieldContext_JoinResult_queuedCount(ctx, field)
+			case "queuePath":
+				return ec.fieldContext_JoinResult_queuePath(ctx, field)
 			case "message":
 				return ec.fieldContext_JoinResult_message(ctx, field)
 			}
@@ -4194,6 +4317,8 @@ func (ec *executionContext) fieldContext_Query_myActiveQueue(_ context.Context, 
 				return ec.fieldContext_ActiveQueue_status(ctx, field)
 			case "queuedCount":
 				return ec.fieldContext_ActiveQueue_queuedCount(ctx, field)
+			case "queuePath":
+				return ec.fieldContext_ActiveQueue_queuePath(ctx, field)
 			case "joinUrl":
 				return ec.fieldContext_ActiveQueue_joinUrl(ctx, field)
 			}
@@ -6772,6 +6897,8 @@ func (ec *executionContext) _ActiveQueue(ctx context.Context, sel ast.SelectionS
 			}
 		case "queuedCount":
 			out.Values[i] = ec._ActiveQueue_queuedCount(ctx, field, obj)
+		case "queuePath":
+			out.Values[i] = ec._ActiveQueue_queuePath(ctx, field, obj)
 		case "joinUrl":
 			out.Values[i] = ec._ActiveQueue_joinUrl(ctx, field, obj)
 		default:
@@ -7188,6 +7315,8 @@ func (ec *executionContext) _GameModeSeat(ctx context.Context, sel ast.Selection
 			out.Values[i] = ec._GameModeSeat_team(ctx, field, obj)
 		case "role":
 			out.Values[i] = ec._GameModeSeat_role(ctx, field, obj)
+		case "queuePath":
+			out.Values[i] = ec._GameModeSeat_queuePath(ctx, field, obj)
 		case "sortOrder":
 			out.Values[i] = ec._GameModeSeat_sortOrder(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -7238,6 +7367,8 @@ func (ec *executionContext) _JoinResult(ctx context.Context, sel ast.SelectionSe
 			out.Values[i] = ec._JoinResult_joinUrl(ctx, field, obj)
 		case "queuedCount":
 			out.Values[i] = ec._JoinResult_queuedCount(ctx, field, obj)
+		case "queuePath":
+			out.Values[i] = ec._JoinResult_queuePath(ctx, field, obj)
 		case "message":
 			out.Values[i] = ec._JoinResult_message(ctx, field, obj)
 		default:

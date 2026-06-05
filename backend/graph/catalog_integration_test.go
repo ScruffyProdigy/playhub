@@ -32,12 +32,7 @@ func newMockGameAPIServer(t *testing.T) *httptest.Server {
 				"modes": [{
 					"key": "duel",
 					"displayName": "Duel",
-					"minPlayers": 2,
-					"maxPlayers": 2,
-					"seats": [
-						{"key": "p1", "team": "A"},
-						{"key": "p2", "team": "B"}
-					]
+					"seatTemplate": {"count": 2}
 				}]
 			}`))
 		default:

@@ -22,7 +22,8 @@ func (s *Store) GetUserModeQueueView(ctx context.Context, modeQueueID, userID uu
 		return nil, err
 	}
 
-	if _, err := s.GetWaitingModeQueueEntry(ctx, modeQueueID, userID); err == nil {
+	entry, err := s.GetWaitingModeQueueEntry(ctx, modeQueueID, userID)
+	if err == nil {
 		count, err := s.CountWaitingInModeQueue(ctx, modeQueueID)
 		if err != nil {
 			return nil, err
@@ -33,6 +34,7 @@ func (s *Store) GetUserModeQueueView(ctx context.Context, modeQueueID, userID uu
 			InQueue:     true,
 			Waiting:     true,
 			QueuedCount: count,
+			QueuePath:   entry.QueuePath,
 		}, nil
 	} else if !errors.Is(err, ErrNotFound) {
 		return nil, err

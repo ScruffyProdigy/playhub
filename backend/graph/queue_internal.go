@@ -10,7 +10,7 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
-func (r *mutationResolver) joinQueueInternal(ctx context.Context, modeQueueID uuid.UUID) (*model.JoinResult, error) {
+func (r *mutationResolver) joinQueueInternal(ctx context.Context, modeQueueID uuid.UUID, queuePath string) (*model.JoinResult, error) {
 	st, err := r.requireStore()
 	if err != nil {
 		return nil, err
@@ -21,7 +21,7 @@ func (r *mutationResolver) joinQueueInternal(ctx context.Context, modeQueueID uu
 		return nil, err
 	}
 
-	result, err := st.JoinModeQueue(ctx, modeQueueID, userID)
+	result, err := st.JoinModeQueue(ctx, modeQueueID, userID, queuePath)
 	if err != nil {
 		if errors.Is(err, store.ErrAlreadyMatched) {
 			return nil, fmt.Errorf("you already have an active match; finish or leave your current queue first")

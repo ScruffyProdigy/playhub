@@ -16,6 +16,7 @@ type UserActiveQueue struct {
 	Waiting     bool
 	Matched     bool
 	QueuedCount int
+	QueuePath   *string
 	SessionID   *uuid.UUID
 }
 
@@ -24,6 +25,10 @@ func (s *Store) GetUserActiveQueue(ctx context.Context, userID uuid.UUID) (*User
 	if waiting, err := s.getUserWaitingQueueAny(ctx, userID); err != nil {
 		return nil, err
 	} else if waiting != nil {
+		entry, err := s.GetWaitingModeQueueEntry(ctx, waiting.ModeQueueID, userID)
+		if err != nil {
+			return nil, err
+		}
 		count, err := s.CountWaitingInModeQueue(ctx, waiting.ModeQueueID)
 		if err != nil {
 			return nil, err
@@ -38,6 +43,7 @@ func (s *Store) GetUserActiveQueue(ctx context.Context, userID uuid.UUID) (*User
 			ModeQueueID: waiting.ModeQueueID,
 			Waiting:     true,
 			QueuedCount: count,
+			QueuePath:   entry.QueuePath,
 		}, nil
 	}
 

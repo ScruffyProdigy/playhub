@@ -68,12 +68,14 @@ type GameMode struct {
 }
 
 type GameModeSeat struct {
-	ID        uuid.UUID
-	ModeID    uuid.UUID
-	SeatKey   string
-	Team      *string
-	Role      *string
-	SortOrder int
+	ID          uuid.UUID
+	ModeID      uuid.UUID
+	SeatKey     string
+	Team        *string
+	Role        *string
+	AffinityKey *string
+	QueuePath   *string
+	SortOrder   int
 }
 
 type ModeQueue struct {
@@ -117,6 +119,7 @@ type UserQueueView struct {
 	Waiting     bool
 	Matched     bool
 	QueuedCount int
+	QueuePath   *string
 	SessionID   *uuid.UUID
 }
 
@@ -139,6 +142,7 @@ type QueueJoinResult struct {
 	Status         string
 	SessionID      *uuid.UUID
 	QueuedCount    int
+	QueuePath      *string
 	NotifyUserIDs  []uuid.UUID
 	AlreadyInQueue bool
 	SwitchedFrom   *SwitchedFromQueue
@@ -150,6 +154,7 @@ type QueueEntry struct {
 	ModeQueueID *uuid.UUID
 	UserID      uuid.UUID
 	Status      string
+	QueuePath   *string
 	JoinedAt    time.Time
 }
 

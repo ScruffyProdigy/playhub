@@ -14,7 +14,7 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 
 ### ✅ Implemented
 - **Authentication**: Magic-link sign-in, session cookies, JWT seat tokens
-- **Catalog & matchmaking**: `registerGame`, mode queues, `joinQueue(queueId)`, handoff to game servers
+- **Catalog & matchmaking**: `registerGame`, mode queues, `joinQueue(queueId, queuePath)`, handoff to game servers
 - **Database-backed queries**: `games`, `game`, `session`, `goods`, `myInventory`, `player` (game service)
 - **Real-time**: `queueUpdated` subscription via Redis pub/sub
 - **Post-game**: `returnDestination`, `reportPlayerFinished`, `reportMatchResult` — see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md), [player-return-routing.md](./player-return-routing.md)
@@ -248,16 +248,19 @@ Status for a specific mode queue (per-game row sync).
 #### `joinQueue` ✅
 Start **looking for a group** in a mode queue (`queueId` from `game.modes.queues`). Requires authentication.
 
+- **Fifo modes** (no seat `queuePath` on the mode): omit `queuePath`.
+- **Composition modes**: pass the role bucket from the template (e.g. `queuePath: "DPS"`). Required when the mode defines multiple queue paths.
 - Only one **waiting** queue per player globally. Joining another game **leaves** the previous wait list and sets **`message`** explaining the switch.
 - Still **blocked** while **matched** in another queue until the player leaves or the match ends.
 
 ```graphql
 mutation {
-  joinQueue(queueId: "a3000000-0000-4000-8000-000000000001") {
+  joinQueue(queueId: "a3000000-0000-4000-8000-000000000001", queuePath: "DPS") {
     queued
     sessionId
     joinUrl
     queuedCount
+    queuePath
     message
   }
 }

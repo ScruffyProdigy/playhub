@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/graph/model"
 	"github.com/scruffyprodigy/playhub/internal/store"
@@ -14,6 +16,17 @@ func joinSwitchMessage(from *store.SwitchedFromQueue) *string {
 	return &msg
 }
 
+func joinResultQueuePath(path *string) *string {
+	if path == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*path)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
 // joinResultFromQueueJoin is the joinQueue mutation response for waiters: always "in queue"
 // from the client's perspective. Match details are delivered via queueUpdated / myQueueStatus.
 func joinResultFromQueueJoin(result *store.QueueJoinResult) *model.JoinResult {
@@ -25,6 +38,7 @@ func joinResultFromQueueJoin(result *store.QueueJoinResult) *model.JoinResult {
 	return &model.JoinResult{
 		Queued:      true,
 		QueuedCount: &count,
+		QueuePath:   joinResultQueuePath(result.QueuePath),
 		Message:     joinSwitchMessage(result.SwitchedFrom),
 	}
 }
@@ -41,6 +55,7 @@ func joinResultAfterJoin(result *store.QueueJoinResult, userID uuid.UUID, launch
 		resp := &model.JoinResult{
 			Queued:    false,
 			SessionID: &sessionID,
+			QueuePath: joinResultQueuePath(result.QueuePath),
 			Message:   joinSwitchMessage(result.SwitchedFrom),
 		}
 		if launchURLs != nil {
@@ -64,6 +79,7 @@ func joinResultFromQueueView(view *store.UserQueueView, launchURL string) *model
 		return &model.JoinResult{
 			Queued:      true,
 			QueuedCount: &count,
+			QueuePath:   joinResultQueuePath(view.QueuePath),
 		}
 	}
 

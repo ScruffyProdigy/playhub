@@ -13,7 +13,7 @@ UPDATE games
 SET status = 'inactive'
 WHERE id = 'a1000000-0000-4000-8000-000000000002';
 
-INSERT INTO game_modes (id, game_id, mode_key, display_name, min_players, max_players, best_of, status)
+INSERT INTO game_modes (id, game_id, mode_key, display_name, min_players, max_players, best_of, seat_template, status)
 VALUES (
     'a2000000-0000-4000-8000-000000000001',
     'a1000000-0000-4000-8000-000000000001',
@@ -22,6 +22,7 @@ VALUES (
     2,
     2,
     5,
+    '{"count": 2}'::jsonb,
     'active'
 )
 ON CONFLICT (game_id, mode_key) DO UPDATE SET
@@ -34,8 +35,8 @@ ON CONFLICT (game_id, mode_key) DO UPDATE SET
 
 INSERT INTO game_mode_seats (mode_id, seat_key, sort_order)
 VALUES
-    ('a2000000-0000-4000-8000-000000000001', 'a', 0),
-    ('a2000000-0000-4000-8000-000000000001', 'b', 1)
+    ('a2000000-0000-4000-8000-000000000001', '1', 0),
+    ('a2000000-0000-4000-8000-000000000001', '2', 1)
 ON CONFLICT (mode_id, seat_key) DO NOTHING;
 
 INSERT INTO mode_queues (id, mode_id, name, players_to_start, status, is_default)

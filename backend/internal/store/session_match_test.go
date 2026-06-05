@@ -25,10 +25,10 @@ func TestRequeueAfterReturnUsesNewSessionNotStaleActive(t *testing.T) {
 	}
 	cleaner.TrackUser(userB.ID)
 
-	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, ""); err != nil {
 		t.Fatalf("first join A: %v", err)
 	}
-	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, ""); err != nil {
 		t.Fatalf("first join B: %v", err)
 	}
 
@@ -57,10 +57,10 @@ func TestRequeueAfterReturnUsesNewSessionNotStaleActive(t *testing.T) {
 		t.Fatalf("first session should still be active before re-queue, got %q", firstSession.Status)
 	}
 
-	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, ""); err != nil {
 		t.Fatalf("second join A: %v", err)
 	}
-	second, err := st.JoinModeQueue(ctx, queueID, userB.ID)
+	second, err := st.JoinModeQueue(ctx, queueID, userB.ID, "")
 	if err != nil {
 		t.Fatalf("second join B: %v", err)
 	}

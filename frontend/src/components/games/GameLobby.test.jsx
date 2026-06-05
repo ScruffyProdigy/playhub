@@ -5,10 +5,14 @@ import { AuthProvider } from '../auth/AuthProvider'
 import { mockAuthenticatedSession, mockUnauthenticatedSession } from '../../test/setup'
 import * as games from '../../lib/games'
 
-vi.mock('../../lib/games', () => ({
-  fetchGames: vi.fn(),
-  defaultQueueForGame: vi.fn((game) => game?.modes?.[0]?.queues?.[0] ?? null),
-}))
+vi.mock('../../lib/games', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    fetchGames: vi.fn(),
+    defaultQueueForGame: vi.fn((game) => game?.modes?.[0]?.queues?.[0] ?? null),
+  }
+})
 
 function renderGameLobby() {
   return render(
@@ -30,6 +34,7 @@ describe('GameLobby', () => {
         modes: [
           {
             modeKey: 'duel',
+            seats: [{ queuePath: null }, { queuePath: null }],
             queues: [{ id: 'queue-1', name: 'Default', status: 'active' }],
           },
         ],

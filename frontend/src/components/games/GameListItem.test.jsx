@@ -19,6 +19,7 @@ const catalogGame = {
   modes: [
     {
       modeKey: 'duel',
+      seats: [{ queuePath: null }, { queuePath: null }],
       queues: [{ id: 'queue-1', name: 'Default', status: 'active' }],
     },
   ],
@@ -76,5 +77,33 @@ describe('GameListItem', () => {
       'href',
       'http://localhost:5174/?match=session-1&token=eyJ.test',
     )
+  })
+
+  it('shows composition join buttons inside a Look for group panel', () => {
+    const compositionGame = {
+      ...catalogGame,
+      modes: [
+        {
+          modeKey: 'quick-play',
+          seats: [
+            { queuePath: 'DPS' },
+            { queuePath: 'Tank' },
+            { queuePath: 'Support' },
+          ],
+          queues: [{ id: 'queue-comp', name: 'Default', status: 'active' }],
+        },
+      ],
+    }
+
+    render(
+      <ul>
+        <GameListItem game={compositionGame} activeQueue={null} onQueueChange={vi.fn()} />
+      </ul>,
+    )
+
+    expect(screen.getByRole('region', { name: 'Look for group' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Join as DPS' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Join as Tank' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Join as Support' })).toBeInTheDocument()
   })
 })

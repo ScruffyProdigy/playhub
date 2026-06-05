@@ -46,12 +46,13 @@ describe('useGameQueue', () => {
     const { result } = renderHook(() => useGameQueue(queueId))
 
     await act(async () => {
-      await result.current.handleJoin()
+      await result.current.handleJoin('DPS')
     })
 
     await waitFor(() => {
       expect(result.current.queueState).toBe('waiting')
-      expect(queue.joinQueue).toHaveBeenCalledWith(queueId)
+      expect(result.current.selectedQueuePath).toBe('DPS')
+      expect(queue.joinQueue).toHaveBeenCalledWith(queueId, 'DPS')
     })
   })
 

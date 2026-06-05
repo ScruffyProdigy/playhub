@@ -168,6 +168,36 @@
   gap: 0.5rem;
 }
 
+.join-group-panel {
+  flex-shrink: 0;
+  min-width: 10rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  text-align: center;
+}
+
+.join-group-panel__label {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #b8bcff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.join-group-panel__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.join-group-panel__status {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
 .game-list-button {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
@@ -230,6 +260,18 @@
   .panel-copy,
   .user-card .user-name,
   .game-list-meta {
+    color: #666;
+  }
+
+  .join-group-panel {
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .join-group-panel__label {
+    color: #5558aa;
+  }
+
+  .join-group-panel__status {
     color: #666;
   }
 

@@ -10,22 +10,21 @@ import (
 	"net/http"
 	"strings"
 	"time"
-)
 
-// SeatManifest is one seat in a game mode definition.
-type SeatManifest struct {
-	Key  string  `json:"key"`
-	Team *string `json:"team,omitempty"`
-	Role *string `json:"role,omitempty"`
-}
+	"github.com/scruffyprodigy/playhub/internal/seattemplate"
+)
 
 // ModeManifest is one playable mode from GET /api/v1/game-modes.
 type ModeManifest struct {
-	Key         string         `json:"key"`
-	DisplayName string         `json:"displayName"`
-	MinPlayers  int            `json:"minPlayers"`
-	MaxPlayers  int            `json:"maxPlayers"`
-	Seats       []SeatManifest `json:"seats"`
+	Key          string          `json:"key"`
+	DisplayName  string          `json:"displayName"`
+	Min          int             `json:"min"`
+	Max          int             `json:"max"`
+	MinPlayers   int             `json:"minPlayers"`
+	MaxPlayers   int             `json:"maxPlayers"`
+	SizeForQueue int             `json:"sizeForQueue"`
+	SeatTemplate json.RawMessage `json:"seatTemplate"`
+	Seats        json.RawMessage `json:"seats"`
 }
 
 // StatusResponse is returned by GET /api/v1/status.
@@ -186,22 +185,43 @@ func validateModes(modes []ModeManifest) error {
 		if key == "" {
 			return fmt.Errorf("gameclient: game-modes: mode key is required")
 		}
-		if len(mode.Seats) == 0 {
-			return fmt.Errorf("gameclient: game-modes: mode %q must define seats", key)
+		if len(mode.Seats) > 0 && string(mode.Seats) != "null" {
+			return fmt.Errorf("gameclient: game-modes: mode %q uses flat seats[]; use seatTemplate", key)
 		}
-		seen := make(map[string]struct{}, len(mode.Seats))
-		for _, seat := range mode.Seats {
-			seatKey := strings.TrimSpace(seat.Key)
-			if seatKey == "" {
-				return fmt.Errorf("gameclient: game-modes: mode %q has empty seat key", key)
+		if len(mode.SeatTemplate) == 0 {
+			return fmt.Errorf("gameclient: game-modes: mode %q must define seatTemplate", key)
+		}
+		leaves, err := seattemplate.Expand(mode.SeatTemplate)
+		if err != nil {
+			return fmt.Errorf("gameclient: game-modes: mode %q: %w", key, err)
+		}
+		seen := make(map[string]struct{}, len(leaves))
+		for _, leaf := range leaves {
+			if _, ok := seen[leaf.SeatKey]; ok {
+				return fmt.Errorf("gameclient: game-modes: mode %q duplicate seat %q", key, leaf.SeatKey)
 			}
-			if _, ok := seen[seatKey]; ok {
-				return fmt.Errorf("gameclient: game-modes: mode %q duplicate seat %q", key, seatKey)
-			}
-			seen[seatKey] = struct{}{}
+			seen[leaf.SeatKey] = struct{}{}
 		}
 	}
 	return nil
+}
+
+// ExpandModeSeats expands a mode's seatTemplate into catalog leaves.
+func ExpandModeSeats(mode ModeManifest) ([]seattemplate.Leaf, error) {
+	return seattemplate.Expand(mode.SeatTemplate)
+}
+
+// ModePlayerBounds returns min/max players for a mode after template expansion.
+func ModePlayerBounds(mode ModeManifest, leafCount int) (int, int) {
+	min := mode.Min
+	if min <= 0 {
+		min = mode.MinPlayers
+	}
+	max := mode.Max
+	if max <= 0 {
+		max = mode.MaxPlayers
+	}
+	return seattemplate.DerivedPlayerBounds(leafCount, min, max)
 }
 
 // ErrManifestNotModified means the remote manifest etag is unchanged.

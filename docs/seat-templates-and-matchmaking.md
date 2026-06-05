@@ -145,8 +145,8 @@ Walk the template; register a queue at each [branch endpoint](#queue-path-algori
 
 | Paths | UI |
 |-------|-----|
-| 1 (`""`) | **Look for group** (fifo; `joinQueue` in API) |
-| 2+ | **Join as …** per path (composition) |
+| 1 (`""`) | **Look for group** (single button; fifo; `joinQueue` in API) |
+| 2+ | **Look for group** panel with **Join as …** per path (composition) |
 
 **Algorithm**
 

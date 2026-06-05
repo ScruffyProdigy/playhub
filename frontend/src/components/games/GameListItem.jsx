@@ -1,4 +1,4 @@
-import { defaultQueueForGame } from '../../lib/games'
+import { defaultQueueForGame, joinGroupOptionsForGame } from '../../lib/games'
 import { activeMatchBlockedLine } from '../../lib/playerCopy'
 import GameListItemInfo from './GameListItemInfo'
 import GameQueueActions from './GameQueueActions'
@@ -6,6 +6,7 @@ import { useGameQueue } from './useGameQueue'
 
 export default function GameListItem({ game, activeQueue, onQueueChange }) {
   const defaultQueue = defaultQueueForGame(game)
+  const joinOptions = joinGroupOptionsForGame(game)
 
   const isThisQueue =
     defaultQueue?.id && activeQueue?.queueId && activeQueue.queueId === defaultQueue.id
@@ -21,8 +22,8 @@ export default function GameListItem({ game, activeQueue, onQueueChange }) {
     queue.queueState === 'idle' &&
     activeQueue.status === 'MATCHED'
 
-  async function handleJoin() {
-    await queue.handleJoin()
+  async function handleJoin(queuePath) {
+    await queue.handleJoin(queuePath)
     await onQueueChange?.()
   }
 
@@ -46,10 +47,12 @@ export default function GameListItem({ game, activeQueue, onQueueChange }) {
       />
       {showRowActions ? (
         <GameQueueActions
+          joinOptions={joinOptions}
           queueState={queue.queueState}
           joinUrl={queue.joinUrl}
           busy={queue.busy}
-          onJoin={handleJoin}
+          selectedQueuePath={queue.selectedQueuePath}
+          onJoin={queue.handleJoin}
           onLeave={handleLeave}
           disabled={!defaultQueue || blockedActiveMatch}
         />

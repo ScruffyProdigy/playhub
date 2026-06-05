@@ -23,7 +23,7 @@ type Subscription {
 
 type Mutation {
   # Games & sessions
-  joinQueue(queueId: ID!): JoinResult!
+  joinQueue(queueId: ID!, queuePath: String): JoinResult!
   leaveQueue(queueId: ID!): Boolean!
 
   # Digital goods (simple entitlement grant)

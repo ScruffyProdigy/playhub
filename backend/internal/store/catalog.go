@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/internal/gameclient"
+	"github.com/scruffyprodigy/playhub/internal/seattemplate"
 )
 
 const (
@@ -175,21 +177,19 @@ func applyManifestTx(ctx context.Context, tx *sql.Tx, game *Game, manifest *game
 			displayName = modeKey
 		}
 
-		minPlayers := modeDef.MinPlayers
-		if minPlayers <= 0 {
-			minPlayers = len(modeDef.Seats)
+		leaves, err := gameclient.ExpandModeSeats(modeDef)
+		if err != nil {
+			return nil, false, fmt.Errorf("store: mode %q: %w", modeKey, err)
 		}
-		maxPlayers := modeDef.MaxPlayers
-		if maxPlayers <= 0 {
-			maxPlayers = len(modeDef.Seats)
-		}
+		leafCount := len(leaves)
+		minPlayers, maxPlayers := gameclient.ModePlayerBounds(modeDef, leafCount)
 
-		mode, err := upsertGameModeTx(ctx, tx, game.ID, modeKey, displayName, minPlayers, maxPlayers)
+		mode, err := upsertGameModeTx(ctx, tx, game.ID, modeKey, displayName, minPlayers, maxPlayers, modeDef.SeatTemplate)
 		if err != nil {
 			return nil, false, err
 		}
 
-		newSeatKeys := seatKeysFromManifest(modeDef.Seats)
+		newSeatKeys := seatKeysFromLeaves(leaves)
 		oldSeatKeys, err := listModeSeatKeysTx(ctx, tx, mode.ID)
 		if err != nil {
 			return nil, false, err
@@ -203,11 +203,11 @@ func applyManifestTx(ctx context.Context, tx *sql.Tx, game *Game, manifest *game
 			kicked = append(kicked, k...)
 		}
 
-		if err := replaceModeSeatsTx(ctx, tx, mode.ID, modeDef.Seats); err != nil {
+		if err := replaceModeSeatsFromLeavesTx(ctx, tx, mode.ID, leaves); err != nil {
 			return nil, false, err
 		}
 
-		playersToStart := len(modeDef.Seats)
+		playersToStart := leafCount
 		if _, err := ensureDefaultModeQueueTx(ctx, tx, mode.ID, playersToStart); err != nil {
 			return nil, false, err
 		}
@@ -236,7 +236,7 @@ func (s *Store) ListGameModesByGameID(ctx context.Context, gameID uuid.UUID) ([]
 
 func (s *Store) ListGameModeSeats(ctx context.Context, modeID uuid.UUID) ([]GameModeSeat, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, mode_id, seat_key, team, role, sort_order
+		SELECT id, mode_id, seat_key, team, role, affinity_key, queue_path, sort_order
 		FROM game_mode_seats
 		WHERE mode_id = $1
 		ORDER BY sort_order ASC, seat_key ASC
@@ -249,8 +249,8 @@ func (s *Store) ListGameModeSeats(ctx context.Context, modeID uuid.UUID) ([]Game
 	var seats []GameModeSeat
 	for rows.Next() {
 		var seat GameModeSeat
-		var team, role sql.NullString
-		if err := rows.Scan(&seat.ID, &seat.ModeID, &seat.SeatKey, &team, &role, &seat.SortOrder); err != nil {
+		var team, role, affinity, queuePath sql.NullString
+		if err := rows.Scan(&seat.ID, &seat.ModeID, &seat.SeatKey, &team, &role, &affinity, &queuePath, &seat.SortOrder); err != nil {
 			return nil, err
 		}
 		if team.Valid {
@@ -258,6 +258,12 @@ func (s *Store) ListGameModeSeats(ctx context.Context, modeID uuid.UUID) ([]Game
 		}
 		if role.Valid {
 			seat.Role = &role.String
+		}
+		if affinity.Valid {
+			seat.AffinityKey = &affinity.String
+		}
+		if queuePath.Valid {
+			seat.QueuePath = &queuePath.String
 		}
 		seats = append(seats, seat)
 	}
@@ -350,18 +356,19 @@ func scanGameModes(rows *sql.Rows) ([]GameMode, error) {
 	return modes, rows.Err()
 }
 
-func upsertGameModeTx(ctx context.Context, tx *sql.Tx, gameID uuid.UUID, modeKey, displayName string, minPlayers, maxPlayers int) (*GameMode, error) {
+func upsertGameModeTx(ctx context.Context, tx *sql.Tx, gameID uuid.UUID, modeKey, displayName string, minPlayers, maxPlayers int, seatTemplate json.RawMessage) (*GameMode, error) {
 	row := tx.QueryRowContext(ctx, `
-		INSERT INTO game_modes (game_id, mode_key, display_name, min_players, max_players, status)
-		VALUES ($1, $2, $3, $4, $5, 'active')
+		INSERT INTO game_modes (game_id, mode_key, display_name, min_players, max_players, seat_template, status)
+		VALUES ($1, $2, $3, $4, $5, $6, 'active')
 		ON CONFLICT (game_id, mode_key) DO UPDATE SET
 			display_name = EXCLUDED.display_name,
 			min_players = EXCLUDED.min_players,
 			max_players = EXCLUDED.max_players,
+			seat_template = EXCLUDED.seat_template,
 			status = 'active',
 			updated_at = NOW()
 		RETURNING id, game_id, mode_key, display_name, min_players, max_players, status, created_at, updated_at
-	`, gameID, modeKey, displayName, minPlayers, maxPlayers)
+	`, gameID, modeKey, displayName, minPlayers, maxPlayers, seatTemplate)
 	return scanGameModeRow(row)
 }
 
@@ -377,17 +384,17 @@ func scanGameModeRow(row *sql.Row) (*GameMode, error) {
 	return &mode, nil
 }
 
-func replaceModeSeatsTx(ctx context.Context, tx *sql.Tx, modeID uuid.UUID, seats []gameclient.SeatManifest) error {
+func replaceModeSeatsFromLeavesTx(ctx context.Context, tx *sql.Tx, modeID uuid.UUID, leaves []seattemplate.Leaf) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM game_mode_seats WHERE mode_id = $1`, modeID); err != nil {
 		return err
 	}
-	for i, seat := range seats {
-		team := optionalString(seat.Team)
-		role := optionalString(seat.Role)
+	for i, leaf := range leaves {
+		affinity := optionalString(nonEmptyStringPtr(leaf.AffinityKey))
+		queuePath := optionalString(nonEmptyStringPtr(leaf.QueuePath))
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO game_mode_seats (mode_id, seat_key, team, role, sort_order)
-			VALUES ($1, $2, $3, $4, $5)
-		`, modeID, strings.TrimSpace(seat.Key), team, role, i); err != nil {
+			INSERT INTO game_mode_seats (mode_id, seat_key, team, role, affinity_key, queue_path, sort_order)
+			VALUES ($1, $2, NULL, NULL, $3, $4, $5)
+		`, modeID, strings.TrimSpace(leaf.SeatKey), affinity, queuePath, i); err != nil {
 			return err
 		}
 	}
@@ -535,13 +542,21 @@ func generateWebhookSecret() (string, error) {
 	return hex.EncodeToString(buf), nil
 }
 
-func seatKeysFromManifest(seats []gameclient.SeatManifest) []string {
-	keys := make([]string, len(seats))
-	for i, seat := range seats {
-		keys[i] = strings.TrimSpace(seat.Key)
+func seatKeysFromLeaves(leaves []seattemplate.Leaf) []string {
+	keys := make([]string, len(leaves))
+	for i, leaf := range leaves {
+		keys[i] = strings.TrimSpace(leaf.SeatKey)
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func nonEmptyStringPtr(value string) *string {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	v := strings.TrimSpace(value)
+	return &v
 }
 
 func equalStringSets(a, b []string) bool {

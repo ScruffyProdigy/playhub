@@ -16,6 +16,7 @@ type ActiveQueue struct {
 	GameName    string      `json:"gameName"`
 	Status      QueueStatus `json:"status"`
 	QueuedCount *int        `json:"queuedCount,omitempty"`
+	QueuePath   *string     `json:"queuePath,omitempty"`
 	JoinURL     *string     `json:"joinUrl,omitempty"`
 }
 
@@ -59,9 +60,11 @@ type GameMode struct {
 }
 
 type GameModeSeat struct {
-	SeatKey   string  `json:"seatKey"`
-	Team      *string `json:"team,omitempty"`
-	Role      *string `json:"role,omitempty"`
+	SeatKey string  `json:"seatKey"`
+	Team    *string `json:"team,omitempty"`
+	Role    *string `json:"role,omitempty"`
+	// Lobby join bucket derived from seatTemplate (empty for fifo modes).
+	QueuePath *string `json:"queuePath,omitempty"`
 	SortOrder int     `json:"sortOrder"`
 }
 
@@ -70,6 +73,7 @@ type JoinResult struct {
 	SessionID   *string `json:"sessionId,omitempty"`
 	JoinURL     *string `json:"joinUrl,omitempty"`
 	QueuedCount *int    `json:"queuedCount,omitempty"`
+	QueuePath   *string `json:"queuePath,omitempty"`
 	Message     *string `json:"message,omitempty"`
 }
 

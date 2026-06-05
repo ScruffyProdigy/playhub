@@ -6,6 +6,14 @@ export const LOOK_FOR_GROUP = 'Look for group'
 export const LOOKING_FOR_GROUP = 'Looking…'
 export const STOP_LOOKING = 'Stop looking'
 
+export function joinAsLabel(queuePath) {
+  return `Join as ${queuePath}`
+}
+
+export function waitingAsRoleLine(queuePath) {
+  return `Looking as ${queuePath}…`
+}
+
 export const LAUNCH_GAME = 'Launch game'
 export const LEAVE_MATCH = 'Leave match'
 

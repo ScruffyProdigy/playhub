@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/graph/generated"
@@ -17,12 +18,16 @@ import (
 )
 
 // JoinQueue is the resolver for the joinQueue field.
-func (r *mutationResolver) JoinQueue(ctx context.Context, queueID string) (*model.JoinResult, error) {
+func (r *mutationResolver) JoinQueue(ctx context.Context, queueID string, queuePath *string) (*model.JoinResult, error) {
 	modeQueueID, err := parseUUID(queueID, "queue id")
 	if err != nil {
 		return nil, err
 	}
-	return r.joinQueueInternal(ctx, modeQueueID)
+	path := ""
+	if queuePath != nil {
+		path = strings.TrimSpace(*queuePath)
+	}
+	return r.joinQueueInternal(ctx, modeQueueID, path)
 }
 
 // LeaveQueue is the resolver for the leaveQueue field.
@@ -330,6 +335,7 @@ func (r *queryResolver) MyActiveQueue(ctx context.Context) (*model.ActiveQueue, 
 		resp.Status = model.QueueStatusWaiting
 		count := active.QueuedCount
 		resp.QueuedCount = &count
+		resp.QueuePath = joinResultQueuePath(active.QueuePath)
 		return resp, nil
 	}
 

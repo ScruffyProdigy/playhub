@@ -12,6 +12,9 @@ const GAMES_QUERY = `
       modes {
         modeKey
         displayName
+        seats {
+          queuePath
+        }
         queues {
           id
           name
@@ -33,6 +36,41 @@ export function defaultQueueForGame(game) {
     }
   }
   return null
+}
+
+/** Mode that owns the default active queue for this game. */
+export function defaultModeForGame(game) {
+  for (const mode of game?.modes ?? []) {
+    for (const queue of mode?.queues ?? []) {
+      if (queue.status === 'active') {
+        return mode
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * Join UI options derived from expanded seat queue paths.
+ * @returns {{ kind: 'fifo', paths: [] } | { kind: 'composition', paths: string[] }}
+ */
+export function joinGroupOptionsForMode(mode) {
+  const paths = new Set()
+  for (const seat of mode?.seats ?? []) {
+    const path = seat.queuePath?.trim() ?? ''
+    if (path) {
+      paths.add(path)
+    }
+  }
+  const sorted = [...paths].sort()
+  if (sorted.length === 0) {
+    return { kind: 'fifo', paths: [] }
+  }
+  return { kind: 'composition', paths: sorted }
+}
+
+export function joinGroupOptionsForGame(game) {
+  return joinGroupOptionsForMode(defaultModeForGame(game))
 }
 
 export async function fetchGames() {

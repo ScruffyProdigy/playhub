@@ -2,6 +2,7 @@ package gameclient
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,13 +31,7 @@ func newManifestTestServer(t *testing.T) *httptest.Server {
 				"modes": [{
 					"key": "classic",
 					"displayName": "Classic",
-					"minPlayers": 2,
-					"maxPlayers": 2,
-					"bestOf": 1,
-					"seats": [
-						{"key": "p1", "team": "A"},
-						{"key": "p2", "team": "B"}
-					]
+					"seatTemplate": {"count": 2}
 				}]
 			}`))
 		default:
@@ -85,15 +80,24 @@ func TestManifestFetcherNotModified(t *testing.T) {
 	}
 }
 
-func TestValidateModesRejectsEmptySeats(t *testing.T) {
+func TestValidateModesRejectsEmptySeatTemplate(t *testing.T) {
 	err := validateModes([]ModeManifest{{
 		Key:         "solo",
 		DisplayName: "Solo",
-		MinPlayers:  1,
-		MaxPlayers:  1,
-		Seats:       nil,
 	}})
 	if err == nil {
-		t.Fatal("expected validation error for mode without seats")
+		t.Fatal("expected validation error for mode without seatTemplate")
+	}
+}
+
+func TestValidateModesRejectsFlatSeats(t *testing.T) {
+	err := validateModes([]ModeManifest{{
+		Key:          "duel",
+		DisplayName:  "Duel",
+		SeatTemplate: json.RawMessage(`{"count":2}`),
+		Seats:        json.RawMessage(`[{"key":"a"}]`),
+	}})
+	if err == nil {
+		t.Fatal("expected validation error for flat seats[]")
 	}
 }

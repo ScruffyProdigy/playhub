@@ -12,6 +12,7 @@ function applyJoinResponse(result, handlers) {
   if (result?.message) {
     handlers.setNotice?.(result.message)
   }
+  syncSelectedQueuePath(result, handlers.setSelectedQueuePath)
   if (result?.joinUrl) {
     return applyQueueUpdate(
       { status: 'MATCHED', joinUrl: result.joinUrl, queuedCount: 0 },
@@ -27,7 +28,7 @@ function applyJoinResponse(result, handlers) {
   return false
 }
 
-function applyQueueUpdate(update, { setQueueState, setJoinUrl, setQueuedCount, setError }) {
+function applyQueueUpdate(update, { setQueueState, setJoinUrl, setQueuedCount, setError, setSelectedQueuePath }) {
   if (update.status === 'MATCHED' && update.joinUrl) {
     setQueueState('matched')
     setJoinUrl(update.joinUrl)
@@ -44,6 +45,7 @@ function applyQueueUpdate(update, { setQueueState, setJoinUrl, setQueuedCount, s
     setQueueState('idle')
     setJoinUrl('')
     setQueuedCount(0)
+    setSelectedQueuePath?.('')
     if (update.message) {
       setError(update.message)
     } else {
@@ -57,6 +59,7 @@ function applyQueueUpdate(update, { setQueueState, setJoinUrl, setQueuedCount, s
 /** Map myQueueStatus query result into local queue UI state. */
 function applyMyQueueStatus(result, handlers) {
   if (!result?.queued) {
+    syncSelectedQueuePath(result, handlers.setSelectedQueuePath)
     if (result?.joinUrl) {
       return applyQueueUpdate(
         { status: 'MATCHED', joinUrl: result.joinUrl, queuedCount: 0 },
@@ -66,6 +69,7 @@ function applyMyQueueStatus(result, handlers) {
     applyQueueUpdate({ status: 'LEFT', queuedCount: 0 }, handlers)
     return false
   }
+  syncSelectedQueuePath(result, handlers.setSelectedQueuePath)
   if (result.joinUrl) {
     return applyQueueUpdate(
       { status: 'MATCHED', joinUrl: result.joinUrl, queuedCount: result.queuedCount ?? 0 },
@@ -76,6 +80,17 @@ function applyMyQueueStatus(result, handlers) {
     { status: 'WAITING', queuedCount: result.queuedCount ?? 0 },
     handlers,
   )
+}
+
+function syncSelectedQueuePath(result, setSelectedQueuePath) {
+  if (!setSelectedQueuePath) {
+    return
+  }
+  if (result?.queuePath) {
+    setSelectedQueuePath(result.queuePath)
+  } else if (!result?.queued) {
+    setSelectedQueuePath('')
+  }
 }
 
 /**
@@ -89,6 +104,7 @@ export function useGameQueue(queueId, { skipSubscription = false } = {}) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [selectedQueuePath, setSelectedQueuePath] = useState('')
   const unsubscribeRef = useRef(null)
   const subscribeGenerationRef = useRef(0)
   const syncGenerationRef = useRef(0)
@@ -105,6 +121,7 @@ export function useGameQueue(queueId, { skipSubscription = false } = {}) {
         setJoinUrl,
         setQueuedCount,
         setError,
+        setSelectedQueuePath,
       }),
     [],
   )
@@ -181,6 +198,7 @@ export function useGameQueue(queueId, { skipSubscription = false } = {}) {
           setJoinUrl,
           setQueuedCount,
           setError,
+          setSelectedQueuePath,
         })
       } catch {
         // Signed-out or transient errors: keep idle until user joins.
@@ -202,6 +220,7 @@ export function useGameQueue(queueId, { skipSubscription = false } = {}) {
               setJoinUrl,
               setQueuedCount,
               setError,
+              setSelectedQueuePath,
             })
           })
           .catch(() => {})
@@ -217,7 +236,7 @@ export function useGameQueue(queueId, { skipSubscription = false } = {}) {
     }
   }, [queueId, skipSubscription, ensureSubscribed, clearSubscription])
 
-  async function handleJoin() {
+  async function handleJoin(queuePath) {
     if (!queueId) {
       setError('This game is not available for group matchmaking yet')
       return
@@ -225,18 +244,20 @@ export function useGameQueue(queueId, { skipSubscription = false } = {}) {
     setBusy(true)
     setError('')
     setNotice('')
+    setSelectedQueuePath(typeof queuePath === 'string' ? queuePath : '')
     syncGenerationRef.current += 1
     try {
       if (!skipSubscription) {
         await ensureSubscribed()
       }
-      const result = await joinQueue(queueId)
+      const result = await joinQueue(queueId, queuePath)
       applyJoinResponse(result, {
         setQueueState,
         setJoinUrl,
         setQueuedCount,
         setError,
         setNotice,
+        setSelectedQueuePath,
       })
     } catch (err) {
       setError(err.message || 'Could not start looking for a group')
@@ -257,6 +278,7 @@ export function useGameQueue(queueId, { skipSubscription = false } = {}) {
       setQueueState('idle')
       setJoinUrl('')
       setQueuedCount(0)
+      setSelectedQueuePath('')
     } catch (err) {
       setError(err.message || 'Could not stop looking')
     } finally {
@@ -271,6 +293,7 @@ export function useGameQueue(queueId, { skipSubscription = false } = {}) {
     error,
     notice,
     busy,
+    selectedQueuePath,
     handleJoin,
     handleLeave,
   }

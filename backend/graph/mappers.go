@@ -93,6 +93,7 @@ func ToGraphQLGameModeSeats(seats []store.GameModeSeat) []*model.GameModeSeat {
 			SeatKey:   seats[i].SeatKey,
 			Team:      seats[i].Team,
 			Role:      seats[i].Role,
+			QueuePath: seats[i].QueuePath,
 			SortOrder: seats[i].SortOrder,
 		}
 	}

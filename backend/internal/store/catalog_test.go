@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/google/uuid"
@@ -9,18 +10,13 @@ import (
 )
 
 func sampleManifest() *gameclient.Manifest {
-	teamA := "A"
-	teamB := "B"
 	return &gameclient.Manifest{
 		Modes: []gameclient.ModeManifest{{
-			Key:         "classic",
-			DisplayName: "Classic",
-			MinPlayers:  2,
-			MaxPlayers:  2,
-			Seats: []gameclient.SeatManifest{
-				{Key: "p1", Team: &teamA},
-				{Key: "p2", Team: &teamB},
-			},
+			Key:          "classic",
+			DisplayName:  "Classic",
+			MinPlayers:   2,
+			MaxPlayers:   2,
+			SeatTemplate: json.RawMessage(`{"count":2}`),
 		}},
 		Status: gameclient.StatusResponse{
 			Game:    "Catalog Test Game",
@@ -78,6 +74,9 @@ func TestRegisterGameAndRefreshManifest(t *testing.T) {
 	}
 	if len(seats) != 2 {
 		t.Fatalf("expected 2 seats, got %d", len(seats))
+	}
+	if seats[0].SeatKey != "1" || seats[1].SeatKey != "2" {
+		t.Fatalf("expected seat keys 1/2, got %+v", seats)
 	}
 
 	queues, err := st.ListModeQueuesByModeID(ctx, modes[0].ID)

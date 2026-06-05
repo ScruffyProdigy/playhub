@@ -25,10 +25,10 @@ func TestCompleteSessionReleasesMatchedQueueRows(t *testing.T) {
 	}
 	cleaner.TrackUser(userB.ID)
 
-	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, ""); err != nil {
 		t.Fatalf("join A: %v", err)
 	}
-	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, ""); err != nil {
 		t.Fatalf("join B: %v", err)
 	}
 

@@ -88,8 +88,8 @@ func TestJoinQueueProvisionsMatchOnGameServer(t *testing.T) {
 	if a.GameMode != "duel" {
 		t.Fatalf("gameMode = %q, want duel", a.GameMode)
 	}
-	if a.Seats[0].SeatKey != "a" || a.Seats[1].SeatKey != "b" {
-		t.Fatalf("expected manifest seat keys a/b, got %+v", a.Seats)
+	if a.Seats[0].SeatKey != "1" || a.Seats[1].SeatKey != "2" {
+		t.Fatalf("expected manifest seat keys 1/2, got %+v", a.Seats)
 	}
 }
 

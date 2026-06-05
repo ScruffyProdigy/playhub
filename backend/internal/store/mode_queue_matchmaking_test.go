@@ -2,9 +2,11 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/scruffyprodigy/playhub/internal/gameclient"
 )
 
 func TestPickDistinctWaitingEntriesPreventsSelfMatch(t *testing.T) {
@@ -35,7 +37,7 @@ func TestJoinModeQueueIdempotentWhileWaiting(t *testing.T) {
 	}
 	cleaner.TrackUser(user.ID)
 
-	first, err := st.JoinModeQueue(ctx, queueID, user.ID)
+	first, err := st.JoinModeQueue(ctx, queueID, user.ID, "")
 	if err != nil {
 		t.Fatalf("first join: %v", err)
 	}
@@ -43,7 +45,7 @@ func TestJoinModeQueueIdempotentWhileWaiting(t *testing.T) {
 		t.Fatalf("expected waiting, got %s", first.Status)
 	}
 
-	second, err := st.JoinModeQueue(ctx, queueID, user.ID)
+	second, err := st.JoinModeQueue(ctx, queueID, user.ID, "")
 	if err != nil {
 		t.Fatalf("second join: %v", err)
 	}
@@ -72,7 +74,7 @@ func TestJoinModeQueueReplacesStaleWaitingRowForSameGame(t *testing.T) {
 	if err != nil {
 		t.Fatalf("insert legacy queue row: %v", err)
 	}
-	result, err := st.JoinModeQueue(ctx, queueID, user.ID)
+	result, err := st.JoinModeQueue(ctx, queueID, user.ID, "")
 	if err != nil {
 		t.Fatalf("JoinModeQueue after legacy row: %v", err)
 	}
@@ -111,15 +113,98 @@ func TestJoinModeQueueRejectsWhenAlreadyMatched(t *testing.T) {
 	}
 	cleaner.TrackUser(userB.ID)
 
-	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, ""); err != nil {
 		t.Fatalf("join A: %v", err)
 	}
-	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, ""); err != nil {
 		t.Fatalf("join B: %v", err)
 	}
 
-	_, err = st.JoinModeQueue(ctx, queueID, userA.ID)
+	_, err = st.JoinModeQueue(ctx, queueID, userA.ID, "")
 	if err == nil {
 		t.Fatal("expected error when joining queue while already matched")
+	}
+}
+
+func TestJoinModeQueueCompositionMatchmaking(t *testing.T) {
+	st := openTestStore(t)
+	cleaner := st.NewTestCleaner(t)
+	ctx := context.Background()
+
+	slug := "comp-" + uuid.NewString()
+	manifest := &gameclient.Manifest{
+		Modes: []gameclient.ModeManifest{{
+			Key:          "roles",
+			DisplayName:  "Roles",
+			SeatTemplate: json.RawMessage(`{"Team":{"count":1,"DPS":{"count":1},"Tank":{"count":1}}}`),
+		}},
+		Status:     gameclient.StatusResponse{Game: "Comp Test", Version: "1.0.0"},
+		ETag:       `"comp"`,
+		RawJSON:    []byte(`{"modes":[{"key":"roles"}]}`),
+		SHA256Hash: uuid.NewString(),
+	}
+	result, err := st.RegisterGame(ctx, RegisterGameParams{
+		Slug:       slug,
+		PlayURL:    "https://play.example.com/" + slug,
+		APIBaseURL: "https://api.example.com/" + slug,
+	}, manifest)
+	if err != nil {
+		t.Fatalf("RegisterGame: %v", err)
+	}
+	cleaner.TrackGame(result.Game.ID)
+
+	modes, err := st.ListGameModesByGameID(ctx, result.Game.ID)
+	if err != nil {
+		t.Fatalf("ListGameModesByGameID: %v", err)
+	}
+	queues, err := st.ListModeQueuesByModeID(ctx, modes[0].ID)
+	if err != nil {
+		t.Fatalf("ListModeQueuesByModeID: %v", err)
+	}
+	queueID := queues[0].ID
+
+	userDPS, err := st.CreateUser(ctx, CreateUserParams{Email: "dps-" + uuid.NewString() + "@example.com"})
+	if err != nil {
+		t.Fatalf("CreateUser dps: %v", err)
+	}
+	cleaner.TrackUser(userDPS.ID)
+	userTank, err := st.CreateUser(ctx, CreateUserParams{Email: "tank-" + uuid.NewString() + "@example.com"})
+	if err != nil {
+		t.Fatalf("CreateUser tank: %v", err)
+	}
+	cleaner.TrackUser(userTank.ID)
+
+	first, err := st.JoinModeQueue(ctx, queueID, userDPS.ID, "DPS")
+	if err != nil {
+		t.Fatalf("join dps: %v", err)
+	}
+	if first.Status != QueueStatusWaiting {
+		t.Fatalf("expected waiting, got %s", first.Status)
+	}
+
+	second, err := st.JoinModeQueue(ctx, queueID, userTank.ID, "Tank")
+	if err != nil {
+		t.Fatalf("join tank: %v", err)
+	}
+	if second.Status != QueueStatusMatched || second.SessionID == nil {
+		t.Fatalf("expected match, got %+v", second)
+	}
+
+	participants, err := st.ListSessionSeatAssignments(ctx, *second.SessionID)
+	if err != nil {
+		t.Fatalf("ListSessionParticipants: %v", err)
+	}
+	if len(participants) != 2 {
+		t.Fatalf("expected 2 participants, got %d", len(participants))
+	}
+	seatKeys := map[string]struct{}{}
+	for _, p := range participants {
+		seatKeys[p.SeatKey] = struct{}{}
+	}
+	if _, ok := seatKeys["Team-1-DPS-1"]; !ok {
+		t.Fatalf("expected DPS seat, got %+v", seatKeys)
+	}
+	if _, ok := seatKeys["Team-1-Tank-1"]; !ok {
+		t.Fatalf("expected Tank seat, got %+v", seatKeys)
 	}
 }

@@ -8,6 +8,7 @@ const MY_ACTIVE_QUEUE_QUERY = `
       gameName
       status
       queuedCount
+      queuePath
       joinUrl
     }
   }

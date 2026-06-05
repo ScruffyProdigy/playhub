@@ -12,7 +12,9 @@ For **composition** modes, the template defines **queue paths** (e.g. `Offense.W
 
 That is **lobby-side queue selection**, similar to picking a role in a MOBA queue. It is **not** a full character-select UI with animations and loadouts.
 
-For **fifo** modes (simple 1v1 / FFA), the JoinQuest UI shows **“Look for group”** with no role choice (API field remains `joinQueue`).
+For **fifo** modes (simple 1v1 / FFA), the JoinQuest UI shows a single **“Look for group”** button with no role choice (API field remains `joinQueue`).
+
+For **composition** modes, role choices appear **inside a “Look for group” panel** — e.g. “Join as DPS”, “Join as Tank” — so the player is still “looking for a group”, just in a specific role bucket.
 
 ---
 

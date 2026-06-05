@@ -55,6 +55,7 @@ export const mockDemoGames = [
     modes: [
       {
         modeKey: 'duel',
+        seats: [{ queuePath: null }, { queuePath: null }],
         queues: [{ id: 'queue-1', name: 'Default', playersToStart: 2, status: 'active' }],
       },
     ],

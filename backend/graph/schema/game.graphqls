@@ -23,6 +23,7 @@ type JoinResult {
   sessionId: ID
   joinUrl: String
   queuedCount: Int
+  queuePath: String
   # Set when the player was removed from another game's queue to join this one.
   message: String
 }
@@ -34,6 +35,7 @@ type ActiveQueue {
   gameName: String!
   status: QueueStatus!
   queuedCount: Int
+  queuePath: String
   joinUrl: String
 }
 
