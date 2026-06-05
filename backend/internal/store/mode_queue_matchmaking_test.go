@@ -9,22 +9,6 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/gameclient"
 )
 
-func TestPickDistinctWaitingEntriesPreventsSelfMatch(t *testing.T) {
-	userID := uuid.New()
-	entries := []QueueEntry{
-		{ID: uuid.New(), UserID: userID, Status: QueueStatusWaiting},
-		{ID: uuid.New(), UserID: userID, Status: QueueStatusWaiting},
-		{ID: uuid.New(), UserID: uuid.New(), Status: QueueStatusWaiting},
-	}
-	picked := pickDistinctWaitingEntries(entries, 2)
-	if len(picked) != 2 {
-		t.Fatalf("expected 2 distinct picks, got %d", len(picked))
-	}
-	if picked[0].UserID == picked[1].UserID {
-		t.Fatal("expected distinct user ids in match roster")
-	}
-}
-
 func TestJoinModeQueueIdempotentWhileWaiting(t *testing.T) {
 	st := openTestStore(t)
 	cleaner := st.NewTestCleaner(t)

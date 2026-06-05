@@ -6,7 +6,7 @@ import {
 } from './games'
 
 describe('joinGroupOptionsForMode', () => {
-  it('returns fifo when all seats have empty queue paths', () => {
+  it('returns single-bucket (fifo) when all seats have empty queue paths', () => {
     const mode = {
       seats: [{ queuePath: null }, { queuePath: '' }],
     }

@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestTryFormMatchFifo(t *testing.T) {
+func TestTryFormMatchSingleBucket(t *testing.T) {
 	seats := []GameModeSeat{
 		{SeatKey: "1"},
 		{SeatKey: "2"},
@@ -21,6 +21,34 @@ func TestTryFormMatchFifo(t *testing.T) {
 	}
 	if got[0].SeatKey != "1" || got[1].SeatKey != "2" {
 		t.Fatalf("seat order = %+v", got)
+	}
+}
+
+func TestTryFormMatchSkipsDuplicateUser(t *testing.T) {
+	userID := uuid.New()
+	otherID := uuid.New()
+	seats := []GameModeSeat{
+		{SeatKey: "1"},
+		{SeatKey: "2"},
+	}
+	waiting := []QueueEntry{
+		{ID: uuid.New(), UserID: userID},
+		{ID: uuid.New(), UserID: userID},
+		{ID: uuid.New(), UserID: otherID},
+	}
+	got, ok := tryFormMatch(seats, waiting)
+	if !ok || len(got) != 2 {
+		t.Fatalf("expected match, got %+v ok=%v", got, ok)
+	}
+	if got[0].Entry.UserID == got[1].Entry.UserID {
+		t.Fatal("expected distinct users in match roster")
+	}
+	seen := map[uuid.UUID]struct{}{got[0].Entry.UserID: {}, got[1].Entry.UserID: {}}
+	if _, ok := seen[userID]; !ok {
+		t.Fatalf("expected user in match, got %+v", got)
+	}
+	if _, ok := seen[otherID]; !ok {
+		t.Fatalf("expected other user in match, got %+v", got)
 	}
 }
 
@@ -58,7 +86,7 @@ func TestValidateJoinQueuePath(t *testing.T) {
 	dps := "DPS"
 	seats := []GameModeSeat{{SeatKey: "1"}}
 	if err := validateJoinQueuePath(seats, "DPS"); err == nil {
-		t.Fatal("expected error for path on fifo mode")
+		t.Fatal("expected error for path on single-bucket mode")
 	}
 
 	compSeats := []GameModeSeat{{SeatKey: "Team-1-DPS-1", QueuePath: &dps}}

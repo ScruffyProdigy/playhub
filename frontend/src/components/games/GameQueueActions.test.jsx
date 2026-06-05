@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest'
 import GameQueueActions from './GameQueueActions'
 
 describe('GameQueueActions', () => {
-  it('shows a single Look for group button for fifo modes', () => {
+  it('shows a single Look for group button for single-bucket modes', () => {
     render(
       <GameQueueActions
         joinOptions={{ kind: 'fifo', paths: [] }}
