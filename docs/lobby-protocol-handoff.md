@@ -91,8 +91,9 @@ MOBA slot — **the token, not the URL query param, is authoritative.**
 
 ### 5. Seats are a published *manifest*, not a hardcoded player count
 **What we do:** the game publishes `GET /api/v1/game-modes` with `minPlayers`,
-`maxPlayers`, optional `teams`, and `seats[]` (each with `key`, optional `team`,
-`role`).
+`maxPlayers`, and **`seatTemplate`** (a layout tree Lobby expands to leaf `seatKey`s).
+Flat `seats[]` is rejected. Optional `team` / `role` on provision seats may follow
+from the template in later phases.
 
 **Why:** the integration must not be RPS-specific. The original ask generalized to
 "works for >2 players, with specific roles/teams (chess white/black, MOBA teams)."
@@ -140,7 +141,7 @@ and a `playUrl` (browser) for each game in your catalog.
 |------|------|-------|
 | Health | `GET {apiBaseUrl}/healthz` → `ok` | gate listing on this |
 | Status | `GET {apiBaseUrl}/api/v1/status` → `{game,version,appEnv,standalone}` | version/capability gating |
-| Modes | `GET {apiBaseUrl}/api/v1/game-modes` | seat/team/role manifest |
+| Modes | `GET {apiBaseUrl}/api/v1/game-modes` | `seatTemplate` per mode (expanded by Lobby) |
 | Provision | `POST {apiBaseUrl}/api/v1/matches` body `{ lobbyId, lobby: { returnUrl, graphqlUrl, serviceToken? }, assignment: { ... } }` | S2S; `Authorization: Bearer` must match `serviceToken` when present; idempotent on `externalMatchId` |
 | Link | redirect to `{playUrl}?match=<externalMatchId>&token=<jwt>` | optional `&seat=`, `&lobby_user=` |
 | Claim | `POST {apiBaseUrl}/api/v1/matches/{externalMatchId}/claim` + `Authorization: Bearer <jwt>` | game uses the token's `seatKey` |

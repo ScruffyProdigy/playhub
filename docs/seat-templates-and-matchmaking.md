@@ -12,6 +12,17 @@ JoinQuest matchmaking fills a **seat map** before your game sees a roster — so
 
 **Related:** provision + JWT in [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md); catalog overview in [`game-catalog-architecture.md`](./game-catalog-architecture.md).
 
+### Implementation status (Lobby code)
+
+**Shipped:** `seatTemplate` required on manifest sync (flat `seats[]` rejected); expansion to
+`game_mode_seats` with `queue_path`; `joinQueue(queueId, queuePath)` and path-aware
+matchmaking (fifo within each path); JoinQuest **Look for group** / **Join as …** UI from
+expanded paths.
+
+**Not yet:** LFG forming map, `affinity_key` derivation, parties, variable `sizeForQueue`,
+multiple concurrent forming matches. Sections below describe the **target** engine unless
+marked otherwise.
+
 ---
 
 ## What Lobby builds

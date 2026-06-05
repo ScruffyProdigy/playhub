@@ -11,8 +11,8 @@ Game
   └── GameMode (many)
         ├── seatTemplate (from cached game-modes manifest; expanded to leaf seats)
         └── Queue (many)
-              ├── fifo: one default bucket; `sizeForQueue` when variable size
-              └── composition: one bucket per queueable role (DPS, Tank, …)
+              ├── single path (`""`): one “Look for group” bucket (e.g. 1v1 duel)
+              └── composition: one bucket per `queuePath` (DPS, Tank, …)
 ```
 
 - **Game** — `slug`, `play_url`, `api_base_url`, sync metadata.
@@ -26,11 +26,15 @@ Game
 
 ## Seat fill (current implementation vs target)
 
-**Today (shipped):** flat `seats[]` in manifest; one default queue per mode; FIFO assigns
-the first N `seat_key`s by `sort_order`.
+**Today (shipped):** games publish **`seatTemplate` only** (flat `seats[]` is rejected on sync).
+Lobby expands the template to leaf seats (`seat_key`, `queue_path`, `sort_order`), stores
+`seat_template` on the mode, and auto-creates one default queue per mode. Matchmaking pairs
+waiting players to seats by **`queue_path`** (fifo within each path). Modes with a single
+path (often `""`) show one **Look for group** button; modes with multiple paths show **Join as …**
+per role bucket. See [composition-and-join-options.md](./composition-and-join-options.md).
 
-**Target:** template-only manifest; expanded **seat map**; **forming match** filled by
-constraint-based LFG (parties, gaps, weighted dequeue); games receive final `seatKey`
+**Target (Phase B):** **forming match** filled by constraint-based LFG (parties, affinity
+gaps, weighted dequeue, variable `sizeForQueue`); games still receive final `seatKey`
 assignments only. See the linked doc.
 
 ## Admin registration

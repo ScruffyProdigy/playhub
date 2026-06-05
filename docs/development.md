@@ -8,7 +8,7 @@ This guide will help you set up and run JoinQuest locally for development.
 
 ### ✅ Ready for Development
 - **Environment Configuration**: Docker-based runtime environment injection
-- **GraphQL API**: Catalog matchmaking, auth, PostgreSQL-backed resolvers
+- **GraphQL API**: Catalog matchmaking (`seatTemplate`, `queuePath`), auth, PostgreSQL-backed resolvers
 - **Frontend Foundation**: React app with testing infrastructure
 - **Kubernetes Deployment**: Multi-environment deployment scripts
 - **Testing Suite**: Comprehensive test coverage
@@ -18,10 +18,10 @@ This guide will help you set up and run JoinQuest locally for development.
 ### 🚧 In Active Development
 - **Digital goods**: Player purchase and trade flows
 
-### 📋 Next Steps (not in current branch)
+### 📋 Next Steps
 - **E2E partner path**: [end-to-end-partner-checklist.md](./end-to-end-partner-checklist.md)
-- **`seatTemplate` + LFG**: [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md) — manifest still flat `seats[]` in code
-- **Post-game GraphQL**: [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md) (`reportPlayerFinished`, `reportMatchResult`)
+- **LFG forming match** (Phase B): [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md) — parties, affinity gaps, weighted dequeue
+- **Game-backed queue options**: [composition-and-join-options.md](./composition-and-join-options.md) — eligibility from game API before join
 
 ## Prerequisites
 

@@ -12,7 +12,7 @@ For **composition** modes, the template defines **queue paths** (e.g. `Offense.W
 
 That is **lobby-side queue selection**, similar to picking a role in a MOBA queue. It is **not** a full character-select UI with animations and loadouts.
 
-For **fifo** modes (simple 1v1 / FFA), the JoinQuest UI shows a single **“Look for group”** button with no role choice (API field remains `joinQueue`).
+For **single-bucket** modes (simple 1v1 / FFA — one `queuePath`, usually `""`), the JoinQuest UI shows a single **“Look for group”** button; omit `queuePath` on `joinQueue`.
 
 For **composition** modes, role choices appear **inside a “Look for group” panel** — e.g. “Join as DPS”, “Join as Tank” — so the player is still “looking for a group”, just in a specific role bucket.
 
@@ -35,7 +35,7 @@ Those should come from the **game server**, not from a fixed list in `seatTempla
 2. Before or during join, Lobby calls the game (authenticated as that player), e.g.  
    `GET /api/v1/players/{lobbyUserId}/queue-options?modeKey=…&queuePath=…`
 3. Game returns allowed options: `{ "choices": [{ "id": "wizard", "label": "Wizard", "locked": false }, …] }`
-4. JoinQuest UI shows only allowed choices; `joinQueue` sends the selected `queuePath` / preference in `PartyInput` (future).
+4. JoinQuest UI shows only allowed choices; `joinQueue` sends the selected `queuePath` (party constraints via `PartyInput` are future).
 5. After matchmaking, provision still sends **`seatKey`** — the game maps role → concrete character in-client if needed.
 
 Lobby caches responses **briefly** (seconds), not as source of truth. DLC and unlock changes stay on the game.
@@ -62,8 +62,11 @@ So: **not** replacing the game’s character select — **optional** pre-queue e
 
 ## v1 scope
 
-- **Shipped:** fifo default queue per mode; no composition UI.
-- **Spec’d:** composition paths from template; `queuePath` on party input.
-- **Deferred:** game `queue-options` API, DLC-aware polling, unlock progression.
+- **Shipped:** `seatTemplate` manifest sync; one default queue per mode; **Look for group** UI;
+  composition modes show **Join as …** from expanded `queuePath` values; `joinQueue(queueId, queuePath)`
+  and path-aware matchmaking.
+- **Deferred:** LFG forming map (parties, affinity), game `queue-options` API, DLC-aware polling,
+  unlock progression, `PartyInput` on join.
 
-When implementing composition UI, start with **static paths from manifest** for demos; add **game-backed options** before production titles with progression.
+For new composition demos, start with **static paths from `seatTemplate`**; add **game-backed options**
+before production titles with progression.

@@ -14,7 +14,7 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 
 ### ✅ Implemented
 - **Authentication**: Magic-link sign-in, session cookies, JWT seat tokens
-- **Catalog & matchmaking**: `registerGame`, mode queues, `joinQueue(queueId, queuePath)`, handoff to game servers
+- **Catalog & matchmaking**: `registerGame`, `seatTemplate` manifest sync, mode queues, `joinQueue(queueId, queuePath)`, handoff to game servers
 - **Database-backed queries**: `games`, `game`, `session`, `goods`, `myInventory`, `player` (game service)
 - **Real-time**: `queueUpdated` subscription via Redis pub/sub
 - **Post-game**: `returnDestination`, `reportPlayerFinished`, `reportMatchResult` — see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md), [player-return-routing.md](./player-return-routing.md)
@@ -26,7 +26,7 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 
 ### 📋 Planned
 - **File uploads**: game assets and user avatars
-- **`seatTemplate`** manifest + LFG matchmaking — see [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md); games still publish flat `seats[]` today
+- **LFG forming match** (parties, `affinity_key`, variable `sizeForQueue`) — see [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md); **shipped today:** `seatTemplate` expansion + `queuePath` join/matchmaking only
 
 ## Base URL
 
