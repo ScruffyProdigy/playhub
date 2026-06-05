@@ -44,7 +44,7 @@ function MainLayout() {
   const { room, roomOpen, dismissRoom, openRoom, unreadCount } = useActiveRoom()
   const isMobile = useMediaQuery(MOBILE_ROOM_QUERY)
   const showDesktopRoom = Boolean(room && user && !isMobile)
-  const showMobileSheet = Boolean(room && user && isMobile && roomOpen)
+  const showMobileSheet = Boolean(room && user && isMobile)
   const showDock = Boolean(room && user && isMobile)
 
   useEffect(() => {
@@ -70,8 +70,8 @@ function MainLayout() {
       </div>
 
       {showMobileSheet ? (
-        <RoomSheet onDismiss={dismissRoom}>
-          <RoomPanel onDismiss={dismissRoom} showDismiss compact />
+        <RoomSheet open={roomOpen} onDismiss={dismissRoom}>
+          <RoomPanel compact />
         </RoomSheet>
       ) : null}
 

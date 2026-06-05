@@ -1,3 +1,7 @@
+:root {
+  --app-dock-height: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+
 #root {
   max-width: 720px;
   margin: 0 auto;
@@ -9,7 +13,7 @@
 }
 
 #root.app-root--dock {
-  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--app-dock-height) + 1rem);
 }
 
 .app-layout {
@@ -328,6 +332,40 @@
   margin: 0;
 }
 
+.room-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.room-panel__collapsible {
+  margin: 0;
+}
+
+.room-panel__collapsible .room-panel__section-title {
+  cursor: pointer;
+  list-style: none;
+}
+
+.room-panel__collapsible .room-panel__section-title::-webkit-details-marker {
+  display: none;
+}
+
+.room-panel__collapsible .room-panel__section-title::before {
+  content: '▸ ';
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.room-panel__collapsible[open] .room-panel__section-title::before {
+  transform: rotate(90deg);
+}
+
+.room-panel__collapsible .room-members__list {
+  margin-top: 0.5rem;
+}
+
 .room-panel__header {
   display: block;
 }
@@ -348,37 +386,6 @@
   font-size: 1rem;
 }
 
-.room-panel__dismiss {
-  margin-top: 0.25rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.18);
-}
-
-.room-panel__dismiss-btn {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid rgba(100, 108, 255, 0.65);
-  border-radius: 10px;
-  background: rgba(100, 108, 255, 0.45);
-  color: #f0f1ff;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.room-panel__dismiss-btn:hover {
-  background: rgba(100, 108, 255, 0.6);
-}
-
-.room-panel__dismiss-btn svg {
-  flex-shrink: 0;
-}
-
 .room-panel__chat {
   flex: 1;
   min-height: 0;
@@ -390,14 +397,56 @@
   max-height: min(16rem, 40vh);
 }
 
-.room-panel__actions {
+.room-panel__composer {
+  flex-shrink: 0;
+}
+
+.room-panel__leave {
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.room-panel__leave-btn {
   display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255, 90, 90, 0.65);
+  border-radius: 10px;
+  background: rgba(255, 90, 90, 0.22);
+  color: #ffc8c8;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.room-panel__leave-btn:hover:not(:disabled) {
+  background: rgba(255, 90, 90, 0.38);
+}
+
+.room-panel__leave-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.room-panel__leave-btn svg {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke-width: 2.5;
 }
 
 .room-sheet {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: var(--app-dock-height);
   z-index: 40;
   display: flex;
   flex-direction: column;
@@ -414,17 +463,118 @@
   animation: room-sheet-fade-in 0.25s ease;
 }
 
+.room-sheet--exiting .room-sheet__backdrop {
+  animation: room-sheet-fade-out 0.3s ease forwards;
+  pointer-events: none;
+}
+
 .room-sheet__panel {
   position: relative;
   z-index: 1;
-  max-height: min(88vh, 720px);
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
   margin: 0;
   border-radius: 16px 16px 0 0;
   pointer-events: auto;
-  animation: room-sheet-slide-up 0.3s ease;
   background: #242424;
   opacity: 1;
+}
+
+.room-sheet__panel--entering {
+  animation: room-sheet-slide-up 0.3s ease;
+}
+
+.room-sheet__panel--exiting {
+  animation: room-sheet-slide-down 0.3s ease forwards;
+  pointer-events: none;
+}
+
+.room-sheet .room-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 0.5rem;
+}
+
+.room-sheet .room-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0.5rem;
+}
+
+.room-sheet .room-panel__header,
+.room-sheet .room-panel__section:not(.room-panel__chat),
+.room-sheet .room-panel__collapsible,
+.room-sheet .room-panel__composer,
+.room-sheet .room-panel__leave {
+  flex-shrink: 0;
+}
+
+.room-sheet .room-panel__title {
+  font-size: 1.1rem;
+}
+
+.room-sheet .room-panel__meta {
+  font-size: 0.85rem;
+}
+
+.room-sheet .room-panel__share .room-share__actions {
+  gap: 0.35rem;
+}
+
+.room-sheet .room-panel__share .room-share__icon-btn {
+  min-width: 3rem;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.7rem;
+}
+
+.room-sheet .room-panel__chat {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.room-sheet .room-panel__chat .room-panel__section-title {
+  margin-bottom: 0.35rem;
+}
+
+.room-sheet .room-panel__chat .room-chat__log {
+  flex: 1;
+  min-height: 10rem;
+  max-height: none;
+  overflow-y: auto;
+  margin-bottom: 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.room-sheet .room-chat__composer {
+  gap: 0.5rem;
+}
+
+.room-sheet .room-chat__composer label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.room-sheet .room-panel__leave {
+  margin-top: 0;
+  padding-top: 0.5rem;
 }
 
 @keyframes room-sheet-slide-up {
@@ -433,6 +583,15 @@
   }
   to {
     transform: translateY(0);
+  }
+}
+
+@keyframes room-sheet-slide-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
   }
 }
 
@@ -445,12 +604,21 @@
   }
 }
 
+@keyframes room-sheet-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 .app-dock {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 30;
+  z-index: 50;
   display: flex;
   justify-content: center;
   gap: 0;
@@ -639,18 +807,23 @@
     background: #ffffff;
   }
 
-  .room-panel__dismiss {
+  .room-panel__leave {
     border-top-color: rgba(0, 0, 0, 0.1);
   }
 
-  .room-panel__dismiss-btn {
-    border-color: rgba(85, 88, 170, 0.55);
-    background: rgba(100, 108, 255, 0.18);
-    color: #333a99;
+  .room-panel__leave-btn {
+    border-color: rgba(200, 50, 50, 0.55);
+    background: rgba(255, 90, 90, 0.12);
+    color: #b91c1c;
   }
 
-  .room-panel__dismiss-btn:hover {
-    background: rgba(100, 108, 255, 0.28);
+  .room-panel__leave-btn:hover:not(:disabled) {
+    background: rgba(255, 90, 90, 0.22);
+  }
+
+  .room-sheet .room-panel__chat .room-chat__log {
+    border-color: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.04);
   }
 
   .app-dock__tab {

@@ -3,8 +3,8 @@ import LoginForm from '../auth/LoginForm'
 import { useAuth } from '../auth/AuthProvider'
 import { useActiveRoom } from './ActiveRoomProvider'
 import { sendRoomMessage } from '../../lib/rooms'
+import { IconClose } from '../icons/ShareIcons'
 import RoomShareToolbar from './RoomShareToolbar'
-import { IconChevronDown } from '../icons/ShareIcons'
 
 function displayName(user) {
   return user?.displayName?.trim() || 'Player'
@@ -20,7 +20,7 @@ function mergeMessage(messages, incoming) {
   return [...messages, incoming]
 }
 
-export default function RoomPanel({ onDismiss, showDismiss = false, compact = false }) {
+export default function RoomPanel({ compact = false }) {
   const { user, loading: authLoading } = useAuth()
   const {
     room,
@@ -80,91 +80,97 @@ export default function RoomPanel({ onDismiss, showDismiss = false, compact = fa
     return null
   }
 
+  const memberCount = room.members?.length ?? 0
+  const membersList = (
+    <ul className="room-members__list">
+      {room.members.map((member) => (
+        <li key={member.id}>
+          {displayName(member)}
+          {member.id === room.host?.id ? ' (host)' : ''}
+        </li>
+      ))}
+    </ul>
+  )
+
   return (
     <div className={`room-panel ${compact ? 'room-panel--compact' : ''}`}>
-      <header className="room-panel__header">
-        <div>
-          <h2 className="room-panel__title">Room {room.inviteCode}</h2>
-          <p className="room-panel__meta">
-            {room.members?.length ?? 0} {room.members?.length === 1 ? 'member' : 'members'}
-          </p>
-        </div>
-      </header>
+      <div className="room-panel__body">
+        <header className="room-panel__header">
+          <div>
+            <h2 className="room-panel__title">Room {room.inviteCode}</h2>
+            <p className="room-panel__meta">
+              {memberCount} {memberCount === 1 ? 'member' : 'members'}
+            </p>
+          </div>
+        </header>
 
-      {error ? <p className="status-message status-message-error">{error}</p> : null}
+        {error ? <p className="status-message status-message-error">{error}</p> : null}
 
-      <section className="room-panel__section room-members">
-        <h3 className="room-panel__section-title">Members</h3>
-        <ul className="room-members__list">
-          {room.members.map((member) => (
-            <li key={member.id}>
-              {displayName(member)}
-              {member.id === room.host?.id ? ' (host)' : ''}
-            </li>
-          ))}
-        </ul>
-      </section>
+        {compact ? (
+          <details className="room-panel__section room-panel__collapsible room-members">
+            <summary className="room-panel__section-title">
+              Members ({memberCount})
+            </summary>
+            {membersList}
+          </details>
+        ) : (
+          <section className="room-panel__section room-members">
+            <h3 className="room-panel__section-title">Members</h3>
+            {membersList}
+          </section>
+        )}
 
-      <section className="room-panel__section">
-        <RoomShareToolbar joinUrl={room.joinUrl} inviteCode={room.inviteCode} />
-      </section>
+        <section className="room-panel__section room-panel__share">
+          <RoomShareToolbar joinUrl={room.joinUrl} inviteCode={room.inviteCode} />
+        </section>
 
-      <section className="room-panel__section room-panel__chat room-chat">
-        <h3 className="room-panel__section-title">Chat</h3>
-        <div className="room-chat__log" aria-live="polite">
-          {messages.length === 0 ? (
-            <p className="panel-copy">Say hello — messages appear here for everyone in the room.</p>
-          ) : (
-            messages.map((msg) => (
-              <article key={msg.id} className="room-chat__message">
-                <p className="room-chat__author">{displayName(msg.author)}</p>
-                <p className="room-chat__body">{msg.body}</p>
-              </article>
-            ))
-          )}
-          <div ref={chatEndRef} />
-        </div>
-        <form className="room-chat__composer auth-form" onSubmit={handleSend}>
-          <label htmlFor="room-message">Message</label>
-          <input
-            id="room-message"
-            type="text"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            maxLength={2000}
-            disabled={busy}
-            autoComplete="off"
-          />
-          <button type="submit" className="game-list-button" disabled={busy || !draft.trim()}>
-            Send
-          </button>
-        </form>
-      </section>
+        <section className="room-panel__section room-panel__chat room-chat">
+          <h3 className="room-panel__section-title">Chat</h3>
+          <div className="room-chat__log" aria-live="polite">
+            {messages.length === 0 ? (
+              <p className="panel-copy">Say hello — messages appear here for everyone in the room.</p>
+            ) : (
+              messages.map((msg) => (
+                <article key={msg.id} className="room-chat__message">
+                  <p className="room-chat__author">{displayName(msg.author)}</p>
+                  <p className="room-chat__body">{msg.body}</p>
+                </article>
+              ))
+            )}
+            <div ref={chatEndRef} />
+          </div>
+        </section>
+      </div>
 
-      <div className="room-panel__actions">
+      <form className="room-panel__composer room-chat__composer auth-form" onSubmit={handleSend}>
+        <label htmlFor="room-message">Message</label>
+        <input
+          id="room-message"
+          type="text"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          maxLength={2000}
+          disabled={busy}
+          autoComplete="off"
+          placeholder="Message"
+        />
+        <button type="submit" className="game-list-button" disabled={busy || !draft.trim()}>
+          Send
+        </button>
+      </form>
+
+      <div className="room-panel__leave">
         <button
           type="button"
-          className="game-list-button game-list-button-secondary"
+          className="room-panel__leave-btn"
           onClick={handleLeave}
           disabled={busy || loading}
         >
-          Leave room
+          <IconClose aria-hidden="true" />
+          <span>Leave room</span>
+          <IconClose aria-hidden="true" />
         </button>
       </div>
-
-      {showDismiss ? (
-        <div className="room-panel__dismiss">
-          <button
-            type="button"
-            className="room-panel__dismiss-btn"
-            onClick={onDismiss}
-            aria-label="Dismiss room to catalog"
-          >
-            <IconChevronDown />
-            <span>Back to catalog</span>
-          </button>
-        </div>
-      ) : null}
     </div>
   )
 }
