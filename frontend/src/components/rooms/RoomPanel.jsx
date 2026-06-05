@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { useActiveRoom } from './ActiveRoomProvider'
 import { sendRoomMessage } from '../../lib/rooms'
 import RoomShareToolbar from './RoomShareToolbar'
-import { IconClose } from '../icons/ShareIcons'
+import { IconChevronDown } from '../icons/ShareIcons'
 
 function displayName(user) {
   return user?.displayName?.trim() || 'Player'
@@ -89,11 +89,6 @@ export default function RoomPanel({ onDismiss, showDismiss = false, compact = fa
             {room.members?.length ?? 0} {room.members?.length === 1 ? 'member' : 'members'}
           </p>
         </div>
-        {showDismiss ? (
-          <button type="button" className="room-panel__icon-btn" onClick={onDismiss} aria-label="Dismiss room">
-            <IconClose />
-          </button>
-        ) : null}
       </header>
 
       {error ? <p className="status-message status-message-error">{error}</p> : null}
@@ -156,6 +151,20 @@ export default function RoomPanel({ onDismiss, showDismiss = false, compact = fa
           Leave room
         </button>
       </div>
+
+      {showDismiss ? (
+        <div className="room-panel__dismiss">
+          <button
+            type="button"
+            className="room-panel__dismiss-btn"
+            onClick={onDismiss}
+            aria-label="Dismiss room to catalog"
+          >
+            <IconChevronDown />
+            <span>Back to catalog</span>
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -33,6 +33,7 @@
   max-height: calc(100vh - 2rem);
   overflow: auto;
   padding: 0;
+  background: #242424;
 }
 
 .app-shell--catalog {
@@ -328,10 +329,7 @@
 }
 
 .room-panel__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
+  display: block;
 }
 
 .room-panel__title {
@@ -350,17 +348,35 @@
   font-size: 1rem;
 }
 
-.room-panel__icon-btn {
-  display: inline-flex;
+.room-panel__dismiss {
+  margin-top: 0.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.room-panel__dismiss-btn {
+  display: flex;
+  width: 100%;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(100, 108, 255, 0.65);
+  border-radius: 10px;
+  background: rgba(100, 108, 255, 0.45);
+  color: #f0f1ff;
   cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.room-panel__dismiss-btn:hover {
+  background: rgba(100, 108, 255, 0.6);
+}
+
+.room-panel__dismiss-btn svg {
+  flex-shrink: 0;
 }
 
 .room-panel__chat {
@@ -407,6 +423,8 @@
   border-radius: 16px 16px 0 0;
   pointer-events: auto;
   animation: room-sheet-slide-up 0.3s ease;
+  background: #242424;
+  opacity: 1;
 }
 
 @keyframes room-sheet-slide-up {
@@ -440,8 +458,8 @@
   margin: 0 auto;
   padding: 0.35rem 1rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(20, 20, 24, 0.94);
-  backdrop-filter: blur(10px);
+  background: #141418;
+  opacity: 1;
 }
 
 .app-dock__tab {
@@ -613,7 +631,26 @@
 
   .app-dock {
     border-top-color: rgba(0, 0, 0, 0.08);
-    background: rgba(255, 255, 255, 0.94);
+    background: #ffffff;
+  }
+
+  .app-layout__room,
+  .room-sheet__panel {
+    background: #ffffff;
+  }
+
+  .room-panel__dismiss {
+    border-top-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .room-panel__dismiss-btn {
+    border-color: rgba(85, 88, 170, 0.55);
+    background: rgba(100, 108, 255, 0.18);
+    color: #333a99;
+  }
+
+  .room-panel__dismiss-btn:hover {
+    background: rgba(100, 108, 255, 0.28);
   }
 
   .app-dock__tab {

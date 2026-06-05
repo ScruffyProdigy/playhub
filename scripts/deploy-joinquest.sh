@@ -97,6 +97,22 @@ sed 's/namespace: playhub/namespace: joinquest/g' k8s/jobs/stale-session-cleanup
 echo "Patching game catalog handoff URLs for production..."
 run_patch_game_handoff_urls_job "$NAMESPACE"
 
+# GKE nodes may cache :latest; pin to the digest we just pushed when available locally.
+pin_local_image() {
+  local deploy=$1 container=$2 ref=$3
+  local digest
+  digest=$(docker image inspect "$ref" --format '{{index .RepoDigests 0}}' 2>/dev/null | sed 's/.*@//')
+  if [ -n "$digest" ]; then
+    echo "Pinning ${deploy} to digest ${digest}"
+    kubectl set image "deployment/${deploy}" -n "$NAMESPACE" "${container}=${ref%%@*}@${digest}"
+  fi
+}
+
+if command -v docker >/dev/null 2>&1; then
+  pin_local_image lobby-frontend frontend docker.io/scruffyprodigy/playhub-frontend:latest
+  pin_local_image lobby-backend backend docker.io/scruffyprodigy/playhub-backend:latest
+fi
+
 echo "Waiting for app deployments..."
 kubectl wait --for=condition=available --timeout=300s deployment/lobby-backend -n "$NAMESPACE"
 kubectl wait --for=condition=available --timeout=300s deployment/lobby-frontend -n "$NAMESPACE"
