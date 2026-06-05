@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { createRoom } from '../../lib/rooms'
+import { useActiveRoom } from './ActiveRoomProvider'
 
 export default function CreateRoomPanel() {
+  const { openRoomFromCreate } = useActiveRoom()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -10,9 +12,10 @@ export default function CreateRoomPanel() {
     setError('')
     try {
       const room = await createRoom()
-      window.location.href = `/room/${room.inviteCode}`
+      openRoomFromCreate(room)
     } catch (err) {
       setError(err.message || 'Could not create room.')
+    } finally {
       setBusy(false)
     }
   }

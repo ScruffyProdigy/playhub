@@ -4,19 +4,25 @@ import AuthPanel from './components/auth/AuthPanel'
 import ActiveQueueBanner from './components/games/ActiveQueueBanner'
 import GameLobby from './components/games/GameLobby'
 import CreateRoomPanel from './components/rooms/CreateRoomPanel'
-import RoomPage from './components/rooms/RoomPage'
+import { ActiveRoomProvider, useActiveRoom } from './components/rooms/ActiveRoomProvider'
+import AppDock from './components/rooms/AppDock'
+import RoomPanel from './components/rooms/RoomPanel'
+import RoomSheet from './components/rooms/RoomSheet'
 import { AuthProvider, useAuth } from './components/auth/AuthProvider'
 import { useActiveQueue } from './components/games/useActiveQueue'
 import { APP_NAME, APP_TAGLINE } from './lib/brand'
 import { parseRoomInviteCode } from './lib/rooms'
+import { MOBILE_ROOM_QUERY, useMediaQuery } from './lib/useMediaQuery'
+import { usePathname } from './lib/usePathname'
+import { useEffect } from 'react'
 import './App.css'
 
-function HomePage() {
+function CatalogPage() {
   const { user, loading: authLoading } = useAuth()
   const { activeQueue, busy, refresh, handleLeave } = useActiveQueue()
 
   return (
-    <main className="app-shell">
+    <main className="app-shell app-shell--catalog">
       {!authLoading && user ? (
         <ActiveQueueBanner activeQueue={activeQueue} busy={busy} onLeave={handleLeave} />
       ) : null}
@@ -33,19 +39,84 @@ function HomePage() {
   )
 }
 
+function MainLayout() {
+  const { user } = useAuth()
+  const { room, roomOpen, dismissRoom, openRoom, unreadCount } = useActiveRoom()
+  const isMobile = useMediaQuery(MOBILE_ROOM_QUERY)
+  const showDesktopRoom = Boolean(room && user && !isMobile)
+  const showMobileSheet = Boolean(room && user && isMobile && roomOpen)
+  const showDock = Boolean(room && user && isMobile)
+
+  useEffect(() => {
+    const root = document.getElementById('root')
+    root?.classList.toggle('app-root--split', showDesktopRoom)
+    root?.classList.toggle('app-root--dock', showDock)
+    return () => {
+      root?.classList.remove('app-root--split', 'app-root--dock')
+    }
+  }, [showDesktopRoom, showDock])
+
+  return (
+    <>
+      <div className={`app-layout ${showDesktopRoom ? 'app-layout--split' : ''}`}>
+        <div className="app-layout__catalog">
+          <CatalogPage />
+        </div>
+        {showDesktopRoom ? (
+          <aside className="app-layout__room panel-card" aria-label="Room chat">
+            <RoomPanel compact />
+          </aside>
+        ) : null}
+      </div>
+
+      {showMobileSheet ? (
+        <RoomSheet onDismiss={dismissRoom}>
+          <RoomPanel onDismiss={dismissRoom} showDismiss compact />
+        </RoomSheet>
+      ) : null}
+
+      {showDock ? (
+        <AppDock
+          unreadCount={unreadCount}
+          roomOpen={roomOpen}
+          onOpenCatalog={dismissRoom}
+          onOpenRoom={openRoom}
+        />
+      ) : null}
+    </>
+  )
+}
+
+function MainShell() {
+  const pathname = usePathname()
+  const inviteCode = parseRoomInviteCode(pathname)
+
+  return (
+    <ActiveRoomProvider pendingInviteCode={inviteCode}>
+      <MainLayout />
+    </ActiveRoomProvider>
+  )
+}
+
 function App() {
-  const roomCode = parseRoomInviteCode()
+  const pathname = usePathname()
+  const isMainRoute = pathname === '/' || parseRoomInviteCode(pathname)
 
   return (
     <AuthProvider>
-      {window.location.pathname.startsWith('/auth/complete') ? (
+      {pathname.startsWith('/auth/complete') ? (
         <CompleteSignInPage />
-      ) : window.location.pathname.startsWith('/return') ? (
+      ) : pathname.startsWith('/return') ? (
         <ReturnPage />
-      ) : roomCode ? (
-        <RoomPage />
+      ) : isMainRoute ? (
+        <MainShell />
       ) : (
-        <HomePage />
+        <main className="app-shell auth-page">
+          <h1>Page not found</h1>
+          <a className="auth-link" href="/">
+            Back to {APP_NAME}
+          </a>
+        </main>
       )}
     </AuthProvider>
   )

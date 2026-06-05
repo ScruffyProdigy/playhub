@@ -92,6 +92,10 @@ function createFetchMock(handlers) {
       data = { joinQueue: handlers.joinQueue ?? { queued: true, queuedCount: 1 } }
     } else if (query.includes('leaveQueue')) {
       data = { leaveQueue: true }
+    } else if (query.includes('myRoom')) {
+      data = { myRoom: handlers.myRoom ?? null }
+    } else if (query.includes('createRoom')) {
+      data = { createRoom: handlers.createRoom ?? null }
     } else {
       data = handlers.fallback ?? {}
     }
@@ -128,6 +132,7 @@ export function mockAuthenticatedSession(
     subscriptionAuth: 'Bearer test-token',
     myQueueStatus: defaultQueueStatus,
     myActiveQueue: null,
+    myRoom: null,
   })
 }
 
