@@ -41,6 +41,32 @@ function JoinGroupPanel({ children }) {
   )
 }
 
+function FifoQueueActions({ queueState, busy, disabled, onJoin, onLeave }) {
+  if (queueState === 'waiting') {
+    return (
+      <div className="game-list-actions game-list-actions--stack">
+        <p className="queue-status-line">{LOOKING_FOR_GROUP}</p>
+        <button type="button" className="game-list-button" onClick={onLeave} disabled={busy}>
+          {STOP_LOOKING}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="game-list-actions">
+      <button
+        type="button"
+        className="game-list-button"
+        onClick={() => onJoin()}
+        disabled={busy || disabled}
+      >
+        {busy ? LOOKING_FOR_GROUP : LOOK_FOR_GROUP}
+      </button>
+    </div>
+  )
+}
+
 export default function GameQueueActions({
   joinOptions,
   queueState,
@@ -82,7 +108,7 @@ export default function GameQueueActions({
       <JoinGroupPanel>
         {queueState === 'waiting' ? (
           <>
-            <p className="join-group-panel__status">
+            <p className="queue-status-line">
               {selectedQueuePath
                 ? waitingAsRoleLine(selectedDisplayName || selectedQueuePath)
                 : LOOKING_FOR_GROUP}
@@ -115,25 +141,5 @@ export default function GameQueueActions({
     )
   }
 
-  return (
-    <JoinGroupPanel>
-      {queueState === 'waiting' ? (
-        <>
-          <p className="join-group-panel__status">{LOOKING_FOR_GROUP}</p>
-          <button type="button" className="game-list-button" onClick={onLeave} disabled={busy}>
-            {STOP_LOOKING}
-          </button>
-        </>
-      ) : (
-        <button
-          type="button"
-          className="game-list-button"
-          onClick={() => onJoin()}
-          disabled={busy || disabled}
-        >
-          {busy ? LOOKING_FOR_GROUP : LOOK_FOR_GROUP}
-        </button>
-      )}
-    </JoinGroupPanel>
-  )
+  return <FifoQueueActions queueState={queueState} busy={busy} disabled={disabled} onJoin={onJoin} onLeave={onLeave} />
 }

@@ -94,7 +94,7 @@ describe('GameListItem', () => {
     await waitFor(() => expect(onQueueChange).toHaveBeenCalled())
   })
 
-  it('shows a Look for group panel for fifo modes with empty queuePaths', () => {
+  it('shows a plain Look for group button for fifo modes with empty queuePaths', () => {
     const fifoGame = {
       ...catalogGame,
       modes: [
@@ -113,12 +113,12 @@ describe('GameListItem', () => {
       </ul>,
     )
 
-    expect(screen.getByRole('region', { name: 'Look for group' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Look for group' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Look for group' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Join as' })).not.toBeInTheDocument()
   })
 
-  it('keeps fifo join panel visible while waiting in this queue', async () => {
+  it('keeps fifo join controls visible while waiting in this queue', async () => {
     vi.mocked(queue.fetchMyQueueStatus).mockResolvedValue({
       queued: true,
       queuedCount: 1,
@@ -140,9 +140,9 @@ describe('GameListItem', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByRole('region', { name: 'Look for group' })).toBeInTheDocument()
+      expect(screen.getByText('Looking…')).toBeInTheDocument()
     })
-    expect(screen.getByText('Looking…')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Look for group' })).not.toBeInTheDocument()
     expect(screen.queryByText('Use the banner above')).not.toBeInTheDocument()
   })
 

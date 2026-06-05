@@ -208,6 +208,12 @@
   gap: 0.5rem;
 }
 
+.game-list-actions--stack {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+}
+
 .join-group-panel {
   flex-shrink: 0;
   min-width: 10rem;

@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest'
 import GameQueueActions from './GameQueueActions'
 
 describe('GameQueueActions', () => {
-  it('shows a Look for group panel for single-bucket modes', () => {
+  it('shows a Look for group button for single-bucket modes', () => {
     render(
       <GameQueueActions
         joinOptions={{ kind: 'fifo', paths: [] }}
@@ -15,11 +15,11 @@ describe('GameQueueActions', () => {
       />,
     )
 
-    expect(screen.getByRole('region', { name: 'Look for group' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Look for group' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Look for group' })).toBeInTheDocument()
   })
 
-  it('keeps the Look for group panel visible while waiting in fifo modes', () => {
+  it('shows waiting controls without a Look for group panel in fifo modes', () => {
     render(
       <GameQueueActions
         joinOptions={{ kind: 'fifo', paths: [] }}
@@ -30,7 +30,7 @@ describe('GameQueueActions', () => {
       />,
     )
 
-    expect(screen.getByRole('region', { name: 'Look for group' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Look for group' })).not.toBeInTheDocument()
     expect(screen.getByText('Looking…')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Stop looking' })).toBeInTheDocument()
   })
@@ -102,7 +102,7 @@ describe('GameQueueActions', () => {
     expect(onJoin).toHaveBeenCalledWith('Tank')
   })
 
-  it('falls back to fifo panel when composition paths are empty', () => {
+  it('falls back to a plain Look for group button when composition paths are empty', () => {
     render(
       <GameQueueActions
         joinOptions={{
@@ -116,7 +116,7 @@ describe('GameQueueActions', () => {
       />,
     )
 
-    expect(screen.getByRole('region', { name: 'Look for group' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Look for group' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Look for group' })).toBeInTheDocument()
   })
 
