@@ -41,3 +41,5 @@ Local `./scripts/dev.sh` starts Postgres and Redis via Docker and sets both vari
 ## Game projects
 
 Reuse the same pattern: Redis channel per room or user, JSON events, subscribe from Node with `ioredis` or `redis` package. Keep gameplay state in the game DB; use pub/sub only for notifications and cross-service fan-out.
+
+**Room chat (JoinQuest):** channel `lobby:room:{roomId}` — payload `RoomEvent` with `type` `updated` (membership) or `message` (new chat row). GraphQL subscriptions: `roomUpdated`, `roomMessageAdded`.

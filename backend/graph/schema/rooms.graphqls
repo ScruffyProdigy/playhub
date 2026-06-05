@@ -1,0 +1,32 @@
+type Room {
+  id: ID!
+  inviteCode: String!
+  joinUrl: String!
+  host: User!
+  members: [User!]!
+  messages(limit: Int = 50, before: ID): [RoomMessage!]!
+}
+
+type RoomMessage {
+  id: ID!
+  author: User!
+  body: String!
+  createdAt: Time!
+}
+
+extend type Query {
+  room(inviteCode: String!): Room
+  myRoom: Room
+}
+
+extend type Mutation {
+  createRoom: Room!
+  joinRoom(inviteCode: String!): Room!
+  leaveRoom: Boolean!
+  sendRoomMessage(roomId: ID!, body: String!): RoomMessage!
+}
+
+extend type Subscription {
+  roomUpdated(roomId: ID!): Room!
+  roomMessageAdded(roomId: ID!): RoomMessage!
+}

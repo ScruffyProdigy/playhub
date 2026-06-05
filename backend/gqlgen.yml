@@ -43,3 +43,17 @@ models:
     fields:
       isAdmin:
         resolver: true
+  Room:
+    fields:
+      host:
+        resolver: true
+      members:
+        resolver: true
+      messages:
+        resolver: true
+      joinUrl:
+        resolver: true
+  RoomMessage:
+    fields:
+      author:
+        resolver: true

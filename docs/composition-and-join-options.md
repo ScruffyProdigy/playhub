@@ -96,6 +96,7 @@ So: **not** replacing the game’s character select — **optional** pre-queue e
   and path-aware matchmaking with per-path **`sizeForQueue`** fire thresholds.
 - **Deferred:** LFG forming map (parties, affinity), game `queue-options` API, DLC-aware polling,
   unlock progression, `PartyInput` on join.
+- **Rooms & tables:** Step 1 = chat **rooms** (invite, QR, share); Step 2 = **tables** for forming games — [rooms-and-tables.md](./rooms-and-tables.md).
 
 For new composition demos, start with **static paths from `seatTemplate`**; add **game-backed options**
 before production titles with progression.

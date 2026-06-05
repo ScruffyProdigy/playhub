@@ -139,6 +139,22 @@ type ReturnDestination struct {
 	Kind string `json:"kind"`
 }
 
+type Room struct {
+	ID         string         `json:"id"`
+	InviteCode string         `json:"inviteCode"`
+	JoinURL    string         `json:"joinUrl"`
+	Host       *User          `json:"host"`
+	Members    []*User        `json:"members"`
+	Messages   []*RoomMessage `json:"messages"`
+}
+
+type RoomMessage struct {
+	ID        string    `json:"id"`
+	Author    *User     `json:"author"`
+	Body      string    `json:"body"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 type Session struct {
 	ID        string        `json:"id"`
 	Game      *Game         `json:"game"`

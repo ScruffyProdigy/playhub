@@ -35,7 +35,9 @@ When a player is seated for a match, Lobby stores JSON on `game_session_particip
 | `kind` | Meaning | Typical `path` |
 |--------|---------|----------------|
 | `catalog_lfg` | Joined via catalog queue | `/` (home / catalog) |
-| `room` (future) | Friend room / party | `/room/{id}` |
+| `room` | Room after table start | `/room/{inviteCode}` |
+
+Room/table spec: [rooms-and-tables.md](./rooms-and-tables.md).
 
 New entry paths set context at join/match time. The return hub only reads it.
 

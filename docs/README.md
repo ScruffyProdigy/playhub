@@ -19,6 +19,7 @@ Documentation for **JoinQuest** — the platform that connects players to third-
 - **[End-to-end partner checklist](end-to-end-partner-checklist.md)** — Sign-in → queue → play → return
 - **[Match lifecycle callbacks](match-lifecycle-callbacks.md)** — Per-player finish + match result (planned)
 - **[Composition & join options](composition-and-join-options.md)** — Role queues vs game-backed eligibility
+- **[Rooms & tables](rooms-and-tables.md)** — Private rooms, forming tables, invite/QR, queue exclusion
 - **[Lobby ↔ Game Handoff](lobby-protocol-handoff.md)** — Provision, JWT, and integration rationale
 - **[Game Catalog Architecture](game-catalog-architecture.md)** — Modes, queues, manifest sync
 - **[Seat templates & LFG](seat-templates-and-matchmaking.md)** — Seat map contract and matchmaking spec

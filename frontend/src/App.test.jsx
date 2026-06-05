@@ -18,6 +18,7 @@ describe('App Component', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
     })
+    expect(screen.queryByRole('heading', { name: 'Room' })).not.toBeInTheDocument()
   })
 
   it('shows the signed-in user when authenticated', async () => {
@@ -28,6 +29,8 @@ describe('App Component', () => {
     expect(screen.getByText('player@example.com')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Available games' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Room' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create room' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Rock Paper Scissors Lizard Spock' })).toBeInTheDocument()
   })
 

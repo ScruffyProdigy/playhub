@@ -236,6 +236,99 @@
   font-size: 0.85rem;
 }
 
+.room-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.room-members__list {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.room-share__code {
+  margin: 0 0 0.75rem;
+}
+
+.room-share__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.room-share__status {
+  margin: 0.75rem 0 0;
+  color: #b8bcff;
+  font-size: 0.9rem;
+}
+
+.room-chat__log {
+  max-height: 18rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+}
+
+.room-chat__message {
+  margin: 0;
+}
+
+.room-chat__author {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #b8bcff;
+}
+
+.room-chat__body {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.room-qr-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.room-qr-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.room-qr-modal__panel {
+  position: relative;
+  z-index: 1;
+  max-width: 22rem;
+  width: 100%;
+  text-align: center;
+}
+
+.room-qr-modal__image {
+  display: block;
+  margin: 0 auto 1rem;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.5rem;
+}
+
+.room-qr-modal__url {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: #aaa;
+  word-break: break-all;
+}
+
 @media (prefers-color-scheme: light) {
   .active-queue-banner {
     border-color: rgba(100, 108, 255, 0.35);
@@ -272,6 +365,15 @@
   }
 
   .join-group-panel__status {
+    color: #666;
+  }
+
+  .room-share__status,
+  .room-chat__author {
+    color: #5558aa;
+  }
+
+  .room-qr-modal__url {
     color: #666;
   }
 

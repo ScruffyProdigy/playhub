@@ -16,9 +16,9 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 - **Authentication**: Magic-link sign-in, session cookies, JWT seat tokens
 - **Catalog & matchmaking**: `registerGame`, `seatTemplate` manifest sync, mode queues, `joinQueue(queueId, queuePath)`, handoff to game servers
 - **Database-backed queries**: `games`, `game`, `session`, `goods`, `myInventory`, `player` (game service)
-- **Real-time**: `queueUpdated` subscription via Redis pub/sub
+- **Real-time**: `queueUpdated` subscription via Redis pub/sub; **`roomUpdated` / `roomMessageAdded`** for chat rooms
 - **Post-game**: `returnDestination`, `reportPlayerFinished`, `reportMatchResult` — see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md), [player-return-routing.md](./player-return-routing.md)
-- **System**: `version`, `healthz`
+- **Rooms (Step 1)**: `createRoom`, `joinRoom`, `leaveRoom`, `sendRoomMessage`, `room`, `myRoom` — see [rooms-and-tables.md](./rooms-and-tables.md)
 
 ### 🚧 In Development
 - **Player-facing goods**: purchase/trade flows

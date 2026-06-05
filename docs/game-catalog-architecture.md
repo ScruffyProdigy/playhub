@@ -19,7 +19,8 @@ Game
 - **GameMode** — one way to play; identified by `mode_key` sent on provision.
   A two-player mode is a mode with two seats, not a special “duel” type.
 - **Queue** — matchmaking bucket scoped to `queue_id` (fifo default or role-specific).
-- **Session** — `game_id`, `mode_id`, optional `queue_id` (null for non-queue starts later).
+- **Session** — `game_id`, `mode_id`, optional `queue_id` (null for table/room starts).
+- **Room / Table** — social room (invite code) + forming table per game/mode; see [rooms-and-tables.md](./rooms-and-tables.md).
 
 **Full spec (game authors + Lobby LFG):** [`seat-templates-and-matchmaking.md`](./seat-templates-and-matchmaking.md) —
 `seatTemplate` → seat map (game contract); constraint-based LFG fills the map before provision.

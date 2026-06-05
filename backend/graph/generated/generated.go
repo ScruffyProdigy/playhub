@@ -44,6 +44,8 @@ type ResolverRoot interface {
 	ModeQueue() ModeQueueResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
+	Room() RoomResolver
+	RoomMessage() RoomMessageResolver
 	Session() SessionResolver
 	Subscription() SubscriptionResolver
 	User() UserResolver
@@ -140,9 +142,12 @@ type ComplexityRoot struct {
 	Mutation struct {
 		CompleteSignInWithCode func(childComplexity int, email string, code string) int
 		CompleteSignInWithLink func(childComplexity int, token string) int
+		CreateRoom             func(childComplexity int) int
 		GrantGood              func(childComplexity int, userID string, goodID string, quantity *int) int
 		JoinQueue              func(childComplexity int, queueID string, queuePath *string) int
+		JoinRoom               func(childComplexity int, inviteCode string) int
 		LeaveQueue             func(childComplexity int, queueID string) int
+		LeaveRoom              func(childComplexity int) int
 		Logout                 func(childComplexity int) int
 		RefreshGameManifest    func(childComplexity int, gameID string) int
 		RegisterGame           func(childComplexity int, input model.RegisterGameInput) int
@@ -150,6 +155,7 @@ type ComplexityRoot struct {
 		ReportPlayerFinished   func(childComplexity int, matchID string, lobbyUserID string, reason model.PlayerFinishReason, placement *int, metadata map[string]any) int
 		RequestSignIn          func(childComplexity int, email string) int
 		RevokeGood             func(childComplexity int, userID string, goodID string, quantity *int) int
+		SendRoomMessage        func(childComplexity int, roomID string, body string) int
 	}
 
 	PublicPlayer struct {
@@ -166,8 +172,10 @@ type ComplexityRoot struct {
 		MyActiveQueue     func(childComplexity int) int
 		MyInventory       func(childComplexity int, gameID *string) int
 		MyQueueStatus     func(childComplexity int, queueID string) int
+		MyRoom            func(childComplexity int) int
 		Player            func(childComplexity int, id string) int
 		ReturnDestination func(childComplexity int, matchID *string) int
+		Room              func(childComplexity int, inviteCode string) int
 		Session           func(childComplexity int, id string) int
 		SubscriptionAuth  func(childComplexity int) int
 		Version           func(childComplexity int) int
@@ -194,6 +202,22 @@ type ComplexityRoot struct {
 		Path func(childComplexity int) int
 	}
 
+	Room struct {
+		Host       func(childComplexity int) int
+		ID         func(childComplexity int) int
+		InviteCode func(childComplexity int) int
+		JoinURL    func(childComplexity int) int
+		Members    func(childComplexity int) int
+		Messages   func(childComplexity int, limit *int, before *string) int
+	}
+
+	RoomMessage struct {
+		Author    func(childComplexity int) int
+		Body      func(childComplexity int) int
+		CreatedAt func(childComplexity int) int
+		ID        func(childComplexity int) int
+	}
+
 	Session struct {
 		CreatedAt func(childComplexity int) int
 		Game      func(childComplexity int) int
@@ -203,7 +227,9 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
-		QueueUpdated func(childComplexity int, queueID string) int
+		QueueUpdated     func(childComplexity int, queueID string) int
+		RoomMessageAdded func(childComplexity int, roomID string) int
+		RoomUpdated      func(childComplexity int, roomID string) int
 	}
 
 	User struct {
@@ -241,6 +267,10 @@ type MutationResolver interface {
 	RefreshGameManifest(ctx context.Context, gameID string) (*model.Game, error)
 	ReportPlayerFinished(ctx context.Context, matchID string, lobbyUserID string, reason model.PlayerFinishReason, placement *int, metadata map[string]any) (bool, error)
 	ReportMatchResult(ctx context.Context, matchID string, status model.MatchResultStatus, winnerLobbyUserIds []string, metadata map[string]any) (bool, error)
+	CreateRoom(ctx context.Context) (*model.Room, error)
+	JoinRoom(ctx context.Context, inviteCode string) (*model.Room, error)
+	LeaveRoom(ctx context.Context) (bool, error)
+	SendRoomMessage(ctx context.Context, roomID string, body string) (*model.RoomMessage, error)
 }
 type QueryResolver interface {
 	Version(ctx context.Context) (string, error)
@@ -256,6 +286,17 @@ type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
 	SubscriptionAuth(ctx context.Context) (*string, error)
 	ReturnDestination(ctx context.Context, matchID *string) (*model.ReturnDestination, error)
+	Room(ctx context.Context, inviteCode string) (*model.Room, error)
+	MyRoom(ctx context.Context) (*model.Room, error)
+}
+type RoomResolver interface {
+	JoinURL(ctx context.Context, obj *model.Room) (string, error)
+	Host(ctx context.Context, obj *model.Room) (*model.User, error)
+	Members(ctx context.Context, obj *model.Room) ([]*model.User, error)
+	Messages(ctx context.Context, obj *model.Room, limit *int, before *string) ([]*model.RoomMessage, error)
+}
+type RoomMessageResolver interface {
+	Author(ctx context.Context, obj *model.RoomMessage) (*model.User, error)
 }
 type SessionResolver interface {
 	Game(ctx context.Context, obj *model.Session) (*model.Game, error)
@@ -264,6 +305,8 @@ type SessionResolver interface {
 }
 type SubscriptionResolver interface {
 	QueueUpdated(ctx context.Context, queueID string) (<-chan *model.QueueUpdate, error)
+	RoomUpdated(ctx context.Context, roomID string) (<-chan *model.Room, error)
+	RoomMessageAdded(ctx context.Context, roomID string) (<-chan *model.RoomMessage, error)
 }
 type UserResolver interface {
 	IsAdmin(ctx context.Context, obj *model.User) (bool, error)
@@ -666,6 +709,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.CompleteSignInWithLink(childComplexity, args["token"].(string)), true
+	case "Mutation.createRoom":
+		if e.complexity.Mutation.CreateRoom == nil {
+			break
+		}
+
+		return e.complexity.Mutation.CreateRoom(childComplexity), true
 	case "Mutation.grantGood":
 		if e.complexity.Mutation.GrantGood == nil {
 			break
@@ -688,6 +737,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.JoinQueue(childComplexity, args["queueId"].(string), args["queuePath"].(*string)), true
+	case "Mutation.joinRoom":
+		if e.complexity.Mutation.JoinRoom == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_joinRoom_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.JoinRoom(childComplexity, args["inviteCode"].(string)), true
 	case "Mutation.leaveQueue":
 		if e.complexity.Mutation.LeaveQueue == nil {
 			break
@@ -699,6 +759,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.LeaveQueue(childComplexity, args["queueId"].(string)), true
+	case "Mutation.leaveRoom":
+		if e.complexity.Mutation.LeaveRoom == nil {
+			break
+		}
+
+		return e.complexity.Mutation.LeaveRoom(childComplexity), true
 	case "Mutation.logout":
 		if e.complexity.Mutation.Logout == nil {
 			break
@@ -771,6 +837,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RevokeGood(childComplexity, args["userId"].(string), args["goodId"].(string), args["quantity"].(*int)), true
+	case "Mutation.sendRoomMessage":
+		if e.complexity.Mutation.SendRoomMessage == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_sendRoomMessage_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SendRoomMessage(childComplexity, args["roomId"].(string), args["body"].(string)), true
 
 	case "PublicPlayer.displayName":
 		if e.complexity.PublicPlayer.DisplayName == nil {
@@ -858,6 +935,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.MyQueueStatus(childComplexity, args["queueId"].(string)), true
+	case "Query.myRoom":
+		if e.complexity.Query.MyRoom == nil {
+			break
+		}
+
+		return e.complexity.Query.MyRoom(childComplexity), true
 	case "Query.player":
 		if e.complexity.Query.Player == nil {
 			break
@@ -880,6 +963,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.ReturnDestination(childComplexity, args["matchId"].(*string)), true
+	case "Query.room":
+		if e.complexity.Query.Room == nil {
+			break
+		}
+
+		args, err := ec.field_Query_room_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Room(childComplexity, args["inviteCode"].(string)), true
 	case "Query.session":
 		if e.complexity.Query.Session == nil {
 			break
@@ -979,6 +1073,73 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ReturnDestination.Path(childComplexity), true
 
+	case "Room.host":
+		if e.complexity.Room.Host == nil {
+			break
+		}
+
+		return e.complexity.Room.Host(childComplexity), true
+	case "Room.id":
+		if e.complexity.Room.ID == nil {
+			break
+		}
+
+		return e.complexity.Room.ID(childComplexity), true
+	case "Room.inviteCode":
+		if e.complexity.Room.InviteCode == nil {
+			break
+		}
+
+		return e.complexity.Room.InviteCode(childComplexity), true
+	case "Room.joinUrl":
+		if e.complexity.Room.JoinURL == nil {
+			break
+		}
+
+		return e.complexity.Room.JoinURL(childComplexity), true
+	case "Room.members":
+		if e.complexity.Room.Members == nil {
+			break
+		}
+
+		return e.complexity.Room.Members(childComplexity), true
+	case "Room.messages":
+		if e.complexity.Room.Messages == nil {
+			break
+		}
+
+		args, err := ec.field_Room_messages_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Room.Messages(childComplexity, args["limit"].(*int), args["before"].(*string)), true
+
+	case "RoomMessage.author":
+		if e.complexity.RoomMessage.Author == nil {
+			break
+		}
+
+		return e.complexity.RoomMessage.Author(childComplexity), true
+	case "RoomMessage.body":
+		if e.complexity.RoomMessage.Body == nil {
+			break
+		}
+
+		return e.complexity.RoomMessage.Body(childComplexity), true
+	case "RoomMessage.createdAt":
+		if e.complexity.RoomMessage.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.RoomMessage.CreatedAt(childComplexity), true
+	case "RoomMessage.id":
+		if e.complexity.RoomMessage.ID == nil {
+			break
+		}
+
+		return e.complexity.RoomMessage.ID(childComplexity), true
+
 	case "Session.createdAt":
 		if e.complexity.Session.CreatedAt == nil {
 			break
@@ -1021,6 +1182,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Subscription.QueueUpdated(childComplexity, args["queueId"].(string)), true
+	case "Subscription.roomMessageAdded":
+		if e.complexity.Subscription.RoomMessageAdded == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_roomMessageAdded_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.RoomMessageAdded(childComplexity, args["roomId"].(string)), true
+	case "Subscription.roomUpdated":
+		if e.complexity.Subscription.RoomUpdated == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_roomUpdated_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.RoomUpdated(childComplexity, args["roomId"].(string)), true
 
 	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
@@ -1407,6 +1590,39 @@ extend type Mutation {
   ): Boolean!
 }
 `, BuiltIn: false},
+	{Name: "../schema/rooms.graphqls", Input: `type Room {
+  id: ID!
+  inviteCode: String!
+  joinUrl: String!
+  host: User!
+  members: [User!]!
+  messages(limit: Int = 50, before: ID): [RoomMessage!]!
+}
+
+type RoomMessage {
+  id: ID!
+  author: User!
+  body: String!
+  createdAt: Time!
+}
+
+extend type Query {
+  room(inviteCode: String!): Room
+  myRoom: Room
+}
+
+extend type Mutation {
+  createRoom: Room!
+  joinRoom(inviteCode: String!): Room!
+  leaveRoom: Boolean!
+  sendRoomMessage(roomId: ID!, body: String!): RoomMessage!
+}
+
+extend type Subscription {
+  roomUpdated(roomId: ID!): Room!
+  roomMessageAdded(roomId: ID!): RoomMessage!
+}
+`, BuiltIn: false},
 	{Name: "../schema/users.graphqls", Input: `type User {
   id: ID!
   email: String
@@ -1500,6 +1716,17 @@ func (ec *executionContext) field_Mutation_joinQueue_args(ctx context.Context, r
 		return nil, err
 	}
 	args["queuePath"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_joinRoom_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "inviteCode", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["inviteCode"] = arg0
 	return args, nil
 }
 
@@ -1625,6 +1852,22 @@ func (ec *executionContext) field_Mutation_revokeGood_args(ctx context.Context, 
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_sendRoomMessage_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "roomId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["roomId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "body", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["body"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1718,6 +1961,17 @@ func (ec *executionContext) field_Query_returnDestination_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_room_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "inviteCode", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["inviteCode"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_session_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1729,6 +1983,22 @@ func (ec *executionContext) field_Query_session_args(ctx context.Context, rawArg
 	return args, nil
 }
 
+func (ec *executionContext) field_Room_messages_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "before", ec.unmarshalOID2ᚖstring)
+	if err != nil {
+		return nil, err
+	}
+	args["before"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Subscription_queueUpdated_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1737,6 +2007,28 @@ func (ec *executionContext) field_Subscription_queueUpdated_args(ctx context.Con
 		return nil, err
 	}
 	args["queueId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_roomMessageAdded_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "roomId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["roomId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_roomUpdated_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "roomId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["roomId"] = arg0
 	return args, nil
 }
 
@@ -4111,6 +4403,184 @@ func (ec *executionContext) fieldContext_Mutation_reportMatchResult(ctx context.
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_createRoom(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_createRoom,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Mutation().CreateRoom(ctx)
+		},
+		nil,
+		ec.marshalNRoom2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoom,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createRoom(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Room_id(ctx, field)
+			case "inviteCode":
+				return ec.fieldContext_Room_inviteCode(ctx, field)
+			case "joinUrl":
+				return ec.fieldContext_Room_joinUrl(ctx, field)
+			case "host":
+				return ec.fieldContext_Room_host(ctx, field)
+			case "members":
+				return ec.fieldContext_Room_members(ctx, field)
+			case "messages":
+				return ec.fieldContext_Room_messages(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_joinRoom(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_joinRoom,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().JoinRoom(ctx, fc.Args["inviteCode"].(string))
+		},
+		nil,
+		ec.marshalNRoom2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoom,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_joinRoom(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Room_id(ctx, field)
+			case "inviteCode":
+				return ec.fieldContext_Room_inviteCode(ctx, field)
+			case "joinUrl":
+				return ec.fieldContext_Room_joinUrl(ctx, field)
+			case "host":
+				return ec.fieldContext_Room_host(ctx, field)
+			case "members":
+				return ec.fieldContext_Room_members(ctx, field)
+			case "messages":
+				return ec.fieldContext_Room_messages(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_joinRoom_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_leaveRoom(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_leaveRoom,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Mutation().LeaveRoom(ctx)
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_leaveRoom(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_sendRoomMessage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_sendRoomMessage,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().SendRoomMessage(ctx, fc.Args["roomId"].(string), fc.Args["body"].(string))
+		},
+		nil,
+		ec.marshalNRoomMessage2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoomMessage,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_sendRoomMessage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_RoomMessage_id(ctx, field)
+			case "author":
+				return ec.fieldContext_RoomMessage_author(ctx, field)
+			case "body":
+				return ec.fieldContext_RoomMessage_body(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_RoomMessage_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RoomMessage", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_sendRoomMessage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _PublicPlayer_id(ctx context.Context, field graphql.CollectedField, obj *model.PublicPlayer) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4778,6 +5248,104 @@ func (ec *executionContext) fieldContext_Query_returnDestination(ctx context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_room(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_room,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().Room(ctx, fc.Args["inviteCode"].(string))
+		},
+		nil,
+		ec.marshalORoom2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoom,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_room(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Room_id(ctx, field)
+			case "inviteCode":
+				return ec.fieldContext_Room_inviteCode(ctx, field)
+			case "joinUrl":
+				return ec.fieldContext_Room_joinUrl(ctx, field)
+			case "host":
+				return ec.fieldContext_Room_host(ctx, field)
+			case "members":
+				return ec.fieldContext_Room_members(ctx, field)
+			case "messages":
+				return ec.fieldContext_Room_messages(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_room_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_myRoom(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_myRoom,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().MyRoom(ctx)
+		},
+		nil,
+		ec.marshalORoom2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoom,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_myRoom(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Room_id(ctx, field)
+			case "inviteCode":
+				return ec.fieldContext_Room_inviteCode(ctx, field)
+			case "joinUrl":
+				return ec.fieldContext_Room_joinUrl(ctx, field)
+			case "host":
+				return ec.fieldContext_Room_host(ctx, field)
+			case "members":
+				return ec.fieldContext_Room_members(ctx, field)
+			case "messages":
+				return ec.fieldContext_Room_messages(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -5258,6 +5826,354 @@ func (ec *executionContext) fieldContext_ReturnDestination_kind(_ context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _Room_id(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Room_inviteCode(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_inviteCode,
+		func(ctx context.Context) (any, error) {
+			return obj.InviteCode, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_inviteCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Room_joinUrl(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_joinUrl,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Room().JoinURL(ctx, obj)
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_joinUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Room_host(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_host,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Room().Host(ctx, obj)
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_host(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Room_members(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_members,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Room().Members(ctx, obj)
+		},
+		nil,
+		ec.marshalNUser2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUserᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_members(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Room_messages(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_messages,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Room().Messages(ctx, obj, fc.Args["limit"].(*int), fc.Args["before"].(*string))
+		},
+		nil,
+		ec.marshalNRoomMessage2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoomMessageᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_messages(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_RoomMessage_id(ctx, field)
+			case "author":
+				return ec.fieldContext_RoomMessage_author(ctx, field)
+			case "body":
+				return ec.fieldContext_RoomMessage_body(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_RoomMessage_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RoomMessage", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Room_messages_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RoomMessage_id(ctx context.Context, field graphql.CollectedField, obj *model.RoomMessage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RoomMessage_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RoomMessage_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RoomMessage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RoomMessage_author(ctx context.Context, field graphql.CollectedField, obj *model.RoomMessage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RoomMessage_author,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.RoomMessage().Author(ctx, obj)
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RoomMessage_author(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RoomMessage",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RoomMessage_body(ctx context.Context, field graphql.CollectedField, obj *model.RoomMessage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RoomMessage_body,
+		func(ctx context.Context) (any, error) {
+			return obj.Body, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RoomMessage_body(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RoomMessage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RoomMessage_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.RoomMessage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RoomMessage_createdAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RoomMessage_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RoomMessage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Session_id(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -5490,6 +6406,112 @@ func (ec *executionContext) fieldContext_Subscription_queueUpdated(ctx context.C
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Subscription_queueUpdated_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Subscription_roomUpdated(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	return graphql.ResolveFieldStream(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Subscription_roomUpdated,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Subscription().RoomUpdated(ctx, fc.Args["roomId"].(string))
+		},
+		nil,
+		ec.marshalNRoom2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoom,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Subscription_roomUpdated(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Room_id(ctx, field)
+			case "inviteCode":
+				return ec.fieldContext_Room_inviteCode(ctx, field)
+			case "joinUrl":
+				return ec.fieldContext_Room_joinUrl(ctx, field)
+			case "host":
+				return ec.fieldContext_Room_host(ctx, field)
+			case "members":
+				return ec.fieldContext_Room_members(ctx, field)
+			case "messages":
+				return ec.fieldContext_Room_messages(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_roomUpdated_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Subscription_roomMessageAdded(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	return graphql.ResolveFieldStream(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Subscription_roomMessageAdded,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Subscription().RoomMessageAdded(ctx, fc.Args["roomId"].(string))
+		},
+		nil,
+		ec.marshalNRoomMessage2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoomMessage,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Subscription_roomMessageAdded(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_RoomMessage_id(ctx, field)
+			case "author":
+				return ec.fieldContext_RoomMessage_author(ctx, field)
+			case "body":
+				return ec.fieldContext_RoomMessage_body(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_RoomMessage_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RoomMessage", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_roomMessageAdded_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -7970,6 +8992,34 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "createRoom":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createRoom(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "joinRoom":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_joinRoom(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "leaveRoom":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_leaveRoom(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sendRoomMessage":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_sendRoomMessage(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8321,6 +9371,44 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "room":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_room(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "myRoom":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_myRoom(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -8505,6 +9593,279 @@ func (ec *executionContext) _ReturnDestination(ctx context.Context, sel ast.Sele
 	return out
 }
 
+var roomImplementors = []string{"Room"}
+
+func (ec *executionContext) _Room(ctx context.Context, sel ast.SelectionSet, obj *model.Room) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, roomImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Room")
+		case "id":
+			out.Values[i] = ec._Room_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "inviteCode":
+			out.Values[i] = ec._Room_inviteCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "joinUrl":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Room_joinUrl(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "host":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Room_host(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "members":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Room_members(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "messages":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Room_messages(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var roomMessageImplementors = []string{"RoomMessage"}
+
+func (ec *executionContext) _RoomMessage(ctx context.Context, sel ast.SelectionSet, obj *model.RoomMessage) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, roomMessageImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RoomMessage")
+		case "id":
+			out.Values[i] = ec._RoomMessage_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "author":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RoomMessage_author(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "body":
+			out.Values[i] = ec._RoomMessage_body(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "createdAt":
+			out.Values[i] = ec._RoomMessage_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var sessionImplementors = []string{"Session"}
 
 func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, obj *model.Session) graphql.Marshaler {
@@ -8641,6 +10002,10 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	switch fields[0].Name {
 	case "queueUpdated":
 		return ec._Subscription_queueUpdated(ctx, fields[0])
+	case "roomUpdated":
+		return ec._Subscription_roomUpdated(ctx, fields[0])
+	case "roomMessageAdded":
+		return ec._Subscription_roomMessageAdded(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
@@ -9586,6 +10951,78 @@ func (ec *executionContext) marshalNReturnDestination2ᚖgithubᚗcomᚋscruffyp
 	return ec._ReturnDestination(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNRoom2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoom(ctx context.Context, sel ast.SelectionSet, v model.Room) graphql.Marshaler {
+	return ec._Room(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRoom2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoom(ctx context.Context, sel ast.SelectionSet, v *model.Room) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Room(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNRoomMessage2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoomMessage(ctx context.Context, sel ast.SelectionSet, v model.RoomMessage) graphql.Marshaler {
+	return ec._RoomMessage(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRoomMessage2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoomMessageᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RoomMessage) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNRoomMessage2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoomMessage(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNRoomMessage2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoomMessage(ctx context.Context, sel ast.SelectionSet, v *model.RoomMessage) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RoomMessage(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNSession2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSessionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Session) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -10132,6 +11569,13 @@ func (ec *executionContext) marshalOPublicPlayer2ᚖgithubᚗcomᚋscruffyprodig
 		return graphql.Null
 	}
 	return ec._PublicPlayer(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalORoom2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐRoom(ctx context.Context, sel ast.SelectionSet, v *model.Room) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Room(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOSession2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSession(ctx context.Context, sel ast.SelectionSet, v *model.Session) graphql.Marshaler {
