@@ -42,6 +42,31 @@ describe('UserSessionCard', () => {
     expect(screen.getByText('player')).toBeInTheDocument()
   })
 
+  it('shows change display for completed profiles', async () => {
+    renderSessionCard()
+
+    expect(await screen.findByRole('button', { name: 'Change display' })).toBeInTheDocument()
+  })
+
+  it('prompts new players to set up display', async () => {
+    const newUser = {
+      ...user,
+      avatarKey: null,
+      avatarUrl: null,
+      displayName: 'player (new)',
+    }
+
+    render(
+      <AuthProvider>
+        <UserSessionCard user={newUser} />
+      </AuthProvider>,
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Set up your display' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Display name')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save display' })).toBeInTheDocument()
+  })
+
   it('logs out and clears the session', async () => {
     renderSessionCard()
     await screen.findByText('Welcome back')

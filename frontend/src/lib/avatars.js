@@ -1,9 +1,12 @@
 import { graphqlRequest } from './graphql'
 
+export const PROVISIONAL_DISPLAY_SUFFIX = ' (new)'
+
 export const USER_AVATAR_FIELDS = `
   id
   displayName
   avatarUrl
+  avatarKey
 `
 
 export const STARTER_AVATARS_QUERY = `
@@ -13,6 +16,20 @@ export const STARTER_AVATARS_QUERY = `
       name
       slot
       imageUrl
+    }
+  }
+`
+
+const UPDATE_PLAYER_PROFILE = `
+  mutation UpdatePlayerProfile($displayName: String!, $avatarKey: ID!) {
+    updatePlayerProfile(displayName: $displayName, avatarKey: $avatarKey) {
+      id
+      email
+      displayName
+      avatarUrl
+      avatarKey
+      avatarSource
+      createdAt
     }
   }
 `
@@ -38,6 +55,22 @@ export const STARTER_AVATAR_FALLBACK = [
   { key: 'beacon', name: 'Beacon', slot: 'Beacon', imageUrl: '/avatars/beacon.png' },
 ]
 
+export function isProvisionalDisplayName(name) {
+  return Boolean(name?.trim().endsWith(PROVISIONAL_DISPLAY_SUFFIX))
+}
+
+export function needsProfileSetup(user) {
+  return !user?.avatarKey || isProvisionalDisplayName(user?.displayName)
+}
+
+export function defaultDisplayNameInput(user) {
+  const name = user?.displayName?.trim() || ''
+  if (isProvisionalDisplayName(name)) {
+    return name.slice(0, -PROVISIONAL_DISPLAY_SUFFIX.length).trim()
+  }
+  return name
+}
+
 export async function fetchStarterAvatars() {
   try {
     const data = await graphqlRequest(STARTER_AVATARS_QUERY)
@@ -45,6 +78,11 @@ export async function fetchStarterAvatars() {
   } catch {
     return STARTER_AVATAR_FALLBACK
   }
+}
+
+export async function updatePlayerProfile(displayName, avatarKey) {
+  const data = await graphqlRequest(UPDATE_PLAYER_PROFILE, { displayName, avatarKey })
+  return data.updatePlayerProfile
 }
 
 export async function selectStarterAvatar(key) {

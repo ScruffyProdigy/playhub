@@ -88,6 +88,14 @@ function createFetchMock(handlers) {
       data = { games: handlers.games ?? [] }
     } else if (query.includes('starterAvatars')) {
       data = { starterAvatars: handlers.starterAvatars ?? [] }
+    } else if (query.includes('updatePlayerProfile')) {
+      data = {
+        updatePlayerProfile: handlers.updatePlayerProfile ?? {
+          ...handlers.me,
+          displayName: body.variables?.displayName ?? handlers.me?.displayName,
+          avatarKey: body.variables?.avatarKey ?? handlers.me?.avatarKey,
+        },
+      }
     } else if (query.includes('selectStarterAvatar')) {
       data = { selectStarterAvatar: handlers.selectStarterAvatar ?? handlers.me ?? null }
     } else if (query.includes('me {') || query.includes('query Me')) {

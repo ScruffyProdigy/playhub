@@ -85,6 +85,37 @@ func TestSelectStarterAvatarAndPlayerLookup(t *testing.T) {
 	if len(catalogResp.Data.StarterAvatars) != 5 {
 		t.Fatalf("expected 5 starter avatars, got %d", len(catalogResp.Data.StarterAvatars))
 	}
+
+	profileQuery := `mutation Profile($displayName: String!, $avatarKey: ID!) {
+		updatePlayerProfile(displayName: $displayName, avatarKey: $avatarKey) {
+			displayName
+			avatarKey
+			avatarUrl
+		}
+	}`
+	profileBody := postGraphQL(t, env.Handler, profileQuery, map[string]any{
+		"displayName": "River",
+		"avatarKey":   "storm",
+	}, cookie)
+	var profileResp struct {
+		Data struct {
+			UpdatePlayerProfile struct {
+				DisplayName *string `json:"displayName"`
+				AvatarKey   *string `json:"avatarKey"`
+				AvatarURL   *string `json:"avatarUrl"`
+			} `json:"updatePlayerProfile"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(profileBody, &profileResp); err != nil {
+		t.Fatalf("decode profile: %v body=%s", err, profileBody)
+	}
+	profile := profileResp.Data.UpdatePlayerProfile
+	if profile.DisplayName == nil || *profile.DisplayName != "River" {
+		t.Fatalf("displayName: %+v", profile.DisplayName)
+	}
+	if profile.AvatarKey == nil || *profile.AvatarKey != "storm" {
+		t.Fatalf("avatarKey: %+v", profile.AvatarKey)
+	}
 }
 
 func TestMyRoomIncludesMemberAvatars(t *testing.T) {

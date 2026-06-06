@@ -166,6 +166,7 @@ type ComplexityRoot struct {
 		SendRoomMessage        func(childComplexity int, roomID string, body string) int
 		SitAtTable             func(childComplexity int, tableID string, seatKey string) int
 		StartTable             func(childComplexity int, tableID string) int
+		UpdatePlayerProfile    func(childComplexity int, displayName string, avatarKey string) int
 	}
 
 	MyTableSeat struct {
@@ -336,6 +337,7 @@ type MutationResolver interface {
 	CompleteSignInWithCode(ctx context.Context, email string, code string) (*model.User, error)
 	Logout(ctx context.Context) (bool, error)
 	SelectStarterAvatar(ctx context.Context, key string) (*model.User, error)
+	UpdatePlayerProfile(ctx context.Context, displayName string, avatarKey string) (*model.User, error)
 	RegisterGame(ctx context.Context, input model.RegisterGameInput) (*model.RegisterGamePayload, error)
 	RefreshGameManifest(ctx context.Context, gameID string) (*model.Game, error)
 	ReportPlayerFinished(ctx context.Context, matchID string, lobbyUserID string, reason model.PlayerFinishReason, placement *int, metadata map[string]any) (bool, error)
@@ -1025,6 +1027,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.StartTable(childComplexity, args["tableId"].(string)), true
+	case "Mutation.updatePlayerProfile":
+		if e.complexity.Mutation.UpdatePlayerProfile == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updatePlayerProfile_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdatePlayerProfile(childComplexity, args["displayName"].(string), args["avatarKey"].(string)), true
 
 	case "MyTableSeat.gameId":
 		if e.complexity.MyTableSeat.GameID == nil {
@@ -1837,6 +1850,7 @@ extend type Query {
 
 extend type Mutation {
   selectStarterAvatar(key: ID!): User!
+  updatePlayerProfile(displayName: String!, avatarKey: ID!): User!
 }
 `, BuiltIn: false},
 	{Name: "../schema/catalog.graphqls", Input: `input RegisterGameInput {
@@ -2507,6 +2521,22 @@ func (ec *executionContext) field_Mutation_startTable_args(ctx context.Context, 
 		return nil, err
 	}
 	args["tableId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updatePlayerProfile_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "displayName", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["displayName"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "avatarKey", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["avatarKey"] = arg1
 	return args, nil
 }
 
@@ -4925,6 +4955,65 @@ func (ec *executionContext) fieldContext_Mutation_selectStarterAvatar(ctx contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_selectStarterAvatar_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updatePlayerProfile(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_updatePlayerProfile,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().UpdatePlayerProfile(ctx, fc.Args["displayName"].(string), fc.Args["avatarKey"].(string))
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updatePlayerProfile(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updatePlayerProfile_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -11551,6 +11640,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "selectStarterAvatar":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_selectStarterAvatar(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatePlayerProfile":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updatePlayerProfile(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

@@ -11,4 +11,5 @@ extend type Query {
 
 extend type Mutation {
   selectStarterAvatar(key: ID!): User!
+  updatePlayerProfile(displayName: String!, avatarKey: ID!): User!
 }

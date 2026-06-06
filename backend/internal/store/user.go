@@ -13,6 +13,23 @@ import (
 )
 
 var ErrInvalidAvatarKey = errors.New("store: invalid avatar key")
+var ErrInvalidDisplayName = errors.New("store: invalid display name")
+
+const MaxDisplayNameLen = 100
+
+// IsProvisionalDisplayName reports auto-generated names awaiting player customization.
+func IsProvisionalDisplayName(name string) bool {
+	return strings.HasSuffix(strings.TrimSpace(name), ProvisionalDisplayNameSuffix)
+}
+
+// NormalizeDisplayName trims and validates a player-visible display name.
+func NormalizeDisplayName(raw string) (string, error) {
+	name := strings.TrimSpace(raw)
+	if name == "" || len(name) > MaxDisplayNameLen {
+		return "", ErrInvalidDisplayName
+	}
+	return name, nil
+}
 
 func scanUser(row interface{ Scan(dest ...any) error }) (*User, error) {
 	var u User
@@ -115,6 +132,29 @@ func (s *Store) SetUserStarterAvatar(ctx context.Context, userID uuid.UUID, avat
 		WHERE id = $1 AND is_active = true
 		RETURNING `+userColumns+`
 	`, userID, key, source, url)
+	return scanUser(row)
+}
+
+// UpdateUserProfile sets the player's display name and starter avatar together.
+func (s *Store) UpdateUserProfile(ctx context.Context, userID uuid.UUID, displayName, avatarKey, publicOrigin string) (*User, error) {
+	name, err := NormalizeDisplayName(displayName)
+	if err != nil {
+		return nil, err
+	}
+	entry, ok := avatars.StarterByKey(avatarKey)
+	if !ok {
+		return nil, ErrInvalidAvatarKey
+	}
+	key := entry.Key
+	source := avatars.SourceStarter
+	url := avatars.PublicAssetURL(publicOrigin, entry.File)
+
+	row := s.db.QueryRowContext(ctx, `
+		UPDATE users
+		SET display_name = $2, avatar_key = $3, avatar_source = $4, avatar_url = $5, updated_at = NOW()
+		WHERE id = $1 AND is_active = true
+		RETURNING `+userColumns+`
+	`, userID, name, key, source, url)
 	return scanUser(row)
 }
 

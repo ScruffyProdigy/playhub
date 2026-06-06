@@ -35,6 +35,30 @@ func (r *mutationResolver) SelectStarterAvatar(ctx context.Context, key string) 
 	return ToGraphQLUser(user), nil
 }
 
+// UpdatePlayerProfile is the resolver for the updatePlayerProfile field.
+func (r *mutationResolver) UpdatePlayerProfile(ctx context.Context, displayName string, avatarKey string) (*model.User, error) {
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	user, err := st.UpdateUserProfile(ctx, userID, displayName, avatarKey, auth.LobbyPublicURL())
+	if err != nil {
+		switch {
+		case errors.Is(err, store.ErrInvalidAvatarKey):
+			return nil, fmt.Errorf("invalid avatar key")
+		case errors.Is(err, store.ErrInvalidDisplayName):
+			return nil, fmt.Errorf("invalid display name")
+		default:
+			return nil, err
+		}
+	}
+	return ToGraphQLUser(user), nil
+}
+
 // StarterAvatars is the resolver for the starterAvatars field.
 func (r *queryResolver) StarterAvatars(ctx context.Context) ([]*model.StarterAvatar, error) {
 	origin := auth.LobbyPublicURL()
