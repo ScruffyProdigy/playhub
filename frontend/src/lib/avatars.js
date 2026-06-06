@@ -34,18 +34,6 @@ const UPDATE_PLAYER_PROFILE = `
   }
 `
 
-const SELECT_STARTER_AVATAR = `
-  mutation SelectStarterAvatar($key: ID!) {
-    selectStarterAvatar(key: $key) {
-      id
-      displayName
-      avatarUrl
-      avatarKey
-      avatarSource
-    }
-  }
-`
-
 /** Static fallback when the catalog query is unavailable (tests, offline). */
 export const STARTER_AVATAR_FALLBACK = [
   { key: 'compass', name: 'Compass', slot: 'Compass', imageUrl: '/avatars/compass.png' },
@@ -96,11 +84,6 @@ export async function fetchStarterAvatars() {
 export async function updatePlayerProfile(displayName, avatarKey) {
   const data = await graphqlRequest(UPDATE_PLAYER_PROFILE, { displayName, avatarKey })
   return data.updatePlayerProfile
-}
-
-export async function selectStarterAvatar(key) {
-  const data = await graphqlRequest(SELECT_STARTER_AVATAR, { key })
-  return data.selectStarterAvatar
 }
 
 export function avatarInitial(user) {

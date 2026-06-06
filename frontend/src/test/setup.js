@@ -96,8 +96,6 @@ function createFetchMock(handlers) {
           avatarKey: body.variables?.avatarKey ?? handlers.me?.avatarKey,
         },
       }
-    } else if (query.includes('selectStarterAvatar')) {
-      data = { selectStarterAvatar: handlers.selectStarterAvatar ?? handlers.me ?? null }
     } else if (query.includes('me {') || query.includes('query Me')) {
       data = { me: handlers.me ?? null }
     } else if (query.includes('joinQueue')) {

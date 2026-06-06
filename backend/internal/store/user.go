@@ -116,23 +116,12 @@ func (s *Store) UpdateUserLastLogin(ctx context.Context, id uuid.UUID) error {
 	return ensureRowsAffected(result, ErrNotFound)
 }
 
-// SetUserStarterAvatar updates the user's starter avatar selection.
-func (s *Store) SetUserStarterAvatar(ctx context.Context, userID uuid.UUID, avatarKey, publicOrigin string) (*User, error) {
+func resolveStarterAvatar(avatarKey, publicOrigin string) (key, source, url string, err error) {
 	entry, ok := avatars.StarterByKey(avatarKey)
 	if !ok {
-		return nil, ErrInvalidAvatarKey
+		return "", "", "", ErrInvalidAvatarKey
 	}
-	key := entry.Key
-	source := avatars.SourceStarter
-	url := avatars.PublicAssetURL(publicOrigin, entry.File)
-
-	row := s.db.QueryRowContext(ctx, `
-		UPDATE users
-		SET avatar_key = $2, avatar_source = $3, avatar_url = $4, updated_at = NOW()
-		WHERE id = $1 AND is_active = true
-		RETURNING `+userColumns+`
-	`, userID, key, source, url)
-	return scanUser(row)
+	return entry.Key, avatars.SourceStarter, avatars.PublicAssetURL(publicOrigin, entry.File), nil
 }
 
 // UpdateUserProfile sets the player's display name and starter avatar together.
@@ -141,13 +130,10 @@ func (s *Store) UpdateUserProfile(ctx context.Context, userID uuid.UUID, display
 	if err != nil {
 		return nil, err
 	}
-	entry, ok := avatars.StarterByKey(avatarKey)
-	if !ok {
-		return nil, ErrInvalidAvatarKey
+	key, source, url, err := resolveStarterAvatar(avatarKey, publicOrigin)
+	if err != nil {
+		return nil, err
 	}
-	key := entry.Key
-	source := avatars.SourceStarter
-	url := avatars.PublicAssetURL(publicOrigin, entry.File)
 
 	row := s.db.QueryRowContext(ctx, `
 		UPDATE users

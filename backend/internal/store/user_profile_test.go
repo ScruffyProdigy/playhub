@@ -57,4 +57,9 @@ func TestUpdateUserProfile(t *testing.T) {
 	if err != ErrInvalidDisplayName {
 		t.Fatalf("expected ErrInvalidDisplayName, got %v", err)
 	}
+
+	_, err = st.UpdateUserProfile(ctx, user.ID, "River", "not-real", "https://joinquest.cc")
+	if err != ErrInvalidAvatarKey {
+		t.Fatalf("expected ErrInvalidAvatarKey, got %v", err)
+	}
 }

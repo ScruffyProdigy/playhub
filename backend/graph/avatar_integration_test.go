@@ -9,7 +9,7 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
-func TestSelectStarterAvatarAndPlayerLookup(t *testing.T) {
+func TestUpdatePlayerProfileAndPlayerLookup(t *testing.T) {
 	env := newQueueIntegrationEnv(t)
 	cleaner := env.newCleaner(t)
 	ctx := context.Background()
@@ -26,32 +26,39 @@ func TestSelectStarterAvatarAndPlayerLookup(t *testing.T) {
 	cleaner.TrackUser(user.ID)
 	_, cookie := createTestUserSessionForUser(t, env, user.ID)
 
-	selectQuery := `mutation Select($key: ID!) {
-		selectStarterAvatar(key: $key) {
-			id
+	profileQuery := `mutation Profile($displayName: String!, $avatarKey: ID!) {
+		updatePlayerProfile(displayName: $displayName, avatarKey: $avatarKey) {
+			displayName
 			avatarKey
 			avatarUrl
 			avatarSource
 		}
 	}`
-	selectBody := postGraphQL(t, env.Handler, selectQuery, map[string]any{"key": "campfire"}, cookie)
-	var selectResp struct {
+	profileBody := postGraphQL(t, env.Handler, profileQuery, map[string]any{
+		"displayName": "River",
+		"avatarKey":   "campfire",
+	}, cookie)
+	var profileResp struct {
 		Data struct {
-			SelectStarterAvatar struct {
-				AvatarKey *string `json:"avatarKey"`
-				AvatarURL *string `json:"avatarUrl"`
-			} `json:"selectStarterAvatar"`
+			UpdatePlayerProfile struct {
+				DisplayName *string `json:"displayName"`
+				AvatarKey   *string `json:"avatarKey"`
+				AvatarURL   *string `json:"avatarUrl"`
+			} `json:"updatePlayerProfile"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(selectBody, &selectResp); err != nil {
-		t.Fatalf("decode select: %v body=%s", err, selectBody)
+	if err := json.Unmarshal(profileBody, &profileResp); err != nil {
+		t.Fatalf("decode profile: %v body=%s", err, profileBody)
 	}
-	selected := selectResp.Data.SelectStarterAvatar
-	if selected.AvatarKey == nil || *selected.AvatarKey != "campfire" {
-		t.Fatalf("avatarKey: %+v", selected.AvatarKey)
+	profile := profileResp.Data.UpdatePlayerProfile
+	if profile.DisplayName == nil || *profile.DisplayName != "River" {
+		t.Fatalf("displayName: %+v", profile.DisplayName)
 	}
-	if selected.AvatarURL == nil || *selected.AvatarURL != "https://joinquest.test/avatars/campfire.png" {
-		t.Fatalf("avatarUrl: %+v", selected.AvatarURL)
+	if profile.AvatarKey == nil || *profile.AvatarKey != "campfire" {
+		t.Fatalf("avatarKey: %+v", profile.AvatarKey)
+	}
+	if profile.AvatarURL == nil || *profile.AvatarURL != "https://joinquest.test/avatars/campfire.png" {
+		t.Fatalf("avatarUrl: %+v", profile.AvatarURL)
 	}
 
 	playerQuery := `query Player($id: ID!) { player(id: $id) { id avatarUrl avatarSource } }`
@@ -85,37 +92,6 @@ func TestSelectStarterAvatarAndPlayerLookup(t *testing.T) {
 	if len(catalogResp.Data.StarterAvatars) != 5 {
 		t.Fatalf("expected 5 starter avatars, got %d", len(catalogResp.Data.StarterAvatars))
 	}
-
-	profileQuery := `mutation Profile($displayName: String!, $avatarKey: ID!) {
-		updatePlayerProfile(displayName: $displayName, avatarKey: $avatarKey) {
-			displayName
-			avatarKey
-			avatarUrl
-		}
-	}`
-	profileBody := postGraphQL(t, env.Handler, profileQuery, map[string]any{
-		"displayName": "River",
-		"avatarKey":   "storm",
-	}, cookie)
-	var profileResp struct {
-		Data struct {
-			UpdatePlayerProfile struct {
-				DisplayName *string `json:"displayName"`
-				AvatarKey   *string `json:"avatarKey"`
-				AvatarURL   *string `json:"avatarUrl"`
-			} `json:"updatePlayerProfile"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(profileBody, &profileResp); err != nil {
-		t.Fatalf("decode profile: %v body=%s", err, profileBody)
-	}
-	profile := profileResp.Data.UpdatePlayerProfile
-	if profile.DisplayName == nil || *profile.DisplayName != "River" {
-		t.Fatalf("displayName: %+v", profile.DisplayName)
-	}
-	if profile.AvatarKey == nil || *profile.AvatarKey != "storm" {
-		t.Fatalf("avatarKey: %+v", profile.AvatarKey)
-	}
 }
 
 func TestMyRoomIncludesMemberAvatars(t *testing.T) {
@@ -132,8 +108,8 @@ func TestMyRoomIncludesMemberAvatars(t *testing.T) {
 		t.Fatalf("CreateUser: %v", err)
 	}
 	cleaner.TrackUser(user.ID)
-	if _, err := env.Store.SetUserStarterAvatar(ctx, user.ID, "compass", "https://joinquest.test"); err != nil {
-		t.Fatalf("SetUserStarterAvatar: %v", err)
+	if _, err := env.Store.UpdateUserProfile(ctx, user.ID, "Pat", "compass", "https://joinquest.test"); err != nil {
+		t.Fatalf("UpdateUserProfile: %v", err)
 	}
 	_, cookie := createTestUserSessionForUser(t, env, user.ID)
 

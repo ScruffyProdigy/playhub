@@ -15,26 +15,6 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
-// SelectStarterAvatar is the resolver for the selectStarterAvatar field.
-func (r *mutationResolver) SelectStarterAvatar(ctx context.Context, key string) (*model.User, error) {
-	st, err := r.requireStore()
-	if err != nil {
-		return nil, err
-	}
-	userID, err := requireAuthUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-	user, err := st.SetUserStarterAvatar(ctx, userID, key, auth.LobbyPublicURL())
-	if err != nil {
-		if errors.Is(err, store.ErrInvalidAvatarKey) {
-			return nil, fmt.Errorf("invalid avatar key")
-		}
-		return nil, err
-	}
-	return ToGraphQLUser(user), nil
-}
-
 // UpdatePlayerProfile is the resolver for the updatePlayerProfile field.
 func (r *mutationResolver) UpdatePlayerProfile(ctx context.Context, displayName string, avatarKey string) (*model.User, error) {
 	st, err := r.requireStore()
