@@ -55,6 +55,19 @@ export const STARTER_AVATAR_FALLBACK = [
   { key: 'beacon', name: 'Beacon', slot: 'Beacon', imageUrl: '/avatars/beacon.png' },
 ]
 
+export function resolveUserAvatarUrl(user) {
+  const direct = user?.avatarUrl?.trim()
+  if (direct) {
+    return direct
+  }
+  const key = user?.avatarKey?.trim()
+  if (!key) {
+    return null
+  }
+  const known = STARTER_AVATAR_FALLBACK.find((item) => item.key === key)
+  return known?.imageUrl ?? `/avatars/${key}.png`
+}
+
 export function isProvisionalDisplayName(name) {
   return Boolean(name?.trim().endsWith(PROVISIONAL_DISPLAY_SUFFIX))
 }

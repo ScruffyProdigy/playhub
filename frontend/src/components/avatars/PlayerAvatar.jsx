@@ -1,14 +1,15 @@
-import { avatarInitial } from '../../lib/avatars'
+import { avatarInitial, resolveUserAvatarUrl } from '../../lib/avatars'
 import { displayName } from '../../lib/tables'
 
 export default function PlayerAvatar({ user, size = 'md', className = '', title }) {
   const label = title ?? (user ? displayName(user) : 'Player')
   const sizeClass = size === 'sm' ? 'player-avatar--sm' : 'player-avatar--md'
+  const avatarUrl = resolveUserAvatarUrl(user)
 
-  if (user?.avatarUrl) {
+  if (avatarUrl) {
     return (
       <img
-        src={user.avatarUrl}
+        src={avatarUrl}
         alt=""
         aria-hidden="true"
         className={`player-avatar ${sizeClass}${className ? ` ${className}` : ''}`}

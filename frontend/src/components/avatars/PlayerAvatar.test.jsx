@@ -14,4 +14,10 @@ describe('PlayerAvatar', () => {
     render(<PlayerAvatar user={{ displayName: 'River' }} />)
     expect(screen.getByText('R')).toBeTruthy()
   })
+
+  it('renders image from avatarKey when avatarUrl is missing', () => {
+    const { container } = render(<PlayerAvatar user={{ displayName: 'River', avatarKey: 'storm' }} />)
+    const img = container.querySelector('img.player-avatar')
+    expect(img?.getAttribute('src')).toBe('/avatars/storm.png')
+  })
 })
