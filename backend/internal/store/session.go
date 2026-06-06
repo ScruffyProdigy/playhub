@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -124,7 +125,7 @@ func (s *Store) GetMatchedSessionForUserAndModeQueue(ctx context.Context, modeQu
 
 func (s *Store) ListSessionParticipants(ctx context.Context, sessionID uuid.UUID) ([]User, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT u.id, u.email, u.username, u.display_name, u.created_at
+		SELECT `+strings.ReplaceAll(userColumns, "id,", "u.id,")+`
 		FROM game_session_participants p
 		JOIN users u ON u.id = p.user_id
 		WHERE p.session_id = $1 AND p.left_at IS NULL
@@ -137,11 +138,11 @@ func (s *Store) ListSessionParticipants(ctx context.Context, sessionID uuid.UUID
 
 	var users []User
 	for rows.Next() {
-		var u User
-		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.CreatedAt); err != nil {
+		u, err := scanUser(rows)
+		if err != nil {
 			return nil, err
 		}
-		users = append(users, u)
+		users = append(users, *u)
 	}
 	return users, rows.Err()
 }

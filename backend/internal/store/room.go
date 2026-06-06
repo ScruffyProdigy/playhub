@@ -333,7 +333,7 @@ func (s *Store) IsRoomMember(ctx context.Context, roomID, userID uuid.UUID) (boo
 // ListRoomMemberUsers returns members ordered by join time.
 func (s *Store) ListRoomMemberUsers(ctx context.Context, roomID uuid.UUID) ([]User, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT u.id, u.email, u.username, u.display_name, u.created_at
+		SELECT `+strings.ReplaceAll(userColumns, "id,", "u.id,")+`
 		FROM users u
 		INNER JOIN room_members rm ON rm.user_id = u.id
 		WHERE rm.room_id = $1 AND u.is_active = true
@@ -346,11 +346,11 @@ func (s *Store) ListRoomMemberUsers(ctx context.Context, roomID uuid.UUID) ([]Us
 
 	var users []User
 	for rows.Next() {
-		var u User
-		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.CreatedAt); err != nil {
+		u, err := scanUser(rows)
+		if err != nil {
 			return nil, err
 		}
-		users = append(users, u)
+		users = append(users, *u)
 	}
 	return users, rows.Err()
 }

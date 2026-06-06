@@ -86,6 +86,10 @@ function createFetchMock(handlers) {
       data = { myQueueStatus: handlers.myQueueStatus ?? defaultQueueStatus }
     } else if (query.includes('games {')) {
       data = { games: handlers.games ?? [] }
+    } else if (query.includes('starterAvatars')) {
+      data = { starterAvatars: handlers.starterAvatars ?? [] }
+    } else if (query.includes('selectStarterAvatar')) {
+      data = { selectStarterAvatar: handlers.selectStarterAvatar ?? handlers.me ?? null }
     } else if (query.includes('me {') || query.includes('query Me')) {
       data = { me: handlers.me ?? null }
     } else if (query.includes('joinQueue')) {
@@ -123,6 +127,9 @@ export function mockAuthenticatedSession(
     id: 'user-1',
     email: 'player@example.com',
     displayName: 'player',
+    avatarKey: 'compass',
+    avatarUrl: '/avatars/compass.png',
+    avatarSource: 'STARTER',
     createdAt: '2026-01-01T00:00:00Z',
   },
 ) {

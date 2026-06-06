@@ -12,6 +12,9 @@ type User struct {
 	Email       string
 	Username    string
 	DisplayName string
+	AvatarURL   *string
+	AvatarKey   *string
+	AvatarSource *string
 	CreatedAt   time.Time
 }
 

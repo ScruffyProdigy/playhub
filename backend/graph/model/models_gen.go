@@ -114,8 +114,10 @@ type MyTableSeat struct {
 }
 
 type PublicPlayer struct {
-	ID          string  `json:"id"`
-	DisplayName *string `json:"displayName,omitempty"`
+	ID           string        `json:"id"`
+	DisplayName  *string       `json:"displayName,omitempty"`
+	AvatarURL    *string       `json:"avatarUrl,omitempty"`
+	AvatarSource *AvatarSource `json:"avatarSource,omitempty"`
 }
 
 type Query struct {
@@ -176,6 +178,13 @@ type Session struct {
 	Players   []*User       `json:"players"`
 }
 
+type StarterAvatar struct {
+	Key      string `json:"key"`
+	Name     string `json:"name"`
+	Slot     string `json:"slot"`
+	ImageURL string `json:"imageUrl"`
+}
+
 type Subscription struct {
 }
 
@@ -214,11 +223,71 @@ type TableSeatSlot struct {
 }
 
 type User struct {
-	ID          string    `json:"id"`
-	Email       *string   `json:"email,omitempty"`
-	DisplayName *string   `json:"displayName,omitempty"`
-	CreatedAt   time.Time `json:"createdAt"`
-	IsAdmin     bool      `json:"isAdmin"`
+	ID           string        `json:"id"`
+	Email        *string       `json:"email,omitempty"`
+	DisplayName  *string       `json:"displayName,omitempty"`
+	AvatarURL    *string       `json:"avatarUrl,omitempty"`
+	AvatarKey    *string       `json:"avatarKey,omitempty"`
+	AvatarSource *AvatarSource `json:"avatarSource,omitempty"`
+	CreatedAt    time.Time     `json:"createdAt"`
+	IsAdmin      bool          `json:"isAdmin"`
+}
+
+type AvatarSource string
+
+const (
+	AvatarSourceStarter      AvatarSource = "STARTER"
+	AvatarSourceSpiritAnimal AvatarSource = "SPIRIT_ANIMAL"
+	AvatarSourceNone         AvatarSource = "NONE"
+)
+
+var AllAvatarSource = []AvatarSource{
+	AvatarSourceStarter,
+	AvatarSourceSpiritAnimal,
+	AvatarSourceNone,
+}
+
+func (e AvatarSource) IsValid() bool {
+	switch e {
+	case AvatarSourceStarter, AvatarSourceSpiritAnimal, AvatarSourceNone:
+		return true
+	}
+	return false
+}
+
+func (e AvatarSource) String() string {
+	return string(e)
+}
+
+func (e *AvatarSource) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AvatarSource(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AvatarSource", str)
+	}
+	return nil
+}
+
+func (e AvatarSource) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *AvatarSource) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e AvatarSource) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type MatchResultStatus string

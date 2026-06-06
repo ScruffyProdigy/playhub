@@ -8,6 +8,7 @@ import { IconClose } from '../icons/ShareIcons'
 import RoomShareToolbar from './RoomShareToolbar'
 import TableCard from './TableCard'
 import { useActiveTableSeat } from '../games/useActiveTableSeat'
+import PlayerAvatar from '../avatars/PlayerAvatar'
 
 function mergeMessage(messages, incoming) {
   if (!incoming?.id) {
@@ -142,9 +143,12 @@ export default function RoomPanel({ compact = false }) {
   const membersList = (
     <ul className="room-members__list">
       {room.members.map((member) => (
-        <li key={member.id}>
-          {displayName(member)}
-          {member.id === room.host?.id ? ' (host)' : ''}
+        <li key={member.id} className="room-members__item">
+          <PlayerAvatar user={member} size="sm" />
+          <span>
+            {displayName(member)}
+            {member.id === room.host?.id ? ' (host)' : ''}
+          </span>
         </li>
       ))}
     </ul>

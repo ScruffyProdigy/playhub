@@ -2,6 +2,9 @@ type User {
   id: ID!
   email: String
   displayName: String
+  avatarUrl: String
+  avatarKey: String
+  avatarSource: AvatarSource
   createdAt: Time!
   isAdmin: Boolean!
 }
@@ -10,4 +13,12 @@ type User {
 type PublicPlayer {
   id: ID!
   displayName: String
+  avatarUrl: String
+  avatarSource: AvatarSource
+}
+
+enum AvatarSource {
+  STARTER
+  SPIRIT_ANIMAL
+  NONE
 }

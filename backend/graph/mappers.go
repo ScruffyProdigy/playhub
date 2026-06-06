@@ -16,10 +16,13 @@ func ToGraphQLUser(user *store.User) *model.User {
 	email := user.Email
 	displayName := user.DisplayName
 	return &model.User{
-		ID:          user.ID.String(),
-		Email:       &email,
-		DisplayName: &displayName,
-		CreatedAt:   user.CreatedAt,
+		ID:           user.ID.String(),
+		Email:        &email,
+		DisplayName:  &displayName,
+		AvatarURL:    userAvatarURL(user),
+		AvatarKey:    user.AvatarKey,
+		AvatarSource: toGraphQLAvatarSource(user.AvatarSource),
+		CreatedAt:    user.CreatedAt,
 	}
 }
 
@@ -30,8 +33,10 @@ func ToGraphQLPublicPlayer(user *store.User) *model.PublicPlayer {
 	}
 	displayName := user.DisplayName
 	return &model.PublicPlayer{
-		ID:          user.ID.String(),
-		DisplayName: &displayName,
+		ID:           user.ID.String(),
+		DisplayName:  &displayName,
+		AvatarURL:    userAvatarURL(user),
+		AvatarSource: toGraphQLAvatarSource(user.AvatarSource),
 	}
 }
 

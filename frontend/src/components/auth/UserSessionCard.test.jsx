@@ -15,6 +15,8 @@ describe('UserSessionCard', () => {
     id: 'user-1',
     email: 'player@example.com',
     displayName: 'player',
+    avatarKey: 'compass',
+    avatarUrl: '/avatars/compass.png',
     createdAt: '2026-01-01T00:00:00Z',
   }
 

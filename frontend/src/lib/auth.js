@@ -7,6 +7,9 @@ const ME_QUERY = `
       id
       email
       displayName
+      avatarUrl
+      avatarKey
+      avatarSource
       createdAt
     }
   }
@@ -25,6 +28,9 @@ const COMPLETE_SIGN_IN_WITH_LINK_MUTATION = `
       email
       displayName
       createdAt
+      avatarUrl
+      avatarKey
+      avatarSource
     }
   }
 `
@@ -35,6 +41,9 @@ const COMPLETE_SIGN_IN_WITH_CODE_MUTATION = `
       id
       email
       displayName
+      avatarUrl
+      avatarKey
+      avatarSource
       createdAt
     }
   }

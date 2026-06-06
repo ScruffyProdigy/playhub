@@ -3,18 +3,17 @@ import { getGraphQLWsUrl } from './env'
 import { graphqlRequest } from './graphql'
 import { prefetchSubscriptionAuth } from './queue'
 import { TABLE_FIELDS } from './tables'
+import { USER_AVATAR_FIELDS } from './avatars'
 
 const ROOM_FIELDS = `
   id
   inviteCode
   joinUrl
   host {
-    id
-    displayName
+    ${USER_AVATAR_FIELDS}
   }
   members {
-    id
-    displayName
+    ${USER_AVATAR_FIELDS}
   }
 `
 
@@ -25,8 +24,7 @@ const ROOM_WITH_TABLES = `
     body
     createdAt
     author {
-      id
-      displayName
+      ${USER_AVATAR_FIELDS}
     }
   }
   tables {
@@ -63,8 +61,7 @@ const SEND_ROOM_MESSAGE_MUTATION = `
       body
       createdAt
       author {
-        id
-        displayName
+        ${USER_AVATAR_FIELDS}
       }
     }
   }
@@ -109,8 +106,7 @@ const ROOM_MESSAGE_ADDED_SUBSCRIPTION = `
       body
       createdAt
       author {
-        id
-        displayName
+        ${USER_AVATAR_FIELDS}
       }
     }
   }

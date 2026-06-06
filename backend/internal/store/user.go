@@ -9,11 +9,23 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"github.com/scruffyprodigy/playhub/internal/avatars"
 )
+
+var ErrInvalidAvatarKey = errors.New("store: invalid avatar key")
 
 func scanUser(row interface{ Scan(dest ...any) error }) (*User, error) {
 	var u User
-	if err := row.Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.CreatedAt); err != nil {
+	if err := row.Scan(
+		&u.ID,
+		&u.Email,
+		&u.Username,
+		&u.DisplayName,
+		&u.AvatarURL,
+		&u.AvatarKey,
+		&u.AvatarSource,
+		&u.CreatedAt,
+	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -22,7 +34,7 @@ func scanUser(row interface{ Scan(dest ...any) error }) (*User, error) {
 	return &u, nil
 }
 
-const userColumns = `id, email, username, display_name, created_at`
+const userColumns = `id, email, username, display_name, avatar_url, avatar_key, avatar_source, created_at`
 
 // ProvisionalDisplayNameSuffix marks auto-generated display names until the user picks one.
 const ProvisionalDisplayNameSuffix = " (new)"
@@ -85,6 +97,25 @@ func (s *Store) UpdateUserLastLogin(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 	return ensureRowsAffected(result, ErrNotFound)
+}
+
+// SetUserStarterAvatar updates the user's starter avatar selection.
+func (s *Store) SetUserStarterAvatar(ctx context.Context, userID uuid.UUID, avatarKey, publicOrigin string) (*User, error) {
+	entry, ok := avatars.StarterByKey(avatarKey)
+	if !ok {
+		return nil, ErrInvalidAvatarKey
+	}
+	key := entry.Key
+	source := avatars.SourceStarter
+	url := avatars.PublicAssetURL(publicOrigin, entry.File)
+
+	row := s.db.QueryRowContext(ctx, `
+		UPDATE users
+		SET avatar_key = $2, avatar_source = $3, avatar_url = $4, updated_at = NOW()
+		WHERE id = $1 AND is_active = true
+		RETURNING `+userColumns+`
+	`, userID, key, source, url)
+	return scanUser(row)
 }
 
 func (s *Store) uniqueUsername(ctx context.Context, email string) (string, error) {

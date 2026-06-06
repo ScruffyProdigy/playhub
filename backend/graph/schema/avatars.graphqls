@@ -1,0 +1,14 @@
+type StarterAvatar {
+  key: ID!
+  name: String!
+  slot: String!
+  imageUrl: String!
+}
+
+extend type Query {
+  starterAvatars: [StarterAvatar!]!
+}
+
+extend type Mutation {
+  selectStarterAvatar(key: ID!): User!
+}

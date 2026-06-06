@@ -52,7 +52,7 @@ func TestPlayerLookupRequiresServiceTokenWhenConfigured(t *testing.T) {
 	}
 	cleaner.TrackUser(user.ID)
 
-	query := `query Player($id: ID!) { player(id: $id) { id displayName } }`
+	query := `query Player($id: ID!) { player(id: $id) { id displayName avatarUrl avatarSource } }`
 	vars := map[string]any{"id": user.ID.String()}
 
 	deniedBody := postGraphQLWithBearer(t, env.Handler, "", query, vars)
@@ -106,7 +106,7 @@ func TestPlayerLookupWithoutServiceTokenInDev(t *testing.T) {
 	}
 	cleaner.TrackUser(user.ID)
 
-	query := `query Player($id: ID!) { player(id: $id) { id displayName } }`
+	query := `query Player($id: ID!) { player(id: $id) { id displayName avatarUrl avatarSource } }`
 	body := postGraphQLWithBearer(t, env.Handler, "", query, map[string]any{"id": user.ID.String()})
 
 	var resp struct {

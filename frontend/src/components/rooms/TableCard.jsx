@@ -14,12 +14,14 @@ import {
   mySeatKeyOnTable,
   seatLabelInSection,
 } from '../../lib/tables'
+import PlayerAvatar from '../avatars/PlayerAvatar'
 
-function SeatRow({ slot, seatLabel, mySeat, userId, busy, onSit }) {
+function SeatRow({ slot, seatLabel, mySeat, userId, currentUser, busy, onSit }) {
   const taken = Boolean(slot.user)
   const isMine = mySeat === slot.seatKey || slot.user?.id === userId
   const showOccupant = taken || isMine
-  const occupant = isMine ? 'You' : displayName(slot.user)
+  const occupantUser = isMine ? currentUser : slot.user
+  const occupantLabel = isMine ? 'You' : displayName(slot.user)
 
   return (
     <li
@@ -28,7 +30,12 @@ function SeatRow({ slot, seatLabel, mySeat, userId, busy, onSit }) {
       }${seatLabel ? '' : ' table-seat-row--no-label'}`}
     >
       {seatLabel ? <span className="table-seat-row__label">{seatLabel}</span> : null}
-      {showOccupant ? <span className="table-seat-row__occupant">{occupant}</span> : null}
+      {showOccupant ? (
+        <span className="table-seat-row__occupant" title={occupantLabel}>
+          <PlayerAvatar user={occupantUser} size="sm" />
+          <span className="table-seat-row__occupant-name">{occupantLabel}</span>
+        </span>
+      ) : null}
       {!taken ? (
         <button
           type="button"
@@ -73,7 +80,7 @@ export default function TableCard({ table, busy, onSit, onLeave, onStart, onDisc
   const layout = groupSeatSlotsForDisplay(enriched.seatSlots ?? [])
   const seatedCount = enriched.seats?.length ?? 0
 
-  const seatRowProps = { mySeat, userId: user?.id, busy, onSit }
+  const seatRowProps = { mySeat, userId: user?.id, currentUser: user, busy, onSit }
 
   return (
     <article className="table-card">

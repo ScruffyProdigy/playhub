@@ -162,6 +162,7 @@ type ComplexityRoot struct {
 		ReportPlayerFinished   func(childComplexity int, matchID string, lobbyUserID string, reason model.PlayerFinishReason, placement *int, metadata map[string]any) int
 		RequestSignIn          func(childComplexity int, email string) int
 		RevokeGood             func(childComplexity int, userID string, goodID string, quantity *int) int
+		SelectStarterAvatar    func(childComplexity int, key string) int
 		SendRoomMessage        func(childComplexity int, roomID string, body string) int
 		SitAtTable             func(childComplexity int, tableID string, seatKey string) int
 		StartTable             func(childComplexity int, tableID string) int
@@ -180,8 +181,10 @@ type ComplexityRoot struct {
 	}
 
 	PublicPlayer struct {
-		DisplayName func(childComplexity int) int
-		ID          func(childComplexity int) int
+		AvatarSource func(childComplexity int) int
+		AvatarURL    func(childComplexity int) int
+		DisplayName  func(childComplexity int) int
+		ID           func(childComplexity int) int
 	}
 
 	Query struct {
@@ -199,6 +202,7 @@ type ComplexityRoot struct {
 		ReturnDestination func(childComplexity int, matchID *string) int
 		Room              func(childComplexity int, inviteCode string) int
 		Session           func(childComplexity int, id string) int
+		StarterAvatars    func(childComplexity int) int
 		SubscriptionAuth  func(childComplexity int) int
 		Version           func(childComplexity int) int
 	}
@@ -249,6 +253,13 @@ type ComplexityRoot struct {
 		Status    func(childComplexity int) int
 	}
 
+	StarterAvatar struct {
+		ImageURL func(childComplexity int) int
+		Key      func(childComplexity int) int
+		Name     func(childComplexity int) int
+		Slot     func(childComplexity int) int
+	}
+
 	Subscription struct {
 		QueueUpdated     func(childComplexity int, queueID string) int
 		RoomMessageAdded func(childComplexity int, roomID string) int
@@ -291,11 +302,14 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
-		CreatedAt   func(childComplexity int) int
-		DisplayName func(childComplexity int) int
-		Email       func(childComplexity int) int
-		ID          func(childComplexity int) int
-		IsAdmin     func(childComplexity int) int
+		AvatarKey    func(childComplexity int) int
+		AvatarSource func(childComplexity int) int
+		AvatarURL    func(childComplexity int) int
+		CreatedAt    func(childComplexity int) int
+		DisplayName  func(childComplexity int) int
+		Email        func(childComplexity int) int
+		ID           func(childComplexity int) int
+		IsAdmin      func(childComplexity int) int
 	}
 }
 
@@ -321,6 +335,7 @@ type MutationResolver interface {
 	CompleteSignInWithLink(ctx context.Context, token string) (*model.User, error)
 	CompleteSignInWithCode(ctx context.Context, email string, code string) (*model.User, error)
 	Logout(ctx context.Context) (bool, error)
+	SelectStarterAvatar(ctx context.Context, key string) (*model.User, error)
 	RegisterGame(ctx context.Context, input model.RegisterGameInput) (*model.RegisterGamePayload, error)
 	RefreshGameManifest(ctx context.Context, gameID string) (*model.Game, error)
 	ReportPlayerFinished(ctx context.Context, matchID string, lobbyUserID string, reason model.PlayerFinishReason, placement *int, metadata map[string]any) (bool, error)
@@ -349,6 +364,7 @@ type QueryResolver interface {
 	Player(ctx context.Context, id string) (*model.PublicPlayer, error)
 	Me(ctx context.Context) (*model.User, error)
 	SubscriptionAuth(ctx context.Context) (*string, error)
+	StarterAvatars(ctx context.Context) ([]*model.StarterAvatar, error)
 	ReturnDestination(ctx context.Context, matchID *string) (*model.ReturnDestination, error)
 	Room(ctx context.Context, inviteCode string) (*model.Room, error)
 	MyRoom(ctx context.Context) (*model.Room, error)
@@ -965,6 +981,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RevokeGood(childComplexity, args["userId"].(string), args["goodId"].(string), args["quantity"].(*int)), true
+	case "Mutation.selectStarterAvatar":
+		if e.complexity.Mutation.SelectStarterAvatar == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_selectStarterAvatar_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SelectStarterAvatar(childComplexity, args["key"].(string)), true
 	case "Mutation.sendRoomMessage":
 		if e.complexity.Mutation.SendRoomMessage == nil {
 			break
@@ -1054,6 +1081,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.MyTableSeat.TableID(childComplexity), true
 
+	case "PublicPlayer.avatarSource":
+		if e.complexity.PublicPlayer.AvatarSource == nil {
+			break
+		}
+
+		return e.complexity.PublicPlayer.AvatarSource(childComplexity), true
+	case "PublicPlayer.avatarUrl":
+		if e.complexity.PublicPlayer.AvatarURL == nil {
+			break
+		}
+
+		return e.complexity.PublicPlayer.AvatarURL(childComplexity), true
 	case "PublicPlayer.displayName":
 		if e.complexity.PublicPlayer.DisplayName == nil {
 			break
@@ -1196,6 +1235,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Session(childComplexity, args["id"].(string)), true
+	case "Query.starterAvatars":
+		if e.complexity.Query.StarterAvatars == nil {
+			break
+		}
+
+		return e.complexity.Query.StarterAvatars(childComplexity), true
 	case "Query.subscriptionAuth":
 		if e.complexity.Query.SubscriptionAuth == nil {
 			break
@@ -1388,6 +1433,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Session.Status(childComplexity), true
 
+	case "StarterAvatar.imageUrl":
+		if e.complexity.StarterAvatar.ImageURL == nil {
+			break
+		}
+
+		return e.complexity.StarterAvatar.ImageURL(childComplexity), true
+	case "StarterAvatar.key":
+		if e.complexity.StarterAvatar.Key == nil {
+			break
+		}
+
+		return e.complexity.StarterAvatar.Key(childComplexity), true
+	case "StarterAvatar.name":
+		if e.complexity.StarterAvatar.Name == nil {
+			break
+		}
+
+		return e.complexity.StarterAvatar.Name(childComplexity), true
+	case "StarterAvatar.slot":
+		if e.complexity.StarterAvatar.Slot == nil {
+			break
+		}
+
+		return e.complexity.StarterAvatar.Slot(childComplexity), true
+
 	case "Subscription.queueUpdated":
 		if e.complexity.Subscription.QueueUpdated == nil {
 			break
@@ -1569,6 +1639,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.TableSeatSlot.User(childComplexity), true
 
+	case "User.avatarKey":
+		if e.complexity.User.AvatarKey == nil {
+			break
+		}
+
+		return e.complexity.User.AvatarKey(childComplexity), true
+	case "User.avatarSource":
+		if e.complexity.User.AvatarSource == nil {
+			break
+		}
+
+		return e.complexity.User.AvatarSource(childComplexity), true
+	case "User.avatarUrl":
+		if e.complexity.User.AvatarURL == nil {
+			break
+		}
+
+		return e.complexity.User.AvatarURL(childComplexity), true
 	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
 			break
@@ -1734,6 +1822,21 @@ extend type Mutation {
   completeSignInWithLink(token: ID!): User!
   completeSignInWithCode(email: String!, code: String!): User!
   logout: Boolean!
+}
+`, BuiltIn: false},
+	{Name: "../schema/avatars.graphqls", Input: `type StarterAvatar {
+  key: ID!
+  name: String!
+  slot: String!
+  imageUrl: String!
+}
+
+extend type Query {
+  starterAvatars: [StarterAvatar!]!
+}
+
+extend type Mutation {
+  selectStarterAvatar(key: ID!): User!
 }
 `, BuiltIn: false},
 	{Name: "../schema/catalog.graphqls", Input: `input RegisterGameInput {
@@ -2058,6 +2161,9 @@ extend type Subscription {
   id: ID!
   email: String
   displayName: String
+  avatarUrl: String
+  avatarKey: String
+  avatarSource: AvatarSource
   createdAt: Time!
   isAdmin: Boolean!
 }
@@ -2066,6 +2172,14 @@ extend type Subscription {
 type PublicPlayer {
   id: ID!
   displayName: String
+  avatarUrl: String
+  avatarSource: AvatarSource
+}
+
+enum AvatarSource {
+  STARTER
+  SPIRIT_ANIMAL
+  NONE
 }
 `, BuiltIn: false},
 }
@@ -2339,6 +2453,17 @@ func (ec *executionContext) field_Mutation_revokeGood_args(ctx context.Context, 
 		return nil, err
 	}
 	args["quantity"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_selectStarterAvatar_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "key", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["key"] = arg0
 	return args, nil
 }
 
@@ -4631,6 +4756,12 @@ func (ec *executionContext) fieldContext_Mutation_completeSignInWithLink(ctx con
 				return ec.fieldContext_User_email(ctx, field)
 			case "displayName":
 				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
@@ -4684,6 +4815,12 @@ func (ec *executionContext) fieldContext_Mutation_completeSignInWithCode(ctx con
 				return ec.fieldContext_User_email(ctx, field)
 			case "displayName":
 				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
@@ -4731,6 +4868,65 @@ func (ec *executionContext) fieldContext_Mutation_logout(_ context.Context, fiel
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_selectStarterAvatar(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_selectStarterAvatar,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().SelectStarterAvatar(ctx, fc.Args["key"].(string))
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_selectStarterAvatar(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_selectStarterAvatar_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -5758,6 +5954,64 @@ func (ec *executionContext) fieldContext_PublicPlayer_displayName(_ context.Cont
 	return fc, nil
 }
 
+func (ec *executionContext) _PublicPlayer_avatarUrl(ctx context.Context, field graphql.CollectedField, obj *model.PublicPlayer) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PublicPlayer_avatarUrl,
+		func(ctx context.Context) (any, error) {
+			return obj.AvatarURL, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_PublicPlayer_avatarUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PublicPlayer",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PublicPlayer_avatarSource(ctx context.Context, field graphql.CollectedField, obj *model.PublicPlayer) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PublicPlayer_avatarSource,
+		func(ctx context.Context) (any, error) {
+			return obj.AvatarSource, nil
+		},
+		nil,
+		ec.marshalOAvatarSource2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAvatarSource,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_PublicPlayer_avatarSource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PublicPlayer",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type AvatarSource does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_version(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -6232,6 +6486,10 @@ func (ec *executionContext) fieldContext_Query_player(ctx context.Context, field
 				return ec.fieldContext_PublicPlayer_id(ctx, field)
 			case "displayName":
 				return ec.fieldContext_PublicPlayer_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_PublicPlayer_avatarUrl(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_PublicPlayer_avatarSource(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type PublicPlayer", field.Name)
 		},
@@ -6280,6 +6538,12 @@ func (ec *executionContext) fieldContext_Query_me(_ context.Context, field graph
 				return ec.fieldContext_User_email(ctx, field)
 			case "displayName":
 				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
@@ -6315,6 +6579,45 @@ func (ec *executionContext) fieldContext_Query_subscriptionAuth(_ context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_starterAvatars(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_starterAvatars,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().StarterAvatars(ctx)
+		},
+		nil,
+		ec.marshalNStarterAvatar2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐStarterAvatarᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_starterAvatars(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "key":
+				return ec.fieldContext_StarterAvatar_key(ctx, field)
+			case "name":
+				return ec.fieldContext_StarterAvatar_name(ctx, field)
+			case "slot":
+				return ec.fieldContext_StarterAvatar_slot(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_StarterAvatar_imageUrl(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type StarterAvatar", field.Name)
 		},
 	}
 	return fc, nil
@@ -7115,6 +7418,12 @@ func (ec *executionContext) fieldContext_Room_host(_ context.Context, field grap
 				return ec.fieldContext_User_email(ctx, field)
 			case "displayName":
 				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
@@ -7156,6 +7465,12 @@ func (ec *executionContext) fieldContext_Room_members(_ context.Context, field g
 				return ec.fieldContext_User_email(ctx, field)
 			case "displayName":
 				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
@@ -7328,6 +7643,12 @@ func (ec *executionContext) fieldContext_RoomMessage_author(_ context.Context, f
 				return ec.fieldContext_User_email(ctx, field)
 			case "displayName":
 				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
@@ -7567,12 +7888,134 @@ func (ec *executionContext) fieldContext_Session_players(_ context.Context, fiel
 				return ec.fieldContext_User_email(ctx, field)
 			case "displayName":
 				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _StarterAvatar_key(ctx context.Context, field graphql.CollectedField, obj *model.StarterAvatar) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_StarterAvatar_key,
+		func(ctx context.Context) (any, error) {
+			return obj.Key, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_StarterAvatar_key(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StarterAvatar",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _StarterAvatar_name(ctx context.Context, field graphql.CollectedField, obj *model.StarterAvatar) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_StarterAvatar_name,
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_StarterAvatar_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StarterAvatar",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _StarterAvatar_slot(ctx context.Context, field graphql.CollectedField, obj *model.StarterAvatar) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_StarterAvatar_slot,
+		func(ctx context.Context) (any, error) {
+			return obj.Slot, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_StarterAvatar_slot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StarterAvatar",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _StarterAvatar_imageUrl(ctx context.Context, field graphql.CollectedField, obj *model.StarterAvatar) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_StarterAvatar_imageUrl,
+		func(ctx context.Context) (any, error) {
+			return obj.ImageURL, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_StarterAvatar_imageUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StarterAvatar",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -7996,6 +8439,12 @@ func (ec *executionContext) fieldContext_Table_king(_ context.Context, field gra
 				return ec.fieldContext_User_email(ctx, field)
 			case "displayName":
 				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
@@ -8357,6 +8806,12 @@ func (ec *executionContext) fieldContext_TableSeat_user(_ context.Context, field
 				return ec.fieldContext_User_email(ctx, field)
 			case "displayName":
 				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
@@ -8543,6 +8998,12 @@ func (ec *executionContext) fieldContext_TableSeatSlot_user(_ context.Context, f
 				return ec.fieldContext_User_email(ctx, field)
 			case "displayName":
 				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
@@ -8636,6 +9097,93 @@ func (ec *executionContext) fieldContext_User_displayName(_ context.Context, fie
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_avatarUrl(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_User_avatarUrl,
+		func(ctx context.Context) (any, error) {
+			return obj.AvatarURL, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_User_avatarUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_avatarKey(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_User_avatarKey,
+		func(ctx context.Context) (any, error) {
+			return obj.AvatarKey, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_User_avatarKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_avatarSource(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_User_avatarSource,
+		func(ctx context.Context) (any, error) {
+			return obj.AvatarSource, nil
+		},
+		nil,
+		ec.marshalOAvatarSource2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAvatarSource,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_User_avatarSource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type AvatarSource does not have child fields")
 		},
 	}
 	return fc, nil
@@ -11000,6 +11548,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "selectStarterAvatar":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_selectStarterAvatar(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "registerGame":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_registerGame(ctx, field)
@@ -11218,6 +11773,10 @@ func (ec *executionContext) _PublicPlayer(ctx context.Context, sel ast.Selection
 			}
 		case "displayName":
 			out.Values[i] = ec._PublicPlayer_displayName(ctx, field, obj)
+		case "avatarUrl":
+			out.Values[i] = ec._PublicPlayer_avatarUrl(ctx, field, obj)
+		case "avatarSource":
+			out.Values[i] = ec._PublicPlayer_avatarSource(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -11497,6 +12056,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_subscriptionAuth(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "starterAvatars":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_starterAvatars(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -12199,6 +12780,60 @@ func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, 
 	return out
 }
 
+var starterAvatarImplementors = []string{"StarterAvatar"}
+
+func (ec *executionContext) _StarterAvatar(ctx context.Context, sel ast.SelectionSet, obj *model.StarterAvatar) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, starterAvatarImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("StarterAvatar")
+		case "key":
+			out.Values[i] = ec._StarterAvatar_key(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._StarterAvatar_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "slot":
+			out.Values[i] = ec._StarterAvatar_slot(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "imageUrl":
+			out.Values[i] = ec._StarterAvatar_imageUrl(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var subscriptionImplementors = []string{"Subscription"}
 
 func (ec *executionContext) _Subscription(ctx context.Context, sel ast.SelectionSet) func(ctx context.Context) graphql.Marshaler {
@@ -12789,6 +13424,12 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = ec._User_email(ctx, field, obj)
 		case "displayName":
 			out.Values[i] = ec._User_displayName(ctx, field, obj)
+		case "avatarUrl":
+			out.Values[i] = ec._User_avatarUrl(ctx, field, obj)
+		case "avatarKey":
+			out.Values[i] = ec._User_avatarKey(ctx, field, obj)
+		case "avatarSource":
+			out.Values[i] = ec._User_avatarSource(ctx, field, obj)
 		case "createdAt":
 			out.Values[i] = ec._User_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -13849,6 +14490,60 @@ func (ec *executionContext) marshalNSessionStatus2githubᚗcomᚋscruffyprodigy�
 	return v
 }
 
+func (ec *executionContext) marshalNStarterAvatar2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐStarterAvatarᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.StarterAvatar) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNStarterAvatar2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐStarterAvatar(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNStarterAvatar2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐStarterAvatar(ctx context.Context, sel ast.SelectionSet, v *model.StarterAvatar) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._StarterAvatar(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v any) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -14417,6 +15112,22 @@ func (ec *executionContext) marshalOActiveQueue2ᚖgithubᚗcomᚋscruffyprodigy
 		return graphql.Null
 	}
 	return ec._ActiveQueue(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOAvatarSource2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAvatarSource(ctx context.Context, v any) (*model.AvatarSource, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.AvatarSource)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOAvatarSource2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAvatarSource(ctx context.Context, sel ast.SelectionSet, v *model.AvatarSource) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v any) (bool, error) {

@@ -1,0 +1,65 @@
+package avatars
+
+import (
+	"fmt"
+	"strings"
+)
+
+const SourceStarter = "starter"
+
+// StarterEntry is a pickable avatar from the static catalog.
+type StarterEntry struct {
+	Key  string
+	Name string
+	Slot string
+	File string
+}
+
+// StarterCatalog is the initial journey-themed avatar set.
+var StarterCatalog = []StarterEntry{
+	{Key: "compass", Name: "Compass", Slot: "Compass", File: "compass.png"},
+	{Key: "coin", Name: "Coin", Slot: "Coin", File: "coin.png"},
+	{Key: "storm", Name: "Storm", Slot: "Storm", File: "storm.png"},
+	{Key: "campfire", Name: "Campfire", Slot: "Campfire", File: "campfire.png"},
+	{Key: "beacon", Name: "Beacon", Slot: "Beacon", File: "beacon.png"},
+}
+
+// StarterByKey returns a catalog entry by key (case-insensitive).
+func StarterByKey(key string) (StarterEntry, bool) {
+	normalized := strings.ToLower(strings.TrimSpace(key))
+	for _, entry := range StarterCatalog {
+		if entry.Key == normalized {
+			return entry, true
+		}
+	}
+	return StarterEntry{}, false
+}
+
+// PublicAssetURL builds an absolute HTTPS URL for a starter avatar asset.
+func PublicAssetURL(publicOrigin, file string) string {
+	base := strings.TrimRight(strings.TrimSpace(publicOrigin), "/")
+	if base == "" {
+		base = "http://localhost:5173"
+	}
+	return fmt.Sprintf("%s/avatars/%s", base, strings.TrimPrefix(file, "/"))
+}
+
+// ResolveURL returns the user's public avatar URL, preferring a stored value.
+func ResolveURL(publicOrigin string, storedURL, avatarKey *string) *string {
+	if storedURL != nil {
+		trimmed := strings.TrimSpace(*storedURL)
+		if trimmed != "" {
+			out := trimmed
+			return &out
+		}
+	}
+	if avatarKey == nil {
+		return nil
+	}
+	entry, ok := StarterByKey(*avatarKey)
+	if !ok {
+		return nil
+	}
+	url := PublicAssetURL(publicOrigin, entry.File)
+	return &url
+}

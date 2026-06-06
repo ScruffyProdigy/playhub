@@ -1,4 +1,7 @@
 import { graphqlRequest } from './graphql'
+import { USER_AVATAR_FIELDS } from './avatars'
+
+export { USER_AVATAR_FIELDS }
 
 export const TABLE_FIELDS = `
   id
@@ -14,15 +17,13 @@ export const TABLE_FIELDS = `
     displayName
   }
   king {
-    id
-    displayName
+    ${USER_AVATAR_FIELDS}
   }
   seats {
     seatKey
     seatedAt
     user {
-      id
-      displayName
+      ${USER_AVATAR_FIELDS}
     }
   }
   seatSlots {
@@ -31,8 +32,7 @@ export const TABLE_FIELDS = `
     displayName
     teamPrefix
     user {
-      id
-      displayName
+      ${USER_AVATAR_FIELDS}
     }
   }
   lookForGroupOptions {

@@ -131,6 +131,18 @@ func createTestUserSession(t *testing.T, ctx context.Context, env *queueIntegrat
 	return "Bearer " + token, &http.Cookie{Name: cfg.Name, Value: token}
 }
 
+func createTestUserSessionForUser(t *testing.T, env *queueIntegrationEnv, userID uuid.UUID) (bearer string, cookie *http.Cookie) {
+	t.Helper()
+
+	token, err := env.Signer.SignUserToken(userID, time.Hour)
+	if err != nil {
+		t.Fatalf("SignUserToken: %v", err)
+	}
+
+	cfg := auth.CookieConfigFromEnv()
+	return "Bearer " + token, &http.Cookie{Name: cfg.Name, Value: token}
+}
+
 func graphQLWSURL(httpURL string) string {
 	u, _ := url.Parse(httpURL)
 	u.Scheme = "ws"
