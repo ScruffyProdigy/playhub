@@ -20,7 +20,7 @@ function SeatRow({ slot, seatLabel, mySeat, userId, currentUser, busy, onSit }) 
   const taken = Boolean(slot.user)
   const isMine = mySeat === slot.seatKey || slot.user?.id === userId
   const showOccupant = taken || isMine
-  const occupantUser = isMine ? currentUser : slot.user
+  const occupantUser = isMine ? currentUser ?? slot.user : slot.user
   const occupantLabel = isMine ? 'You' : displayName(slot.user)
 
   return (
@@ -50,7 +50,7 @@ function SeatRow({ slot, seatLabel, mySeat, userId, currentUser, busy, onSit }) 
   )
 }
 
-function SeatSection({ title, slots, mySeat, userId, busy, onSit }) {
+function SeatSection({ title, slots, mySeat, userId, currentUser, busy, onSit }) {
   return (
     <div className="table-card__team">
       <h4 className="table-card__team-title">{title}</h4>
@@ -62,6 +62,7 @@ function SeatSection({ title, slots, mySeat, userId, busy, onSit }) {
             seatLabel={seatLabelInSection(slot, title)}
             mySeat={mySeat}
             userId={userId}
+            currentUser={currentUser}
             busy={busy}
             onSit={onSit}
           />
