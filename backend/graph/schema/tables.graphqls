@@ -1,0 +1,66 @@
+type TableSeat {
+  seatKey: String!
+  user: User!
+  seatedAt: Time!
+}
+
+type TableSeatSlot {
+  seatKey: String!
+  queuePath: String
+  displayName: String!
+  teamPrefix: String
+  user: User
+}
+
+type TableLookForGroupOption {
+  queueId: ID!
+  queueName: String!
+  visible: Boolean!
+  enabled: Boolean!
+}
+
+type Table {
+  id: ID!
+  game: Game!
+  mode: GameMode!
+  createdAt: Time!
+  king: User
+  seats: [TableSeat!]!
+  seatSlots: [TableSeatSlot!]!
+  canStart: Boolean!
+  canDiscard: Boolean!
+  lookForGroupOptions: [TableLookForGroupOption!]!
+}
+
+type MyTableSeat {
+  tableId: ID!
+  roomId: ID!
+  inviteCode: String!
+  gameId: ID!
+  gameName: String!
+  modeId: ID!
+  modeName: String!
+  seatKey: String!
+  seatDisplayName: String!
+}
+
+extend type Room {
+  tables: [Table!]!
+}
+
+extend type Query {
+  myTableSeat: MyTableSeat
+}
+
+extend type Mutation {
+  createPrivateTable(gameId: ID!, modeId: ID!): Table!
+  createTable(roomId: ID!, gameId: ID!, modeId: ID!): Table!
+  sitAtTable(tableId: ID!, seatKey: String!): Table!
+  leaveTable(tableId: ID!): Boolean!
+  discardTable(tableId: ID!): Boolean!
+  startTable(tableId: ID!): JoinResult!
+}
+
+extend type Subscription {
+  tableUpdated(roomId: ID!): Table!
+}

@@ -5,7 +5,7 @@ GraphQL API for **JoinQuest** — the player shell and control plane for registe
 | Client | Typical use |
 |--------|-------------|
 | **JoinQuest frontend** | Sign-in, browse games, `joinQueue`, subscriptions |
-| **Game server** | `player(id)` with provision `serviceToken`; `reportPlayerFinished`, `reportMatchResult` |
+| **Game server** | `player(id)` with provision `serviceToken` (`displayName`, `avatarUrl`); `reportPlayerFinished`, `reportMatchResult` |
 | **Admin** | `registerGame`, manifest sync |
 
 Platform goals and integration overview: [`vision.md`](./vision.md). Game handoff is not GraphQL — see [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md).
@@ -108,6 +108,22 @@ query {
   }
 }
 ```
+
+#### `player` (game service) — planned fields
+Resolve a lobby user by id. Requires `Authorization: Bearer <serviceToken>` from provision `lobby.serviceToken`. Used by game servers for display names and avatars in-match.
+
+```graphql
+query Player($id: ID!) {
+  player(id: $id) {
+    id
+    displayName
+    avatarUrl
+    avatarSource
+  }
+}
+```
+
+Returns `null` if the user does not exist. Personality reading and image prompts are **not** exposed here — only the current `avatarUrl`. See [spirit-animal-avatars.md](./spirit-animal-avatars.md).
 
 ### Game Queries
 

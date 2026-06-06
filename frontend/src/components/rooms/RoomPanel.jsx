@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import LoginForm from '../auth/LoginForm'
 import { useAuth } from '../auth/AuthProvider'
 import { useActiveRoom } from './ActiveRoomProvider'
 import { sendRoomMessage } from '../../lib/rooms'
+import { discardTable, displayName, leaveTable, sitAtTable, startTable } from '../../lib/tables'
 import { IconClose } from '../icons/ShareIcons'
 import RoomShareToolbar from './RoomShareToolbar'
-
-function displayName(user) {
-  return user?.displayName?.trim() || 'Player'
-}
+import TableCard from './TableCard'
+import { useActiveTableSeat } from '../games/useActiveTableSeat'
 
 function mergeMessage(messages, incoming) {
   if (!incoming?.id) {
@@ -30,9 +29,13 @@ export default function RoomPanel({ compact = false }) {
     error,
     setError,
     handleLeave,
+    mergeTableUpdate,
+    refresh,
   } = useActiveRoom()
+  const { refresh: refreshTableSeat } = useActiveTableSeat()
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
+  const [tableBusy, setTableBusy] = useState(false)
   const chatEndRef = useRef(null)
 
   useEffect(() => {
@@ -58,6 +61,56 @@ export default function RoomPanel({ compact = false }) {
     }
   }
 
+  async function runTableAction(action) {
+    setTableBusy(true)
+    setError('')
+    try {
+      await action()
+      await refresh()
+      await refreshTableSeat()
+    } catch (err) {
+      setError(err.message || 'Table action failed.')
+    } finally {
+      setTableBusy(false)
+    }
+  }
+
+  async function handleSit(tableId, seatKey) {
+    setTableBusy(true)
+    setError('')
+    try {
+      const updated = await sitAtTable(tableId, seatKey)
+      mergeTableUpdate(updated)
+      await refreshTableSeat()
+      void refresh()
+    } catch (err) {
+      setError(err.message || 'Could not sit at that seat.')
+    } finally {
+      setTableBusy(false)
+    }
+  }
+
+  async function handleLeaveTable(tableId) {
+    await runTableAction(async () => {
+      await leaveTable(tableId)
+    })
+  }
+
+  async function handleStartTable(tableId) {
+    await runTableAction(async () => {
+      const result = await startTable(tableId)
+      if (result?.joinUrl) {
+        window.location.assign(result.joinUrl)
+      }
+    })
+  }
+
+  async function handleDiscardTable(tableId) {
+    await runTableAction(async () => {
+      await discardTable(tableId)
+    })
+  }
+
   if (authLoading) {
     return <p className="status-message">Loading session…</p>
   }
@@ -77,16 +130,38 @@ export default function RoomPanel({ compact = false }) {
   }
 
   if (!room) {
-    return null
+    return (
+      <div className="room-panel room-panel--guest">
+        <p className="status-message status-message-error">{error || 'Could not load room.'}</p>
+      </div>
+    )
   }
 
   const memberCount = room.members?.length ?? 0
+  const tables = room.tables ?? []
   const membersList = (
     <ul className="room-members__list">
       {room.members.map((member) => (
         <li key={member.id}>
           {displayName(member)}
           {member.id === room.host?.id ? ' (host)' : ''}
+        </li>
+      ))}
+    </ul>
+  )
+
+  const tablesList = (
+    <ul className="room-tables__list">
+      {tables.map((table) => (
+        <li key={table.id}>
+          <TableCard
+            table={table}
+            busy={tableBusy}
+            onSit={(seatKey) => handleSit(table.id, seatKey)}
+            onLeave={() => handleLeaveTable(table.id)}
+            onStart={() => handleStartTable(table.id)}
+            onDiscard={() => handleDiscardTable(table.id)}
+          />
         </li>
       ))}
     </ul>
@@ -123,6 +198,20 @@ export default function RoomPanel({ compact = false }) {
         <section className="room-panel__section room-panel__share">
           <RoomShareToolbar joinUrl={room.joinUrl} inviteCode={room.inviteCode} />
         </section>
+
+        {tables.length > 0 ? (
+          compact ? (
+            <details className="room-panel__section room-panel__collapsible room-tables" open>
+              <summary className="room-panel__section-title">Tables ({tables.length})</summary>
+              {tablesList}
+            </details>
+          ) : (
+            <section className="room-panel__section room-tables">
+              <h3 className="room-panel__section-title">Tables ({tables.length})</h3>
+              {tablesList}
+            </section>
+          )
+        ) : null}
 
         <section className="room-panel__section room-panel__chat room-chat">
           <h3 className="room-panel__section-title">Chat</h3>

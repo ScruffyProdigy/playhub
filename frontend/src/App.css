@@ -238,7 +238,7 @@
   gap: 0.45rem;
 }
 
-.join-group-panel__status {
+.queue-status-line {
   margin: 0;
   font-size: 0.9rem;
   color: #aaa;
@@ -368,7 +368,8 @@
   transform: rotate(90deg);
 }
 
-.room-panel__collapsible .room-members__list {
+.room-panel__collapsible .room-members__list,
+.room-panel__collapsible .room-tables__list {
   margin-top: 0.5rem;
 }
 
@@ -509,7 +510,10 @@
 .room-sheet .room-panel__body {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   gap: 0.5rem;
 }
 
@@ -529,6 +533,14 @@
   font-size: 0.85rem;
 }
 
+.room-sheet .room-panel__share {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #242424;
+  padding-bottom: 0.25rem;
+}
+
 .room-sheet .room-panel__share .room-share__actions {
   gap: 0.35rem;
 }
@@ -540,9 +552,9 @@
 }
 
 .room-sheet .room-panel__chat {
-  flex: 1;
+  flex: none;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   margin-bottom: 0;
 }
 
@@ -551,9 +563,8 @@
 }
 
 .room-sheet .room-panel__chat .room-chat__log {
-  flex: 1;
-  min-height: 10rem;
-  max-height: none;
+  min-height: 8rem;
+  max-height: min(12rem, 28vh);
   overflow-y: auto;
   margin-bottom: 0;
   padding: 0.65rem 0.75rem;
@@ -785,7 +796,7 @@
     color: #5558aa;
   }
 
-  .join-group-panel__status {
+  .queue-status-line {
     color: #666;
   }
 
@@ -810,6 +821,10 @@
 
   .app-layout__room,
   .room-sheet__panel {
+    background: #ffffff;
+  }
+
+  .room-sheet .room-panel__share {
     background: #ffffff;
   }
 
@@ -843,4 +858,184 @@
   .game-list-item {
     border-color: rgba(0, 0, 0, 0.08);
   }
+
+  .table-seat-row {
+    border-color: rgba(0, 0, 0, 0.12);
+    background: rgba(0, 0, 0, 0.03);
+  }
+
+  .table-seat-row__label {
+    color: rgba(0, 0, 0, 0.88);
+  }
+
+  .table-seat-row__occupant {
+    color: rgba(0, 0, 0, 0.72);
+  }
+
+  .table-seat-row--no-label:nth-child(odd) {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.game-list-item--modes .game-mode-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.game-mode-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.game-mode-row__title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.game-mode-row__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.room-tables__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.table-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.table-card__title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.table-card__meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.table-card__layout--teams {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.65rem;
+}
+
+.table-card__team-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.table-card__seats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.table-card__seats--flat {
+  margin-top: 0.15rem;
+}
+
+.table-seat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+
+.table-seat-row--no-label {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.table-seat-row--no-label.table-seat-row--open {
+  grid-template-columns: 1fr auto;
+}
+
+.table-seat-row--mine {
+  border-color: rgba(130, 140, 255, 0.65);
+  background: rgba(130, 140, 255, 0.12);
+}
+
+.table-seat-row--taken {
+  opacity: 0.95;
+}
+
+.table-seat-row__label {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-seat-row__occupant {
+  color: rgba(255, 255, 255, 0.88);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.table-seat-row--no-label:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.table-seat-row--mine .table-seat-row__occupant {
+  font-weight: 600;
+  opacity: 1;
+}
+
+.table-seat-row__sit {
+  border: 1px solid rgba(130, 140, 255, 0.45);
+  background: rgba(130, 140, 255, 0.12);
+  color: inherit;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.table-seat-row__sit:hover:not(:disabled) {
+  border-color: rgba(130, 140, 255, 0.75);
+}
+
+.table-seat-row__sit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.table-card__actions,
+.table-card__lfg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }

@@ -1,6 +1,6 @@
 # Rooms and tables
 
-Social **rooms** for friends to gather; **tables** (forming games) come in a later step.
+Social **rooms** for friends to gather; **tables** are forming private games inside a room.
 
 **Related:** [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md) · [game-catalog-architecture.md](./game-catalog-architecture.md) · [player-return-routing.md](./player-return-routing.md) · [composition-and-join-options.md](./composition-and-join-options.md)
 
@@ -10,190 +10,73 @@ Social **rooms** for friends to gather; **tables** (forming games) come in a lat
 
 | Step | Scope |
 |------|--------|
-| **Step 1 — Rooms** (shipped) | Chat rooms: create/join, short invite code, member list, **QR** + easy link sharing (copy, SMS, native share). One room per player. **No tables.** |
-| **Step 2 — Tables** | Forming match per game+mode inside a room; bucket caps; host Start; queue ↔ table exclusion; disabled table LFG until Phase B. |
-| **Step 3+** | Multiple tables per room; table LFG backfill; affinity-aware buckets. |
+| **Step 1 — Rooms** (shipped) | Chat rooms: create/join, short invite code, member list, **QR** + easy link sharing. One room per player. |
+| **Step 2 — Tables** (shipped) | 0..N forming tables per room; **seat-level sitting** (`sitAtTable(tableId, seatKey)`); king controls; queue ↔ table mutual exclusion; per-mode catalog actions; lazy stale discard. |
+| **Step 3+** | Table LFG backfill (Phase B); affinity-aware buckets. |
 
 ---
 
 ## Step 1: Rooms (chat + invite)
 
-### Purpose
+See git history / prior docs for Step 1 detail. Rooms remain the social shell: invite code, chat, share/QR, one room per player globally.
 
-A lightweight place for friends to coordinate before (or while) using the catalog — “get in the same room, talk, share the link.” Game pick and match start move to **Step 2 (tables)**.
-
-### Concepts
-
-| Entity | Step 1 |
-|--------|--------|
-| **Room** | Persistent chat space. Short **invite code** → `/room/X7K2M9`. |
-| **Table** | *Not shipped yet.* Schema/API should allow a room to gain tables later without a breaking migration. |
-
-```text
-Room (invite code, chat, share/QR)
-  └── (Step 2) Table → game + mode forming → Start → session
-```
-
-### Membership
-
-| Rule | Step 1 |
-|------|--------|
-| One room per player | Joining or creating a room **leaves** any previous room. |
-| Queue while in room | **Allowed.** Room chat does not conflict with catalog queue membership (table/queue exclusion arrives with Step 2). |
-
-### Invite and sharing
-
-| Feature | Behavior |
-|---------|----------|
-| **Short code** | ~6 alphanumeric characters; unique; case-insensitive lookup. |
-| **Join URL** | `{LOBBY_PUBLIC_URL}/room/{code}` — returned as `joinUrl` on `Room`. |
-| **Copy link** | One-click copy to clipboard. |
-| **QR code** | Button opens modal with QR encoding `joinUrl` (client-generated). |
-| **Share sheet** | `navigator.share({ url, title })` when available (mobile / supported browsers). |
-| **Text message** | `sms:?body=` with pre-filled invite text + URL (best-effort; platform-dependent). |
-
-Suggested default share text: *“Join my room on JoinQuest: {joinUrl}”*
-
-### Chat
-
-| Piece | Approach |
-|-------|----------|
-| **Persistence** | `room_messages` table (room_id, user_id, body, created_at); paginated history on load. |
-| **Realtime** | Redis pub/sub channel `lobby:room:{roomId}:chat` + GraphQL subscription `roomMessageAdded(roomId)`. Same pattern as [pubsub.md](./pubsub.md) queue events. |
-| **Send** | Mutation `sendRoomMessage(roomId, body)` — auth required, must be room member. |
-| **Limits** | Reasonable max body length (e.g. 2k chars); rate limit TBD. |
-
-### Data model (Step 1)
-
-#### `rooms`
-
-| Column | Notes |
-|--------|--------|
-| `id` | UUID |
-| `invite_code` | Short unique code |
-| `host_user_id` | Creator |
-| `status` | `open`, `closed` |
-| `created_at`, `updated_at` | |
-
-#### `room_members`
-
-| Column | Notes |
-|--------|--------|
-| `room_id`, `user_id` | **Unique `user_id`** globally — one room per player |
-| `joined_at` | |
-
-#### `room_messages`
-
-| Column | Notes |
-|--------|--------|
-| `id` | UUID |
-| `room_id`, `user_id` | |
-| `body` | Text |
-| `created_at` | |
-
-Index: `room_messages(room_id, created_at DESC)` for history.
-
-*No `tables` / `table_seats` until Step 2.*
-
-### GraphQL (Step 1)
-
-```graphql
-type Room {
-  id: ID!
-  inviteCode: String!
-  joinUrl: String!
-  host: User!
-  members: [User!]!
-  messages(limit: Int = 50, before: ID): [RoomMessage!]!
-}
-
-type RoomMessage {
-  id: ID!
-  author: User!
-  body: String!
-  createdAt: Time!
-}
-
-extend type Mutation {
-  createRoom: Room!
-  joinRoom(inviteCode: String!): Room!
-  leaveRoom: Boolean!
-  sendRoomMessage(roomId: ID!, body: String!): RoomMessage!
-}
-
-extend type Query {
-  room(inviteCode: String!): Room
-  myRoom: Room
-}
-
-extend type Subscription {
-  roomUpdated(roomId: ID!): Room!      # member join/leave
-  roomMessageAdded(roomId: ID!): RoomMessage!
-}
-```
-
-`createRoom` takes **no game/mode** in Step 1 — pure social room.
-
-### UI (Step 1)
-
-| Surface | Content |
-|---------|---------|
-| **Catalog / nav** | “Create room” → creates room, navigates to `/room/{code}`. |
-| **`/room/:code`** | Member list, chat transcript + composer, share toolbar (copy, QR, share, text). |
-| **Deep link** | Unsigned visitor → sign-in → join room → land on room page. |
-
-### Return routing (Step 1)
-
-No table starts yet — return context `kind: "room"` is wired when **Step 2** starts matches from a table. Room page path remains `/room/{inviteCode}`.
+**Step 2 change:** sitting at a table or joining a queue are **mutually exclusive** (see below). Chat-only room membership still works alongside either intent.
 
 ---
 
 ## Step 2: Tables (forming games)
 
-*Deferred — full spec preserved below for when Step 1 ships.*
-
 ### Concepts
 
 | Entity | Purpose |
 |--------|---------|
-| **Table** | One forming match for a **game + mode** inside a room — seated players, bucket caps, host Start, (later) LFG backfill. |
+| **Table** | One **forming** match for a **game + mode** inside a room. Many tables per room (unbounded). |
+| **Seat** | A specific expanded `seatKey` from the mode template (not a queue path alone). |
+| **King** | Longest-sitting player (`min(seated_at)`). Recomputed when anyone leaves. Shown in UI (“King: Pat”). Controls **Start now** and **Discard** when eligible. |
 
 ```text
 Room (invite code, chat)
-  └── Table (Step 2 v1: exactly one per room)
-        ├── game + mode
-        ├── seated players (bucket per join slot)
-        ├── host: Start; disabled Look for group until Phase B LFG
-        └── on Start → session + provision
+  └── Table × N (forming)
+        ├── game + mode (no mode_queue_id until LFG Phase B)
+        ├── seat-level sitting (seatKey)
+        ├── king: Start now; disabled Look for group until Phase B LFG
+        └── on Start → session + provision (return to room)
 ```
 
-**Step 2 v1:** each room linked to **at most one** table. Do not assume 1:1 forever — multiple tables per room later.
-
-### Player membership (Step 2 adds)
+### Player intent (global)
 
 | Slot | Rule |
 |------|------|
-| **Table seat** | One active table seat globally. Sitting **leaves** any other table. |
-| **Queue vs table** | Mutually exclusive — sit at table clears queue; `joinQueue` clears table seat. |
+| **Table seat** | One active table seat globally. Sitting **leaves** any other table seat. |
+| **Queue vs table** | Mutually exclusive — `sitAtTable` clears waiting queue; `joinQueue` clears table seat. |
+| **Matched queue** | Cannot sit at a table until the active match is left. |
 
-Room membership alone (chat only, not seated) still does not conflict with queue until the player sits.
+### Sitting and caps
 
-### Join buckets and capacity
+- Join via **`sitAtTable(tableId, seatKey)`** — validates the key exists on the mode, seat is empty, path `max` not exceeded, and total ≤ mode `maxPlayers`.
+- **Start** requires king, total ∈ `[minPlayers, maxPlayers]`, and every template path meets its **minimum** (path `min`, else `playersToStart` for that path).
+- **Team layout in UI** uses `seatKey` prefix (e.g. `Team-1` vs `Team-2`). Role caps come from shared queue paths (e.g. Overwatch `DPS` cap 4 across both teams). **`affinityKey` is not used in Step 2.**
 
-Table joins validated against mode **seat template** (`PathSpec` / `game_mode_seats`):
+### Catalog UX
 
-- Bucket key = `queuePath` (v1); team-specific caps via distinct paths (e.g. `Team2.DPS`) or Phase B `affinityKey`.
-- **Reject sit** if `seated + 1 > path.max` or total > mode `maxPlayers`.
-- **Reject start** unless host, total ∈ `[min, max]`, every bucket ∈ `[path.min, path.max]`, assignment succeeds.
+Per **mode** row under each game:
 
-### Table UI: Start vs Look for group
+- **Look for group** — existing queue join (unchanged).
+- **Create private game** — `createPrivateTable(gameId, modeId)` creates a room if needed, sweeps stale empty tables, adds a forming table.
 
-| Control | When |
-|---------|------|
-| **Start game** | Enabled when validation passes. |
-| **Look for group** | **Disabled** until Phase B LFG. **Shown** when headcount ≤ LFG target and ≥1 bucket short vs `sizeForQueue`. |
+### Table UI (room panel)
 
-### Return routing (Step 2)
+- **Tables (N)** section above chat.
+- **TableCard:** game/mode, king badge, team columns when `Team-N` prefixes appear, individual seat chips, king-only **Start now**, disabled **Look for group** options, **Discard** when eligible.
+- **Intent banner:** `myTableSeat` when not in a queue.
+
+### Stale tables
+
+- Discardable when **zero seated** and (**≥ 60s old** OR king manually discards).
+- Auto-sweep on **create table** removes stale empty tables first.
+- No countdown UI; button label **Discard**.
+
+### Return routing
 
 ```json
 {
@@ -205,54 +88,63 @@ Table joins validated against mode **seat template** (`PathSpec` / `game_mode_se
 }
 ```
 
-### Data model (Step 2 adds)
+### Data model
 
-#### `tables`
+#### `room_tables`
 
 | Column | Notes |
 |--------|--------|
-| `id`, `room_id` | v1: unique `room_id` while one table per room |
-| `game_id`, `mode_id` | |
-| `host_user_id`, `status`, `target_size`, `session_id` | |
+| `id`, `room_id`, `game_id`, `mode_id` | Many per room |
+| `status` | `forming`, `started`, `discarded` |
+| `session_id` | Set on start |
 
 #### `table_seats`
 
 | Column | Notes |
 |--------|--------|
-| `table_id`, `user_id` | Unique `user_id` globally |
-| `queue_path`, `affinity_key` | Join bucket |
+| `table_id`, `user_id` | **Unique `user_id`** globally |
+| `seat_key` | Expanded template key |
+| `seated_at` | King tie-break |
 
-### GraphQL (Step 2 adds)
+### GraphQL (Step 2)
 
 ```graphql
 type Table {
   id: ID!
   game: Game!
   mode: GameMode!
-  host: User!
-  status: TableStatus!
+  createdAt: Time!
+  king: User
   seats: [TableSeat!]!
-  bucketCounts: [TableBucketCount!]!
+  seatSlots: [TableSeatSlot!]!
   canStart: Boolean!
-  lookForGroupState: LookForGroupState!
+  canDiscard: Boolean!
+  lookForGroupOptions: [TableLookForGroupOption!]!
 }
 
-extend type Room {
-  tables: [Table!]!
-  myTableSeat: TableSeat
-}
+extend type Room { tables: [Table!]! }
+
+extend type Query { myTableSeat: MyTableSeat }
 
 extend type Mutation {
-  createTable(roomId: ID!, gameId: ID!, modeId: ID!, targetSize: Int): Table!
-  sitAtTable(tableId: ID!, queuePath: String, affinityKey: String): Table!
+  createPrivateTable(gameId: ID!, modeId: ID!): Table!
+  createTable(roomId: ID!, gameId: ID!, modeId: ID!): Table!
+  sitAtTable(tableId: ID!, seatKey: String!): Table!
   leaveTable(tableId: ID!): Boolean!
+  discardTable(tableId: ID!): Boolean!
   startTable(tableId: ID!): JoinResult!
 }
 
 extend type Subscription {
-  tableUpdated(tableId: ID!): Table!
+  tableUpdated(roomId: ID!): Table!
 }
 ```
+
+Realtime: Redis `lobby:room:{roomId}` publishes `table_updated` events (same channel as chat/membership).
+
+### Template validation
+
+Catalog sync rejects `seatTemplate` when two queue paths share the same **`displayName`** (case-insensitive). Paths are **not** merged in the UI.
 
 ---
 
@@ -260,11 +152,13 @@ extend type Subscription {
 
 | Decision | Choice |
 |----------|--------|
-| Build order | **Rooms first**, tables second |
-| Invite format | Short code in `/room/{code}` |
-| Rooms per player | 1 |
-| Room vs queue (Step 1) | **No conflict** — can chat in room while queued |
-| Tables per player (Step 2) | 1 seat |
-| Queue vs table (Step 2) | Mutually exclusive |
-| Share UX | Copy link, QR modal, native share, SMS body |
-| Table start / caps / LFG | Step 2 + Phase B as above |
+| Build order | Rooms first, tables second |
+| Tables per room | 0..N |
+| Sitting | **Seat-level** (`seatKey`) |
+| King | Longest-sitting player; visible |
+| Tables per player | 1 seat globally |
+| Queue vs table | Mutually exclusive |
+| Private game | No queue; binds game + mode only |
+| Table LFG | Disabled until Phase B |
+| Stale empty tables | Lazy sweep + manual Discard |
+| Catalog | Per-mode LFG + Create private game |

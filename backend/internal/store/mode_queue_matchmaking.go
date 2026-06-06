@@ -129,6 +129,10 @@ func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID
 	}
 	defer tx.Rollback()
 
+	if _, _, err := s.leaveTableSeatTx(ctx, tx, userID); err != nil {
+		return nil, err
+	}
+
 	joinCtx, err := s.loadModeQueueJoinContext(ctx, tx, modeQueueID)
 	if err != nil {
 		return nil, err

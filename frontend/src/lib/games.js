@@ -10,8 +10,10 @@ const GAMES_QUERY = `
         id
       }
       modes {
+        id
         modeKey
         displayName
+        status
         queuePaths {
           queuePath
           displayName

@@ -48,6 +48,9 @@ type ResolverRoot interface {
 	RoomMessage() RoomMessageResolver
 	Session() SessionResolver
 	Subscription() SubscriptionResolver
+	Table() TableResolver
+	TableSeat() TableSeatResolver
+	TableSeatSlot() TableSeatSlotResolver
 	User() UserResolver
 }
 
@@ -142,12 +145,16 @@ type ComplexityRoot struct {
 	Mutation struct {
 		CompleteSignInWithCode func(childComplexity int, email string, code string) int
 		CompleteSignInWithLink func(childComplexity int, token string) int
+		CreatePrivateTable     func(childComplexity int, gameID string, modeID string) int
 		CreateRoom             func(childComplexity int) int
+		CreateTable            func(childComplexity int, roomID string, gameID string, modeID string) int
+		DiscardTable           func(childComplexity int, tableID string) int
 		GrantGood              func(childComplexity int, userID string, goodID string, quantity *int) int
 		JoinQueue              func(childComplexity int, queueID string, queuePath *string) int
 		JoinRoom               func(childComplexity int, inviteCode string) int
 		LeaveQueue             func(childComplexity int, queueID string) int
 		LeaveRoom              func(childComplexity int) int
+		LeaveTable             func(childComplexity int, tableID string) int
 		Logout                 func(childComplexity int) int
 		RefreshGameManifest    func(childComplexity int, gameID string) int
 		RegisterGame           func(childComplexity int, input model.RegisterGameInput) int
@@ -156,6 +163,20 @@ type ComplexityRoot struct {
 		RequestSignIn          func(childComplexity int, email string) int
 		RevokeGood             func(childComplexity int, userID string, goodID string, quantity *int) int
 		SendRoomMessage        func(childComplexity int, roomID string, body string) int
+		SitAtTable             func(childComplexity int, tableID string, seatKey string) int
+		StartTable             func(childComplexity int, tableID string) int
+	}
+
+	MyTableSeat struct {
+		GameID          func(childComplexity int) int
+		GameName        func(childComplexity int) int
+		InviteCode      func(childComplexity int) int
+		ModeID          func(childComplexity int) int
+		ModeName        func(childComplexity int) int
+		RoomID          func(childComplexity int) int
+		SeatDisplayName func(childComplexity int) int
+		SeatKey         func(childComplexity int) int
+		TableID         func(childComplexity int) int
 	}
 
 	PublicPlayer struct {
@@ -173,6 +194,7 @@ type ComplexityRoot struct {
 		MyInventory       func(childComplexity int, gameID *string) int
 		MyQueueStatus     func(childComplexity int, queueID string) int
 		MyRoom            func(childComplexity int) int
+		MyTableSeat       func(childComplexity int) int
 		Player            func(childComplexity int, id string) int
 		ReturnDestination func(childComplexity int, matchID *string) int
 		Room              func(childComplexity int, inviteCode string) int
@@ -209,6 +231,7 @@ type ComplexityRoot struct {
 		JoinURL    func(childComplexity int) int
 		Members    func(childComplexity int) int
 		Messages   func(childComplexity int, limit *int, before *string) int
+		Tables     func(childComplexity int) int
 	}
 
 	RoomMessage struct {
@@ -230,6 +253,41 @@ type ComplexityRoot struct {
 		QueueUpdated     func(childComplexity int, queueID string) int
 		RoomMessageAdded func(childComplexity int, roomID string) int
 		RoomUpdated      func(childComplexity int, roomID string) int
+		TableUpdated     func(childComplexity int, roomID string) int
+	}
+
+	Table struct {
+		CanDiscard          func(childComplexity int) int
+		CanStart            func(childComplexity int) int
+		CreatedAt           func(childComplexity int) int
+		Game                func(childComplexity int) int
+		ID                  func(childComplexity int) int
+		King                func(childComplexity int) int
+		LookForGroupOptions func(childComplexity int) int
+		Mode                func(childComplexity int) int
+		SeatSlots           func(childComplexity int) int
+		Seats               func(childComplexity int) int
+	}
+
+	TableLookForGroupOption struct {
+		Enabled   func(childComplexity int) int
+		QueueID   func(childComplexity int) int
+		QueueName func(childComplexity int) int
+		Visible   func(childComplexity int) int
+	}
+
+	TableSeat struct {
+		SeatKey  func(childComplexity int) int
+		SeatedAt func(childComplexity int) int
+		User     func(childComplexity int) int
+	}
+
+	TableSeatSlot struct {
+		DisplayName func(childComplexity int) int
+		QueuePath   func(childComplexity int) int
+		SeatKey     func(childComplexity int) int
+		TeamPrefix  func(childComplexity int) int
+		User        func(childComplexity int) int
 	}
 
 	User struct {
@@ -271,6 +329,12 @@ type MutationResolver interface {
 	JoinRoom(ctx context.Context, inviteCode string) (*model.Room, error)
 	LeaveRoom(ctx context.Context) (bool, error)
 	SendRoomMessage(ctx context.Context, roomID string, body string) (*model.RoomMessage, error)
+	CreatePrivateTable(ctx context.Context, gameID string, modeID string) (*model.Table, error)
+	CreateTable(ctx context.Context, roomID string, gameID string, modeID string) (*model.Table, error)
+	SitAtTable(ctx context.Context, tableID string, seatKey string) (*model.Table, error)
+	LeaveTable(ctx context.Context, tableID string) (bool, error)
+	DiscardTable(ctx context.Context, tableID string) (bool, error)
+	StartTable(ctx context.Context, tableID string) (*model.JoinResult, error)
 }
 type QueryResolver interface {
 	Version(ctx context.Context) (string, error)
@@ -288,12 +352,14 @@ type QueryResolver interface {
 	ReturnDestination(ctx context.Context, matchID *string) (*model.ReturnDestination, error)
 	Room(ctx context.Context, inviteCode string) (*model.Room, error)
 	MyRoom(ctx context.Context) (*model.Room, error)
+	MyTableSeat(ctx context.Context) (*model.MyTableSeat, error)
 }
 type RoomResolver interface {
 	JoinURL(ctx context.Context, obj *model.Room) (string, error)
 	Host(ctx context.Context, obj *model.Room) (*model.User, error)
 	Members(ctx context.Context, obj *model.Room) ([]*model.User, error)
 	Messages(ctx context.Context, obj *model.Room, limit *int, before *string) ([]*model.RoomMessage, error)
+	Tables(ctx context.Context, obj *model.Room) ([]*model.Table, error)
 }
 type RoomMessageResolver interface {
 	Author(ctx context.Context, obj *model.RoomMessage) (*model.User, error)
@@ -307,6 +373,24 @@ type SubscriptionResolver interface {
 	QueueUpdated(ctx context.Context, queueID string) (<-chan *model.QueueUpdate, error)
 	RoomUpdated(ctx context.Context, roomID string) (<-chan *model.Room, error)
 	RoomMessageAdded(ctx context.Context, roomID string) (<-chan *model.RoomMessage, error)
+	TableUpdated(ctx context.Context, roomID string) (<-chan *model.Table, error)
+}
+type TableResolver interface {
+	Game(ctx context.Context, obj *model.Table) (*model.Game, error)
+	Mode(ctx context.Context, obj *model.Table) (*model.GameMode, error)
+
+	King(ctx context.Context, obj *model.Table) (*model.User, error)
+	Seats(ctx context.Context, obj *model.Table) ([]*model.TableSeat, error)
+	SeatSlots(ctx context.Context, obj *model.Table) ([]*model.TableSeatSlot, error)
+	CanStart(ctx context.Context, obj *model.Table) (bool, error)
+	CanDiscard(ctx context.Context, obj *model.Table) (bool, error)
+	LookForGroupOptions(ctx context.Context, obj *model.Table) ([]*model.TableLookForGroupOption, error)
+}
+type TableSeatResolver interface {
+	User(ctx context.Context, obj *model.TableSeat) (*model.User, error)
+}
+type TableSeatSlotResolver interface {
+	User(ctx context.Context, obj *model.TableSeatSlot) (*model.User, error)
 }
 type UserResolver interface {
 	IsAdmin(ctx context.Context, obj *model.User) (bool, error)
@@ -709,12 +793,45 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.CompleteSignInWithLink(childComplexity, args["token"].(string)), true
+	case "Mutation.createPrivateTable":
+		if e.complexity.Mutation.CreatePrivateTable == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createPrivateTable_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreatePrivateTable(childComplexity, args["gameId"].(string), args["modeId"].(string)), true
 	case "Mutation.createRoom":
 		if e.complexity.Mutation.CreateRoom == nil {
 			break
 		}
 
 		return e.complexity.Mutation.CreateRoom(childComplexity), true
+	case "Mutation.createTable":
+		if e.complexity.Mutation.CreateTable == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createTable_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateTable(childComplexity, args["roomId"].(string), args["gameId"].(string), args["modeId"].(string)), true
+	case "Mutation.discardTable":
+		if e.complexity.Mutation.DiscardTable == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_discardTable_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DiscardTable(childComplexity, args["tableId"].(string)), true
 	case "Mutation.grantGood":
 		if e.complexity.Mutation.GrantGood == nil {
 			break
@@ -765,6 +882,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.LeaveRoom(childComplexity), true
+	case "Mutation.leaveTable":
+		if e.complexity.Mutation.LeaveTable == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_leaveTable_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.LeaveTable(childComplexity, args["tableId"].(string)), true
 	case "Mutation.logout":
 		if e.complexity.Mutation.Logout == nil {
 			break
@@ -848,6 +976,83 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.SendRoomMessage(childComplexity, args["roomId"].(string), args["body"].(string)), true
+	case "Mutation.sitAtTable":
+		if e.complexity.Mutation.SitAtTable == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_sitAtTable_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SitAtTable(childComplexity, args["tableId"].(string), args["seatKey"].(string)), true
+	case "Mutation.startTable":
+		if e.complexity.Mutation.StartTable == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_startTable_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.StartTable(childComplexity, args["tableId"].(string)), true
+
+	case "MyTableSeat.gameId":
+		if e.complexity.MyTableSeat.GameID == nil {
+			break
+		}
+
+		return e.complexity.MyTableSeat.GameID(childComplexity), true
+	case "MyTableSeat.gameName":
+		if e.complexity.MyTableSeat.GameName == nil {
+			break
+		}
+
+		return e.complexity.MyTableSeat.GameName(childComplexity), true
+	case "MyTableSeat.inviteCode":
+		if e.complexity.MyTableSeat.InviteCode == nil {
+			break
+		}
+
+		return e.complexity.MyTableSeat.InviteCode(childComplexity), true
+	case "MyTableSeat.modeId":
+		if e.complexity.MyTableSeat.ModeID == nil {
+			break
+		}
+
+		return e.complexity.MyTableSeat.ModeID(childComplexity), true
+	case "MyTableSeat.modeName":
+		if e.complexity.MyTableSeat.ModeName == nil {
+			break
+		}
+
+		return e.complexity.MyTableSeat.ModeName(childComplexity), true
+	case "MyTableSeat.roomId":
+		if e.complexity.MyTableSeat.RoomID == nil {
+			break
+		}
+
+		return e.complexity.MyTableSeat.RoomID(childComplexity), true
+	case "MyTableSeat.seatDisplayName":
+		if e.complexity.MyTableSeat.SeatDisplayName == nil {
+			break
+		}
+
+		return e.complexity.MyTableSeat.SeatDisplayName(childComplexity), true
+	case "MyTableSeat.seatKey":
+		if e.complexity.MyTableSeat.SeatKey == nil {
+			break
+		}
+
+		return e.complexity.MyTableSeat.SeatKey(childComplexity), true
+	case "MyTableSeat.tableId":
+		if e.complexity.MyTableSeat.TableID == nil {
+			break
+		}
+
+		return e.complexity.MyTableSeat.TableID(childComplexity), true
 
 	case "PublicPlayer.displayName":
 		if e.complexity.PublicPlayer.DisplayName == nil {
@@ -941,6 +1146,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.MyRoom(childComplexity), true
+	case "Query.myTableSeat":
+		if e.complexity.Query.MyTableSeat == nil {
+			break
+		}
+
+		return e.complexity.Query.MyTableSeat(childComplexity), true
 	case "Query.player":
 		if e.complexity.Query.Player == nil {
 			break
@@ -1114,6 +1325,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Room.Messages(childComplexity, args["limit"].(*int), args["before"].(*string)), true
+	case "Room.tables":
+		if e.complexity.Room.Tables == nil {
+			break
+		}
+
+		return e.complexity.Room.Tables(childComplexity), true
 
 	case "RoomMessage.author":
 		if e.complexity.RoomMessage.Author == nil {
@@ -1204,6 +1421,153 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Subscription.RoomUpdated(childComplexity, args["roomId"].(string)), true
+	case "Subscription.tableUpdated":
+		if e.complexity.Subscription.TableUpdated == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_tableUpdated_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.TableUpdated(childComplexity, args["roomId"].(string)), true
+
+	case "Table.canDiscard":
+		if e.complexity.Table.CanDiscard == nil {
+			break
+		}
+
+		return e.complexity.Table.CanDiscard(childComplexity), true
+	case "Table.canStart":
+		if e.complexity.Table.CanStart == nil {
+			break
+		}
+
+		return e.complexity.Table.CanStart(childComplexity), true
+	case "Table.createdAt":
+		if e.complexity.Table.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Table.CreatedAt(childComplexity), true
+	case "Table.game":
+		if e.complexity.Table.Game == nil {
+			break
+		}
+
+		return e.complexity.Table.Game(childComplexity), true
+	case "Table.id":
+		if e.complexity.Table.ID == nil {
+			break
+		}
+
+		return e.complexity.Table.ID(childComplexity), true
+	case "Table.king":
+		if e.complexity.Table.King == nil {
+			break
+		}
+
+		return e.complexity.Table.King(childComplexity), true
+	case "Table.lookForGroupOptions":
+		if e.complexity.Table.LookForGroupOptions == nil {
+			break
+		}
+
+		return e.complexity.Table.LookForGroupOptions(childComplexity), true
+	case "Table.mode":
+		if e.complexity.Table.Mode == nil {
+			break
+		}
+
+		return e.complexity.Table.Mode(childComplexity), true
+	case "Table.seatSlots":
+		if e.complexity.Table.SeatSlots == nil {
+			break
+		}
+
+		return e.complexity.Table.SeatSlots(childComplexity), true
+	case "Table.seats":
+		if e.complexity.Table.Seats == nil {
+			break
+		}
+
+		return e.complexity.Table.Seats(childComplexity), true
+
+	case "TableLookForGroupOption.enabled":
+		if e.complexity.TableLookForGroupOption.Enabled == nil {
+			break
+		}
+
+		return e.complexity.TableLookForGroupOption.Enabled(childComplexity), true
+	case "TableLookForGroupOption.queueId":
+		if e.complexity.TableLookForGroupOption.QueueID == nil {
+			break
+		}
+
+		return e.complexity.TableLookForGroupOption.QueueID(childComplexity), true
+	case "TableLookForGroupOption.queueName":
+		if e.complexity.TableLookForGroupOption.QueueName == nil {
+			break
+		}
+
+		return e.complexity.TableLookForGroupOption.QueueName(childComplexity), true
+	case "TableLookForGroupOption.visible":
+		if e.complexity.TableLookForGroupOption.Visible == nil {
+			break
+		}
+
+		return e.complexity.TableLookForGroupOption.Visible(childComplexity), true
+
+	case "TableSeat.seatKey":
+		if e.complexity.TableSeat.SeatKey == nil {
+			break
+		}
+
+		return e.complexity.TableSeat.SeatKey(childComplexity), true
+	case "TableSeat.seatedAt":
+		if e.complexity.TableSeat.SeatedAt == nil {
+			break
+		}
+
+		return e.complexity.TableSeat.SeatedAt(childComplexity), true
+	case "TableSeat.user":
+		if e.complexity.TableSeat.User == nil {
+			break
+		}
+
+		return e.complexity.TableSeat.User(childComplexity), true
+
+	case "TableSeatSlot.displayName":
+		if e.complexity.TableSeatSlot.DisplayName == nil {
+			break
+		}
+
+		return e.complexity.TableSeatSlot.DisplayName(childComplexity), true
+	case "TableSeatSlot.queuePath":
+		if e.complexity.TableSeatSlot.QueuePath == nil {
+			break
+		}
+
+		return e.complexity.TableSeatSlot.QueuePath(childComplexity), true
+	case "TableSeatSlot.seatKey":
+		if e.complexity.TableSeatSlot.SeatKey == nil {
+			break
+		}
+
+		return e.complexity.TableSeatSlot.SeatKey(childComplexity), true
+	case "TableSeatSlot.teamPrefix":
+		if e.complexity.TableSeatSlot.TeamPrefix == nil {
+			break
+		}
+
+		return e.complexity.TableSeatSlot.TeamPrefix(childComplexity), true
+	case "TableSeatSlot.user":
+		if e.complexity.TableSeatSlot.User == nil {
+			break
+		}
+
+		return e.complexity.TableSeatSlot.User(childComplexity), true
 
 	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
@@ -1623,6 +1987,73 @@ extend type Subscription {
   roomMessageAdded(roomId: ID!): RoomMessage!
 }
 `, BuiltIn: false},
+	{Name: "../schema/tables.graphqls", Input: `type TableSeat {
+  seatKey: String!
+  user: User!
+  seatedAt: Time!
+}
+
+type TableSeatSlot {
+  seatKey: String!
+  queuePath: String
+  displayName: String!
+  teamPrefix: String
+  user: User
+}
+
+type TableLookForGroupOption {
+  queueId: ID!
+  queueName: String!
+  visible: Boolean!
+  enabled: Boolean!
+}
+
+type Table {
+  id: ID!
+  game: Game!
+  mode: GameMode!
+  createdAt: Time!
+  king: User
+  seats: [TableSeat!]!
+  seatSlots: [TableSeatSlot!]!
+  canStart: Boolean!
+  canDiscard: Boolean!
+  lookForGroupOptions: [TableLookForGroupOption!]!
+}
+
+type MyTableSeat {
+  tableId: ID!
+  roomId: ID!
+  inviteCode: String!
+  gameId: ID!
+  gameName: String!
+  modeId: ID!
+  modeName: String!
+  seatKey: String!
+  seatDisplayName: String!
+}
+
+extend type Room {
+  tables: [Table!]!
+}
+
+extend type Query {
+  myTableSeat: MyTableSeat
+}
+
+extend type Mutation {
+  createPrivateTable(gameId: ID!, modeId: ID!): Table!
+  createTable(roomId: ID!, gameId: ID!, modeId: ID!): Table!
+  sitAtTable(tableId: ID!, seatKey: String!): Table!
+  leaveTable(tableId: ID!): Boolean!
+  discardTable(tableId: ID!): Boolean!
+  startTable(tableId: ID!): JoinResult!
+}
+
+extend type Subscription {
+  tableUpdated(roomId: ID!): Table!
+}
+`, BuiltIn: false},
 	{Name: "../schema/users.graphqls", Input: `type User {
   id: ID!
   email: String
@@ -1682,6 +2113,54 @@ func (ec *executionContext) field_Mutation_completeSignInWithLink_args(ctx conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_createPrivateTable_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "gameId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["gameId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "modeId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["modeId"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createTable_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "roomId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["roomId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "gameId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["gameId"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "modeId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["modeId"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_discardTable_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "tableId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["tableId"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_grantGood_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1738,6 +2217,17 @@ func (ec *executionContext) field_Mutation_leaveQueue_args(ctx context.Context, 
 		return nil, err
 	}
 	args["queueId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_leaveTable_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "tableId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["tableId"] = arg0
 	return args, nil
 }
 
@@ -1865,6 +2355,33 @@ func (ec *executionContext) field_Mutation_sendRoomMessage_args(ctx context.Cont
 		return nil, err
 	}
 	args["body"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_sitAtTable_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "tableId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["tableId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "seatKey", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["seatKey"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_startTable_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "tableId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["tableId"] = arg0
 	return args, nil
 }
 
@@ -2022,6 +2539,17 @@ func (ec *executionContext) field_Subscription_roomMessageAdded_args(ctx context
 }
 
 func (ec *executionContext) field_Subscription_roomUpdated_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "roomId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["roomId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_tableUpdated_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "roomId", ec.unmarshalNID2string)
@@ -4439,6 +4967,8 @@ func (ec *executionContext) fieldContext_Mutation_createRoom(_ context.Context, 
 				return ec.fieldContext_Room_members(ctx, field)
 			case "messages":
 				return ec.fieldContext_Room_messages(ctx, field)
+			case "tables":
+				return ec.fieldContext_Room_tables(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
@@ -4483,6 +5013,8 @@ func (ec *executionContext) fieldContext_Mutation_joinRoom(ctx context.Context, 
 				return ec.fieldContext_Room_members(ctx, field)
 			case "messages":
 				return ec.fieldContext_Room_messages(ctx, field)
+			case "tables":
+				return ec.fieldContext_Room_tables(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
@@ -4577,6 +5109,593 @@ func (ec *executionContext) fieldContext_Mutation_sendRoomMessage(ctx context.Co
 	if fc.Args, err = ec.field_Mutation_sendRoomMessage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createPrivateTable(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_createPrivateTable,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().CreatePrivateTable(ctx, fc.Args["gameId"].(string), fc.Args["modeId"].(string))
+		},
+		nil,
+		ec.marshalNTable2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTable,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createPrivateTable(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Table_id(ctx, field)
+			case "game":
+				return ec.fieldContext_Table_game(ctx, field)
+			case "mode":
+				return ec.fieldContext_Table_mode(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Table_createdAt(ctx, field)
+			case "king":
+				return ec.fieldContext_Table_king(ctx, field)
+			case "seats":
+				return ec.fieldContext_Table_seats(ctx, field)
+			case "seatSlots":
+				return ec.fieldContext_Table_seatSlots(ctx, field)
+			case "canStart":
+				return ec.fieldContext_Table_canStart(ctx, field)
+			case "canDiscard":
+				return ec.fieldContext_Table_canDiscard(ctx, field)
+			case "lookForGroupOptions":
+				return ec.fieldContext_Table_lookForGroupOptions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Table", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createPrivateTable_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createTable(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_createTable,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().CreateTable(ctx, fc.Args["roomId"].(string), fc.Args["gameId"].(string), fc.Args["modeId"].(string))
+		},
+		nil,
+		ec.marshalNTable2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTable,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createTable(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Table_id(ctx, field)
+			case "game":
+				return ec.fieldContext_Table_game(ctx, field)
+			case "mode":
+				return ec.fieldContext_Table_mode(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Table_createdAt(ctx, field)
+			case "king":
+				return ec.fieldContext_Table_king(ctx, field)
+			case "seats":
+				return ec.fieldContext_Table_seats(ctx, field)
+			case "seatSlots":
+				return ec.fieldContext_Table_seatSlots(ctx, field)
+			case "canStart":
+				return ec.fieldContext_Table_canStart(ctx, field)
+			case "canDiscard":
+				return ec.fieldContext_Table_canDiscard(ctx, field)
+			case "lookForGroupOptions":
+				return ec.fieldContext_Table_lookForGroupOptions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Table", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createTable_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_sitAtTable(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_sitAtTable,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().SitAtTable(ctx, fc.Args["tableId"].(string), fc.Args["seatKey"].(string))
+		},
+		nil,
+		ec.marshalNTable2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTable,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_sitAtTable(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Table_id(ctx, field)
+			case "game":
+				return ec.fieldContext_Table_game(ctx, field)
+			case "mode":
+				return ec.fieldContext_Table_mode(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Table_createdAt(ctx, field)
+			case "king":
+				return ec.fieldContext_Table_king(ctx, field)
+			case "seats":
+				return ec.fieldContext_Table_seats(ctx, field)
+			case "seatSlots":
+				return ec.fieldContext_Table_seatSlots(ctx, field)
+			case "canStart":
+				return ec.fieldContext_Table_canStart(ctx, field)
+			case "canDiscard":
+				return ec.fieldContext_Table_canDiscard(ctx, field)
+			case "lookForGroupOptions":
+				return ec.fieldContext_Table_lookForGroupOptions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Table", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_sitAtTable_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_leaveTable(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_leaveTable,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().LeaveTable(ctx, fc.Args["tableId"].(string))
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_leaveTable(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_leaveTable_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_discardTable(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_discardTable,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().DiscardTable(ctx, fc.Args["tableId"].(string))
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_discardTable(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_discardTable_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_startTable(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_startTable,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().StartTable(ctx, fc.Args["tableId"].(string))
+		},
+		nil,
+		ec.marshalNJoinResult2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐJoinResult,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_startTable(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "queued":
+				return ec.fieldContext_JoinResult_queued(ctx, field)
+			case "sessionId":
+				return ec.fieldContext_JoinResult_sessionId(ctx, field)
+			case "joinUrl":
+				return ec.fieldContext_JoinResult_joinUrl(ctx, field)
+			case "queuedCount":
+				return ec.fieldContext_JoinResult_queuedCount(ctx, field)
+			case "queuePath":
+				return ec.fieldContext_JoinResult_queuePath(ctx, field)
+			case "message":
+				return ec.fieldContext_JoinResult_message(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type JoinResult", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_startTable_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MyTableSeat_tableId(ctx context.Context, field graphql.CollectedField, obj *model.MyTableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_MyTableSeat_tableId,
+		func(ctx context.Context) (any, error) {
+			return obj.TableID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_MyTableSeat_tableId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MyTableSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MyTableSeat_roomId(ctx context.Context, field graphql.CollectedField, obj *model.MyTableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_MyTableSeat_roomId,
+		func(ctx context.Context) (any, error) {
+			return obj.RoomID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_MyTableSeat_roomId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MyTableSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MyTableSeat_inviteCode(ctx context.Context, field graphql.CollectedField, obj *model.MyTableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_MyTableSeat_inviteCode,
+		func(ctx context.Context) (any, error) {
+			return obj.InviteCode, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_MyTableSeat_inviteCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MyTableSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MyTableSeat_gameId(ctx context.Context, field graphql.CollectedField, obj *model.MyTableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_MyTableSeat_gameId,
+		func(ctx context.Context) (any, error) {
+			return obj.GameID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_MyTableSeat_gameId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MyTableSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MyTableSeat_gameName(ctx context.Context, field graphql.CollectedField, obj *model.MyTableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_MyTableSeat_gameName,
+		func(ctx context.Context) (any, error) {
+			return obj.GameName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_MyTableSeat_gameName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MyTableSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MyTableSeat_modeId(ctx context.Context, field graphql.CollectedField, obj *model.MyTableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_MyTableSeat_modeId,
+		func(ctx context.Context) (any, error) {
+			return obj.ModeID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_MyTableSeat_modeId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MyTableSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MyTableSeat_modeName(ctx context.Context, field graphql.CollectedField, obj *model.MyTableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_MyTableSeat_modeName,
+		func(ctx context.Context) (any, error) {
+			return obj.ModeName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_MyTableSeat_modeName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MyTableSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MyTableSeat_seatKey(ctx context.Context, field graphql.CollectedField, obj *model.MyTableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_MyTableSeat_seatKey,
+		func(ctx context.Context) (any, error) {
+			return obj.SeatKey, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_MyTableSeat_seatKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MyTableSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MyTableSeat_seatDisplayName(ctx context.Context, field graphql.CollectedField, obj *model.MyTableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_MyTableSeat_seatDisplayName,
+		func(ctx context.Context) (any, error) {
+			return obj.SeatDisplayName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_MyTableSeat_seatDisplayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MyTableSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
 	}
 	return fc, nil
 }
@@ -5285,6 +6404,8 @@ func (ec *executionContext) fieldContext_Query_room(ctx context.Context, field g
 				return ec.fieldContext_Room_members(ctx, field)
 			case "messages":
 				return ec.fieldContext_Room_messages(ctx, field)
+			case "tables":
+				return ec.fieldContext_Room_tables(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
@@ -5339,8 +6460,59 @@ func (ec *executionContext) fieldContext_Query_myRoom(_ context.Context, field g
 				return ec.fieldContext_Room_members(ctx, field)
 			case "messages":
 				return ec.fieldContext_Room_messages(ctx, field)
+			case "tables":
+				return ec.fieldContext_Room_tables(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_myTableSeat(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_myTableSeat,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().MyTableSeat(ctx)
+		},
+		nil,
+		ec.marshalOMyTableSeat2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐMyTableSeat,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_myTableSeat(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "tableId":
+				return ec.fieldContext_MyTableSeat_tableId(ctx, field)
+			case "roomId":
+				return ec.fieldContext_MyTableSeat_roomId(ctx, field)
+			case "inviteCode":
+				return ec.fieldContext_MyTableSeat_inviteCode(ctx, field)
+			case "gameId":
+				return ec.fieldContext_MyTableSeat_gameId(ctx, field)
+			case "gameName":
+				return ec.fieldContext_MyTableSeat_gameName(ctx, field)
+			case "modeId":
+				return ec.fieldContext_MyTableSeat_modeId(ctx, field)
+			case "modeName":
+				return ec.fieldContext_MyTableSeat_modeName(ctx, field)
+			case "seatKey":
+				return ec.fieldContext_MyTableSeat_seatKey(ctx, field)
+			case "seatDisplayName":
+				return ec.fieldContext_MyTableSeat_seatDisplayName(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type MyTableSeat", field.Name)
 		},
 	}
 	return fc, nil
@@ -6046,6 +7218,57 @@ func (ec *executionContext) fieldContext_Room_messages(ctx context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _Room_tables(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_tables,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Room().Tables(ctx, obj)
+		},
+		nil,
+		ec.marshalNTable2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_tables(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Table_id(ctx, field)
+			case "game":
+				return ec.fieldContext_Table_game(ctx, field)
+			case "mode":
+				return ec.fieldContext_Table_mode(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Table_createdAt(ctx, field)
+			case "king":
+				return ec.fieldContext_Table_king(ctx, field)
+			case "seats":
+				return ec.fieldContext_Table_seats(ctx, field)
+			case "seatSlots":
+				return ec.fieldContext_Table_seatSlots(ctx, field)
+			case "canStart":
+				return ec.fieldContext_Table_canStart(ctx, field)
+			case "canDiscard":
+				return ec.fieldContext_Table_canDiscard(ctx, field)
+			case "lookForGroupOptions":
+				return ec.fieldContext_Table_lookForGroupOptions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Table", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _RoomMessage_id(ctx context.Context, field graphql.CollectedField, obj *model.RoomMessage) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -6449,6 +7672,8 @@ func (ec *executionContext) fieldContext_Subscription_roomUpdated(ctx context.Co
 				return ec.fieldContext_Room_members(ctx, field)
 			case "messages":
 				return ec.fieldContext_Room_messages(ctx, field)
+			case "tables":
+				return ec.fieldContext_Room_tables(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
@@ -6514,6 +7739,817 @@ func (ec *executionContext) fieldContext_Subscription_roomMessageAdded(ctx conte
 	if fc.Args, err = ec.field_Subscription_roomMessageAdded_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Subscription_tableUpdated(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	return graphql.ResolveFieldStream(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Subscription_tableUpdated,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Subscription().TableUpdated(ctx, fc.Args["roomId"].(string))
+		},
+		nil,
+		ec.marshalNTable2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTable,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Subscription_tableUpdated(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Table_id(ctx, field)
+			case "game":
+				return ec.fieldContext_Table_game(ctx, field)
+			case "mode":
+				return ec.fieldContext_Table_mode(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Table_createdAt(ctx, field)
+			case "king":
+				return ec.fieldContext_Table_king(ctx, field)
+			case "seats":
+				return ec.fieldContext_Table_seats(ctx, field)
+			case "seatSlots":
+				return ec.fieldContext_Table_seatSlots(ctx, field)
+			case "canStart":
+				return ec.fieldContext_Table_canStart(ctx, field)
+			case "canDiscard":
+				return ec.fieldContext_Table_canDiscard(ctx, field)
+			case "lookForGroupOptions":
+				return ec.fieldContext_Table_lookForGroupOptions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Table", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_tableUpdated_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Table_id(ctx context.Context, field graphql.CollectedField, obj *model.Table) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Table_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Table_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Table",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Table_game(ctx context.Context, field graphql.CollectedField, obj *model.Table) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Table_game,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Table().Game(ctx, obj)
+		},
+		nil,
+		ec.marshalNGame2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGame,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Table_game(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Table",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Game_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Game_name(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Game_createdAt(ctx, field)
+			case "activeSessions":
+				return ec.fieldContext_Game_activeSessions(ctx, field)
+			case "slug":
+				return ec.fieldContext_Game_slug(ctx, field)
+			case "playUrl":
+				return ec.fieldContext_Game_playUrl(ctx, field)
+			case "apiBaseUrl":
+				return ec.fieldContext_Game_apiBaseUrl(ctx, field)
+			case "manifestSyncedAt":
+				return ec.fieldContext_Game_manifestSyncedAt(ctx, field)
+			case "manifestHash":
+				return ec.fieldContext_Game_manifestHash(ctx, field)
+			case "gameVersion":
+				return ec.fieldContext_Game_gameVersion(ctx, field)
+			case "modes":
+				return ec.fieldContext_Game_modes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Game", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Table_mode(ctx context.Context, field graphql.CollectedField, obj *model.Table) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Table_mode,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Table().Mode(ctx, obj)
+		},
+		nil,
+		ec.marshalNGameMode2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGameMode,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Table_mode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Table",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_GameMode_id(ctx, field)
+			case "modeKey":
+				return ec.fieldContext_GameMode_modeKey(ctx, field)
+			case "displayName":
+				return ec.fieldContext_GameMode_displayName(ctx, field)
+			case "minPlayers":
+				return ec.fieldContext_GameMode_minPlayers(ctx, field)
+			case "maxPlayers":
+				return ec.fieldContext_GameMode_maxPlayers(ctx, field)
+			case "status":
+				return ec.fieldContext_GameMode_status(ctx, field)
+			case "seats":
+				return ec.fieldContext_GameMode_seats(ctx, field)
+			case "queuePaths":
+				return ec.fieldContext_GameMode_queuePaths(ctx, field)
+			case "queues":
+				return ec.fieldContext_GameMode_queues(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GameMode", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Table_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Table) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Table_createdAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Table_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Table",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Table_king(ctx context.Context, field graphql.CollectedField, obj *model.Table) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Table_king,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Table().King(ctx, obj)
+		},
+		nil,
+		ec.marshalOUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Table_king(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Table",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Table_seats(ctx context.Context, field graphql.CollectedField, obj *model.Table) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Table_seats,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Table().Seats(ctx, obj)
+		},
+		nil,
+		ec.marshalNTableSeat2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableSeatᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Table_seats(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Table",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "seatKey":
+				return ec.fieldContext_TableSeat_seatKey(ctx, field)
+			case "user":
+				return ec.fieldContext_TableSeat_user(ctx, field)
+			case "seatedAt":
+				return ec.fieldContext_TableSeat_seatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type TableSeat", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Table_seatSlots(ctx context.Context, field graphql.CollectedField, obj *model.Table) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Table_seatSlots,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Table().SeatSlots(ctx, obj)
+		},
+		nil,
+		ec.marshalNTableSeatSlot2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableSeatSlotᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Table_seatSlots(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Table",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "seatKey":
+				return ec.fieldContext_TableSeatSlot_seatKey(ctx, field)
+			case "queuePath":
+				return ec.fieldContext_TableSeatSlot_queuePath(ctx, field)
+			case "displayName":
+				return ec.fieldContext_TableSeatSlot_displayName(ctx, field)
+			case "teamPrefix":
+				return ec.fieldContext_TableSeatSlot_teamPrefix(ctx, field)
+			case "user":
+				return ec.fieldContext_TableSeatSlot_user(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type TableSeatSlot", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Table_canStart(ctx context.Context, field graphql.CollectedField, obj *model.Table) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Table_canStart,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Table().CanStart(ctx, obj)
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Table_canStart(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Table",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Table_canDiscard(ctx context.Context, field graphql.CollectedField, obj *model.Table) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Table_canDiscard,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Table().CanDiscard(ctx, obj)
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Table_canDiscard(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Table",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Table_lookForGroupOptions(ctx context.Context, field graphql.CollectedField, obj *model.Table) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Table_lookForGroupOptions,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Table().LookForGroupOptions(ctx, obj)
+		},
+		nil,
+		ec.marshalNTableLookForGroupOption2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableLookForGroupOptionᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Table_lookForGroupOptions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Table",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "queueId":
+				return ec.fieldContext_TableLookForGroupOption_queueId(ctx, field)
+			case "queueName":
+				return ec.fieldContext_TableLookForGroupOption_queueName(ctx, field)
+			case "visible":
+				return ec.fieldContext_TableLookForGroupOption_visible(ctx, field)
+			case "enabled":
+				return ec.fieldContext_TableLookForGroupOption_enabled(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type TableLookForGroupOption", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableLookForGroupOption_queueId(ctx context.Context, field graphql.CollectedField, obj *model.TableLookForGroupOption) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableLookForGroupOption_queueId,
+		func(ctx context.Context) (any, error) {
+			return obj.QueueID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableLookForGroupOption_queueId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableLookForGroupOption",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableLookForGroupOption_queueName(ctx context.Context, field graphql.CollectedField, obj *model.TableLookForGroupOption) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableLookForGroupOption_queueName,
+		func(ctx context.Context) (any, error) {
+			return obj.QueueName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableLookForGroupOption_queueName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableLookForGroupOption",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableLookForGroupOption_visible(ctx context.Context, field graphql.CollectedField, obj *model.TableLookForGroupOption) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableLookForGroupOption_visible,
+		func(ctx context.Context) (any, error) {
+			return obj.Visible, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableLookForGroupOption_visible(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableLookForGroupOption",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableLookForGroupOption_enabled(ctx context.Context, field graphql.CollectedField, obj *model.TableLookForGroupOption) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableLookForGroupOption_enabled,
+		func(ctx context.Context) (any, error) {
+			return obj.Enabled, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableLookForGroupOption_enabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableLookForGroupOption",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableSeat_seatKey(ctx context.Context, field graphql.CollectedField, obj *model.TableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableSeat_seatKey,
+		func(ctx context.Context) (any, error) {
+			return obj.SeatKey, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableSeat_seatKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableSeat_user(ctx context.Context, field graphql.CollectedField, obj *model.TableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableSeat_user,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.TableSeat().User(ctx, obj)
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableSeat_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableSeat",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableSeat_seatedAt(ctx context.Context, field graphql.CollectedField, obj *model.TableSeat) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableSeat_seatedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.SeatedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableSeat_seatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableSeat",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableSeatSlot_seatKey(ctx context.Context, field graphql.CollectedField, obj *model.TableSeatSlot) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableSeatSlot_seatKey,
+		func(ctx context.Context) (any, error) {
+			return obj.SeatKey, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableSeatSlot_seatKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableSeatSlot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableSeatSlot_queuePath(ctx context.Context, field graphql.CollectedField, obj *model.TableSeatSlot) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableSeatSlot_queuePath,
+		func(ctx context.Context) (any, error) {
+			return obj.QueuePath, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableSeatSlot_queuePath(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableSeatSlot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableSeatSlot_displayName(ctx context.Context, field graphql.CollectedField, obj *model.TableSeatSlot) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableSeatSlot_displayName,
+		func(ctx context.Context) (any, error) {
+			return obj.DisplayName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableSeatSlot_displayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableSeatSlot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableSeatSlot_teamPrefix(ctx context.Context, field graphql.CollectedField, obj *model.TableSeatSlot) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableSeatSlot_teamPrefix,
+		func(ctx context.Context) (any, error) {
+			return obj.TeamPrefix, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableSeatSlot_teamPrefix(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableSeatSlot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TableSeatSlot_user(ctx context.Context, field graphql.CollectedField, obj *model.TableSeatSlot) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_TableSeatSlot_user,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.TableSeatSlot().User(ctx, obj)
+		},
+		nil,
+		ec.marshalOUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_TableSeatSlot_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TableSeatSlot",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -9020,6 +11056,127 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "createPrivateTable":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createPrivateTable(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createTable":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createTable(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sitAtTable":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_sitAtTable(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "leaveTable":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_leaveTable(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "discardTable":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_discardTable(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "startTable":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_startTable(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var myTableSeatImplementors = []string{"MyTableSeat"}
+
+func (ec *executionContext) _MyTableSeat(ctx context.Context, sel ast.SelectionSet, obj *model.MyTableSeat) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, myTableSeatImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MyTableSeat")
+		case "tableId":
+			out.Values[i] = ec._MyTableSeat_tableId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "roomId":
+			out.Values[i] = ec._MyTableSeat_roomId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inviteCode":
+			out.Values[i] = ec._MyTableSeat_inviteCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gameId":
+			out.Values[i] = ec._MyTableSeat_gameId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gameName":
+			out.Values[i] = ec._MyTableSeat_gameName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "modeId":
+			out.Values[i] = ec._MyTableSeat_modeId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "modeName":
+			out.Values[i] = ec._MyTableSeat_modeName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "seatKey":
+			out.Values[i] = ec._MyTableSeat_seatKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "seatDisplayName":
+			out.Values[i] = ec._MyTableSeat_seatDisplayName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -9409,6 +11566,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "myTableSeat":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_myTableSeat(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -9758,6 +11934,42 @@ func (ec *executionContext) _Room(ctx context.Context, sel ast.SelectionSet, obj
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "tables":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Room_tables(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -10006,9 +12218,555 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 		return ec._Subscription_roomUpdated(ctx, fields[0])
 	case "roomMessageAdded":
 		return ec._Subscription_roomMessageAdded(ctx, fields[0])
+	case "tableUpdated":
+		return ec._Subscription_tableUpdated(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
+}
+
+var tableImplementors = []string{"Table"}
+
+func (ec *executionContext) _Table(ctx context.Context, sel ast.SelectionSet, obj *model.Table) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, tableImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Table")
+		case "id":
+			out.Values[i] = ec._Table_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "game":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Table_game(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "mode":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Table_mode(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "createdAt":
+			out.Values[i] = ec._Table_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "king":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Table_king(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "seats":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Table_seats(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "seatSlots":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Table_seatSlots(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "canStart":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Table_canStart(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "canDiscard":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Table_canDiscard(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "lookForGroupOptions":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Table_lookForGroupOptions(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var tableLookForGroupOptionImplementors = []string{"TableLookForGroupOption"}
+
+func (ec *executionContext) _TableLookForGroupOption(ctx context.Context, sel ast.SelectionSet, obj *model.TableLookForGroupOption) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, tableLookForGroupOptionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("TableLookForGroupOption")
+		case "queueId":
+			out.Values[i] = ec._TableLookForGroupOption_queueId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "queueName":
+			out.Values[i] = ec._TableLookForGroupOption_queueName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "visible":
+			out.Values[i] = ec._TableLookForGroupOption_visible(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "enabled":
+			out.Values[i] = ec._TableLookForGroupOption_enabled(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var tableSeatImplementors = []string{"TableSeat"}
+
+func (ec *executionContext) _TableSeat(ctx context.Context, sel ast.SelectionSet, obj *model.TableSeat) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, tableSeatImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("TableSeat")
+		case "seatKey":
+			out.Values[i] = ec._TableSeat_seatKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "user":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._TableSeat_user(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "seatedAt":
+			out.Values[i] = ec._TableSeat_seatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var tableSeatSlotImplementors = []string{"TableSeatSlot"}
+
+func (ec *executionContext) _TableSeatSlot(ctx context.Context, sel ast.SelectionSet, obj *model.TableSeatSlot) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, tableSeatSlotImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("TableSeatSlot")
+		case "seatKey":
+			out.Values[i] = ec._TableSeatSlot_seatKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "queuePath":
+			out.Values[i] = ec._TableSeatSlot_queuePath(ctx, field, obj)
+		case "displayName":
+			out.Values[i] = ec._TableSeatSlot_displayName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "teamPrefix":
+			out.Values[i] = ec._TableSeatSlot_teamPrefix(ctx, field, obj)
+		case "user":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._TableSeatSlot_user(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
 }
 
 var userImplementors = []string{"User"}
@@ -10612,6 +13370,10 @@ func (ec *executionContext) marshalNGame2ᚖgithubᚗcomᚋscruffyprodigyᚋplay
 	return ec._Game(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNGameMode2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGameMode(ctx context.Context, sel ast.SelectionSet, v model.GameMode) graphql.Marshaler {
+	return ec._GameMode(ctx, sel, &v)
+}
+
 func (ec *executionContext) marshalNGameMode2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGameModeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.GameMode) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -11103,6 +13865,226 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
+func (ec *executionContext) marshalNTable2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTable(ctx context.Context, sel ast.SelectionSet, v model.Table) graphql.Marshaler {
+	return ec._Table(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTable2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Table) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTable2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTable(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNTable2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTable(ctx context.Context, sel ast.SelectionSet, v *model.Table) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Table(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNTableLookForGroupOption2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableLookForGroupOptionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.TableLookForGroupOption) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTableLookForGroupOption2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableLookForGroupOption(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNTableLookForGroupOption2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableLookForGroupOption(ctx context.Context, sel ast.SelectionSet, v *model.TableLookForGroupOption) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._TableLookForGroupOption(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNTableSeat2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableSeatᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.TableSeat) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTableSeat2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableSeat(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNTableSeat2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableSeat(ctx context.Context, sel ast.SelectionSet, v *model.TableSeat) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._TableSeat(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNTableSeatSlot2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableSeatSlotᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.TableSeatSlot) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTableSeatSlot2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableSeatSlot(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNTableSeatSlot2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTableSeatSlot(ctx context.Context, sel ast.SelectionSet, v *model.TableSeatSlot) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._TableSeatSlot(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v any) (time.Time, error) {
 	res, err := graphql.UnmarshalTime(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -11562,6 +14544,13 @@ func (ec *executionContext) marshalOJSON2map(ctx context.Context, sel ast.Select
 	_ = ctx
 	res := graphql.MarshalMap(v)
 	return res
+}
+
+func (ec *executionContext) marshalOMyTableSeat2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐMyTableSeat(ctx context.Context, sel ast.SelectionSet, v *model.MyTableSeat) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._MyTableSeat(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOPublicPlayer2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐPublicPlayer(ctx context.Context, sel ast.SelectionSet, v *model.PublicPlayer) graphql.Marshaler {

@@ -9,6 +9,8 @@ import {
   subscribeToRoom,
 } from '../../lib/rooms'
 import { prefetchSubscriptionAuth } from '../../lib/queue'
+import { readRoomInviteHint, readRoomMemberHint, writeRoomDockHint } from '../../lib/roomDockHint'
+import { fetchMyTableSeat, mergeTableRecord } from '../../lib/tables'
 
 const ActiveRoomContext = createContext(null)
 
@@ -51,7 +53,14 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [lastReadMessageId, setLastReadMessageId] = useState(null)
+  const [memberHint, setMemberHint] = useState(() => readRoomMemberHint())
+  const [tableSeatInviteCode, setTableSeatInviteCode] = useState('')
   const unsubscribeRef = useRef(null)
+
+  const hasRoomMembership = useMemo(
+    () => Boolean(room?.inviteCode || memberHint || tableSeatInviteCode),
+    [room?.inviteCode, memberHint, tableSeatInviteCode],
+  )
 
   const unreadCount = useMemo(
     () => countUnread(messages, lastReadMessageId, user?.id),
@@ -71,7 +80,74 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
     const latest = nextMessages[nextMessages.length - 1]
     setLastReadMessageId(latest?.id ?? null)
     setError('')
+    writeRoomDockHint({ member: true, inviteCode: nextRoom?.inviteCode })
+    setMemberHint(true)
   }, [])
+
+  const mergeTableUpdate = useCallback((updatedTable) => {
+    if (!updatedTable?.id) {
+      return
+    }
+    setRoom((prev) => {
+      if (!prev) {
+        return prev
+      }
+      const tables = prev.tables ?? []
+      const idx = tables.findIndex((t) => t.id === updatedTable.id)
+      if (idx === -1) {
+        return { ...prev, tables: [...tables, updatedTable] }
+      }
+      const next = [...tables]
+      next[idx] = mergeTableRecord(tables[idx], updatedTable)
+      return { ...prev, tables: next }
+    })
+  }, [])
+
+  const loadRoomSnapshot = useCallback(async () => {
+    try {
+      const mine = await fetchMyRoom()
+      if (mine) {
+        applyRoom(mine, mine.messages || [])
+        return mine
+      }
+    } catch {
+      // try fallbacks below
+    }
+
+    const hintCode = readRoomInviteHint()
+    if (hintCode) {
+      try {
+        const fromHint = await fetchRoom(hintCode)
+        if (fromHint) {
+          applyRoom(fromHint, fromHint.messages || [])
+          return fromHint
+        }
+      } catch {
+        // try fallbacks below
+      }
+    }
+
+    try {
+      const seat = await fetchMyTableSeat()
+      const code = seat?.inviteCode?.trim().toUpperCase() || ''
+      if (code) {
+        writeRoomDockHint({ member: true, inviteCode: code })
+        setMemberHint(true)
+        setTableSeatInviteCode(code)
+        const fromSeat = await fetchRoom(code)
+        if (fromSeat) {
+          applyRoom(fromSeat, fromSeat.messages || [])
+          return fromSeat
+        }
+      } else {
+        setTableSeatInviteCode('')
+      }
+    } catch {
+      // all fallbacks exhausted
+    }
+
+    return null
+  }, [applyRoom])
 
   const refresh = useCallback(async () => {
     if (!user) {
@@ -82,22 +158,39 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
     }
     setLoading(true)
     try {
-      const mine = await fetchMyRoom()
-      if (mine) {
-        applyRoom(mine, mine.messages || [])
-        return mine
+      const loaded = await loadRoomSnapshot()
+      if (loaded) {
+        return loaded
       }
       setRoom(null)
       setMessages([])
+      if (!readRoomMemberHint()) {
+        writeRoomDockHint({ member: false })
+        setMemberHint(false)
+      }
       return null
     } catch {
-      setRoom(null)
-      setMessages([])
       return null
     } finally {
       setLoading(false)
     }
-  }, [user, applyRoom])
+  }, [user, loadRoomSnapshot])
+
+  useEffect(() => {
+    if (authLoading || !user) {
+      return
+    }
+    void fetchMyTableSeat()
+      .then((seat) => {
+        const code = seat?.inviteCode?.trim().toUpperCase() || ''
+        setTableSeatInviteCode(code)
+        if (code) {
+          writeRoomDockHint({ member: true, inviteCode: code })
+          setMemberHint(true)
+        }
+      })
+      .catch(() => {})
+  }, [authLoading, user])
 
   const openRoomByCode = useCallback(
     async (inviteCode, { openPanel = true } = {}) => {
@@ -129,14 +222,31 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
     [user, applyRoom],
   )
 
-  const openRoom = useCallback(() => {
-    if (!room?.inviteCode) {
+  const openRoom = useCallback(async () => {
+    setRoomOpen(true)
+    setError('')
+
+    if (room?.inviteCode) {
+      markRead()
+      navigateTo(`/room/${room.inviteCode}`)
       return
     }
-    setRoomOpen(true)
-    markRead()
-    navigateTo(`/room/${room.inviteCode}`)
-  }, [room?.inviteCode, markRead])
+
+    setLoading(true)
+    try {
+      const target = await loadRoomSnapshot()
+      if (!target?.inviteCode) {
+        setError('Could not load your room. Try again in a moment.')
+        return
+      }
+      markRead()
+      navigateTo(`/room/${target.inviteCode}`)
+    } catch (err) {
+      setError(err.message || 'Could not load your room.')
+    } finally {
+      setLoading(false)
+    }
+  }, [room, loadRoomSnapshot, markRead])
 
   const dismissRoom = useCallback(() => {
     setRoomOpen(false)
@@ -161,6 +271,9 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
       setMessages([])
       setRoomOpen(false)
       setLastReadMessageId(null)
+      writeRoomDockHint({ member: false })
+      setMemberHint(false)
+      setTableSeatInviteCode('')
       navigateTo('/', { replace: true })
     } catch (err) {
       setError(err.message || 'Could not leave room.')
@@ -177,21 +290,17 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
       setRoom(null)
       setMessages([])
       setRoomOpen(false)
-      return
-    }
-    void refresh()
-  }, [authLoading, user, refresh])
-
-  useEffect(() => {
-    if (authLoading || !user) {
+      writeRoomDockHint({ member: false })
+      setMemberHint(false)
+      setTableSeatInviteCode('')
       return
     }
     if (pendingInviteCode) {
       void openRoomByCode(pendingInviteCode, { openPanel: true })
       return
     }
-    setRoomOpen(false)
-  }, [authLoading, user, pendingInviteCode, openRoomByCode])
+    void refresh()
+  }, [authLoading, user, pendingInviteCode, openRoomByCode, refresh])
 
   useEffect(() => {
     if (roomOpen) {
@@ -221,9 +330,9 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
           },
           onMessage: (msg) => {
             setMessages((prev) => mergeMessage(prev, msg))
-            if (!roomOpen && msg.author?.id !== user.id) {
-              // unread derived from lastReadMessageId
-            }
+          },
+          onTableUpdate: (table) => {
+            mergeTableUpdate(table)
           },
         })
         if (cancelled) {
@@ -241,7 +350,7 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
       unsubscribeRef.current?.()
       unsubscribeRef.current = null
     }
-  }, [user, room?.id, roomOpen])
+  }, [user, room?.id, mergeTableUpdate])
 
   const value = useMemo(
     () => ({
@@ -260,6 +369,8 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
       openRoomFromCreate,
       handleLeave,
       markRead,
+      hasRoomMembership,
+      mergeTableUpdate,
     }),
     [
       room,
@@ -268,6 +379,7 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
       loading,
       error,
       unreadCount,
+      hasRoomMembership,
       refresh,
       openRoom,
       dismissRoom,
@@ -275,6 +387,7 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
       openRoomFromCreate,
       handleLeave,
       markRead,
+      mergeTableUpdate,
     ],
   )
 

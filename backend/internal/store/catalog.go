@@ -211,6 +211,9 @@ func applyManifestTx(ctx context.Context, tx *sql.Tx, game *Game, manifest *game
 		if err != nil {
 			return nil, false, fmt.Errorf("store: mode %q path specs: %w", modeKey, err)
 		}
+		if err := seattemplate.ValidateDistinctDisplayNames(pathSpecs); err != nil {
+			return nil, false, fmt.Errorf("store: mode %q: %w", modeKey, err)
+		}
 		playersToStart := seattemplate.TotalPlayersToStart(pathSpecs)
 		if playersToStart < 1 {
 			playersToStart = leafCount

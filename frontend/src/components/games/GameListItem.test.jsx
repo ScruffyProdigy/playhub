@@ -4,6 +4,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import GameListItem from './GameListItem'
 import * as queue from '../../lib/queue'
 
+vi.mock('../rooms/ActiveRoomProvider', () => ({
+  useActiveRoom: () => ({
+    refresh: vi.fn(),
+    openRoom: vi.fn(),
+  }),
+}))
+
+vi.mock('../../lib/tables', () => ({
+  createPrivateTable: vi.fn(),
+}))
+
 vi.mock('../../lib/queue', () => ({
   joinQueue: vi.fn(),
   fetchMyQueueStatus: vi.fn(),
@@ -12,17 +23,35 @@ vi.mock('../../lib/queue', () => ({
   subscribeToQueue: vi.fn().mockResolvedValue(() => {}),
 }))
 
+const activeMode = {
+  id: 'mode-1',
+  modeKey: 'duel',
+  displayName: 'Duel',
+  status: 'active',
+  seats: [{ queuePath: null }, { queuePath: null }],
+  queues: [{ id: 'queue-1', name: 'Default', status: 'active' }],
+}
+
 const catalogGame = {
   id: 'game-1',
   name: 'Rock Paper Scissors Lizard Spock',
   activeSessions: [{ id: 'session-1' }],
-  modes: [
-    {
-      modeKey: 'duel',
-      seats: [{ queuePath: null }, { queuePath: null }],
-      queues: [{ id: 'queue-1', name: 'Default', status: 'active' }],
-    },
-  ],
+  modes: [activeMode],
+}
+
+function renderItem(props) {
+  return render(
+    <ul>
+      <GameListItem
+        game={catalogGame}
+        activeQueue={null}
+        activeTableSeat={null}
+        onQueueChange={vi.fn()}
+        onTableChange={vi.fn()}
+        {...props}
+      />
+    </ul>,
+  )
 }
 
 describe('GameListItem', () => {
@@ -36,15 +65,12 @@ describe('GameListItem', () => {
   })
 
   it('shows the game name and session count', () => {
-    render(
-      <ul>
-        <GameListItem game={catalogGame} activeQueue={null} onQueueChange={vi.fn()} />
-      </ul>,
-    )
+    renderItem()
 
     expect(screen.getByRole('heading', { name: 'Rock Paper Scissors Lizard Spock' })).toBeInTheDocument()
     expect(screen.getByText('1 active session')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Look for group' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create private game' })).toBeInTheDocument()
   })
 
   it('shows launch when the subscription reports a match', async () => {
@@ -55,11 +81,7 @@ describe('GameListItem', () => {
       return () => {}
     })
 
-    render(
-      <ul>
-        <GameListItem game={catalogGame} activeQueue={null} onQueueChange={vi.fn()} />
-      </ul>,
-    )
+    renderItem()
 
     await userEvent.click(screen.getByRole('button', { name: 'Look for group' }))
 
@@ -83,11 +105,7 @@ describe('GameListItem', () => {
     const onQueueChange = vi.fn()
     vi.mocked(queue.joinQueue).mockResolvedValue({ queued: true, queuedCount: 1 })
 
-    render(
-      <ul>
-        <GameListItem game={catalogGame} activeQueue={null} onQueueChange={onQueueChange} />
-      </ul>,
-    )
+    renderItem({ onQueueChange })
 
     await userEvent.click(screen.getByRole('button', { name: 'Look for group' }))
 
@@ -99,17 +117,21 @@ describe('GameListItem', () => {
       ...catalogGame,
       modes: [
         {
-          modeKey: 'duel',
+          ...activeMode,
           queuePaths: [{ queuePath: '', displayName: '', playersToStart: 2 }],
-          seats: [{ queuePath: null }, { queuePath: null }],
-          queues: [{ id: 'queue-1', name: 'Default', status: 'active' }],
         },
       ],
     }
 
     render(
       <ul>
-        <GameListItem game={fifoGame} activeQueue={null} onQueueChange={vi.fn()} />
+        <GameListItem
+          game={fifoGame}
+          activeQueue={null}
+          activeTableSeat={null}
+          onQueueChange={vi.fn()}
+          onTableChange={vi.fn()}
+        />
       </ul>,
     )
 
@@ -124,20 +146,14 @@ describe('GameListItem', () => {
       queuedCount: 1,
     })
 
-    render(
-      <ul>
-        <GameListItem
-          game={catalogGame}
-          activeQueue={{
-            queueId: 'queue-1',
-            gameName: 'Rock Paper Scissors Lizard Spock',
-            status: 'WAITING',
-            queuedCount: 1,
-          }}
-          onQueueChange={vi.fn()}
-        />
-      </ul>,
-    )
+    renderItem({
+      activeQueue: {
+        queueId: 'queue-1',
+        gameName: 'Rock Paper Scissors Lizard Spock',
+        status: 'WAITING',
+        queuedCount: 1,
+      },
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Looking…')).toBeInTheDocument()
@@ -153,7 +169,10 @@ describe('GameListItem', () => {
       activeSessions: [],
       modes: [
         {
+          id: 'mode-wh',
           modeKey: 'party',
+          displayName: 'Party',
+          status: 'active',
           queuePaths: [
             { queuePath: 'ClueGiver', displayName: 'Clue Giver' },
             { queuePath: 'Guesser', displayName: 'Guesser' },
@@ -181,7 +200,9 @@ describe('GameListItem', () => {
             queuedCount: 2,
             queuePath: 'ClueGiver',
           }}
+          activeTableSeat={null}
           onQueueChange={vi.fn()}
+          onTableChange={vi.fn()}
         />
       </ul>,
     )
@@ -198,7 +219,10 @@ describe('GameListItem', () => {
       ...catalogGame,
       modes: [
         {
+          id: 'mode-comp',
           modeKey: 'quick-play',
+          displayName: 'Quick Play',
+          status: 'active',
           seats: [
             { queuePath: 'DPS' },
             { queuePath: 'Tank' },
@@ -211,7 +235,13 @@ describe('GameListItem', () => {
 
     render(
       <ul>
-        <GameListItem game={compositionGame} activeQueue={null} onQueueChange={vi.fn()} />
+        <GameListItem
+          game={compositionGame}
+          activeQueue={null}
+          activeTableSeat={null}
+          onQueueChange={vi.fn()}
+          onTableChange={vi.fn()}
+        />
       </ul>,
     )
 

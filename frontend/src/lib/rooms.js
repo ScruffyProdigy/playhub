@@ -2,6 +2,7 @@ import { createClient } from 'graphql-ws'
 import { getGraphQLWsUrl } from './env'
 import { graphqlRequest } from './graphql'
 import { prefetchSubscriptionAuth } from './queue'
+import { TABLE_FIELDS } from './tables'
 
 const ROOM_FIELDS = `
   id
@@ -17,7 +18,7 @@ const ROOM_FIELDS = `
   }
 `
 
-const ROOM_WITH_MESSAGES = `
+const ROOM_WITH_TABLES = `
   ${ROOM_FIELDS}
   messages {
     id
@@ -27,6 +28,9 @@ const ROOM_WITH_MESSAGES = `
       id
       displayName
     }
+  }
+  tables {
+    ${TABLE_FIELDS}
   }
 `
 
@@ -69,7 +73,7 @@ const SEND_ROOM_MESSAGE_MUTATION = `
 const MY_ROOM_QUERY = `
   query MyRoom {
     myRoom {
-      ${ROOM_WITH_MESSAGES}
+      ${ROOM_WITH_TABLES}
     }
   }
 `
@@ -77,7 +81,15 @@ const MY_ROOM_QUERY = `
 const ROOM_QUERY = `
   query Room($inviteCode: String!) {
     room(inviteCode: $inviteCode) {
-      ${ROOM_WITH_MESSAGES}
+      ${ROOM_WITH_TABLES}
+    }
+  }
+`
+
+const TABLE_UPDATED_SUBSCRIPTION = `
+  subscription TableUpdated($roomId: ID!) {
+    tableUpdated(roomId: $roomId) {
+      ${TABLE_FIELDS}
     }
   }
 `
@@ -180,7 +192,7 @@ export async function fetchRoom(inviteCode) {
   return data.room
 }
 
-export async function subscribeToRoom(roomId, { onRoomUpdate, onMessage, onError } = {}) {
+export async function subscribeToRoom(roomId, { onRoomUpdate, onMessage, onTableUpdate, onError } = {}) {
   await loadSubscriptionAuth()
   const client = getWsClient()
 
@@ -224,9 +236,30 @@ export async function subscribeToRoom(roomId, { onRoomUpdate, onMessage, onError
     },
   )
 
+  const unsubTables = client.subscribe(
+    {
+      query: TABLE_UPDATED_SUBSCRIPTION,
+      variables: { roomId },
+    },
+    {
+      next: (payload) => {
+        if (payload?.errors?.length) {
+          onError?.(formatSubscriptionError(payload.errors))
+          return
+        }
+        if (payload?.data?.tableUpdated) {
+          onTableUpdate?.(payload.data.tableUpdated)
+        }
+      },
+      error: (err) => onError?.(formatSubscriptionError(err)),
+      complete: () => {},
+    },
+  )
+
   return () => {
     unsubRoom()
     unsubMessages()
+    unsubTables()
   }
 }
 

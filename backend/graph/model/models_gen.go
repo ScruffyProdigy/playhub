@@ -101,6 +101,18 @@ type ModeQueue struct {
 type Mutation struct {
 }
 
+type MyTableSeat struct {
+	TableID         string `json:"tableId"`
+	RoomID          string `json:"roomId"`
+	InviteCode      string `json:"inviteCode"`
+	GameID          string `json:"gameId"`
+	GameName        string `json:"gameName"`
+	ModeID          string `json:"modeId"`
+	ModeName        string `json:"modeName"`
+	SeatKey         string `json:"seatKey"`
+	SeatDisplayName string `json:"seatDisplayName"`
+}
+
 type PublicPlayer struct {
 	ID          string  `json:"id"`
 	DisplayName *string `json:"displayName,omitempty"`
@@ -146,6 +158,7 @@ type Room struct {
 	Host       *User          `json:"host"`
 	Members    []*User        `json:"members"`
 	Messages   []*RoomMessage `json:"messages"`
+	Tables     []*Table       `json:"tables"`
 }
 
 type RoomMessage struct {
@@ -164,6 +177,40 @@ type Session struct {
 }
 
 type Subscription struct {
+}
+
+type Table struct {
+	ID                  string                     `json:"id"`
+	Game                *Game                      `json:"game"`
+	Mode                *GameMode                  `json:"mode"`
+	CreatedAt           time.Time                  `json:"createdAt"`
+	King                *User                      `json:"king,omitempty"`
+	Seats               []*TableSeat               `json:"seats"`
+	SeatSlots           []*TableSeatSlot           `json:"seatSlots"`
+	CanStart            bool                       `json:"canStart"`
+	CanDiscard          bool                       `json:"canDiscard"`
+	LookForGroupOptions []*TableLookForGroupOption `json:"lookForGroupOptions"`
+}
+
+type TableLookForGroupOption struct {
+	QueueID   string `json:"queueId"`
+	QueueName string `json:"queueName"`
+	Visible   bool   `json:"visible"`
+	Enabled   bool   `json:"enabled"`
+}
+
+type TableSeat struct {
+	SeatKey  string    `json:"seatKey"`
+	User     *User     `json:"user"`
+	SeatedAt time.Time `json:"seatedAt"`
+}
+
+type TableSeatSlot struct {
+	SeatKey     string  `json:"seatKey"`
+	QueuePath   *string `json:"queuePath,omitempty"`
+	DisplayName string  `json:"displayName"`
+	TeamPrefix  *string `json:"teamPrefix,omitempty"`
+	User        *User   `json:"user,omitempty"`
 }
 
 type User struct {

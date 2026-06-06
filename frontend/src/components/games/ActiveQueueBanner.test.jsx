@@ -86,4 +86,21 @@ describe('ActiveQueueBanner', () => {
     await user.click(screen.getByRole('button', { name: 'Stop looking' }))
     expect(onLeave).toHaveBeenCalledTimes(1)
   })
+
+  it('shows table seat hint pointing to room nav', () => {
+    render(
+      <ActiveQueueBanner
+        activeTableSeat={{
+          tableId: 't1',
+          gameName: 'Word Hunt',
+          modeName: 'Word Hunt Party',
+          seatDisplayName: 'Guesser · 2',
+        }}
+        busy={false}
+        onLeave={vi.fn()}
+      />,
+    )
+    expect(screen.getByText(/Use Room below/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Leave seat' })).toBeInTheDocument()
+  })
 })

@@ -152,7 +152,7 @@ and a `playUrl` (browser) for each game in your catalog.
 **Assignment seat shape:** `{ seatKey, lobbyUserId, team?, role? }`. The `seatKey` is the
 expanded name from the game’s `seatTemplate` (derivation rules in
 [`seat-templates-and-matchmaking.md`](./seat-templates-and-matchmaking.md#seat-key-expansion)).
-Resolve display names via `player(id)` at `lobby.graphqlUrl`.
+Resolve display names and **avatar URLs** via `player(id)` at `lobby.graphqlUrl` (`displayName`, `avatarUrl`). See [spirit-animal-avatars.md](./spirit-animal-avatars.md).
 
 **Token claims:** `iss`=`LobbyIssuer()`, `aud`=game `api_base_url`, `sub`=lobby user id,
 `jti`=unique token id, `matchId`=`externalMatchId`, **`seatKey`** (same string as provision

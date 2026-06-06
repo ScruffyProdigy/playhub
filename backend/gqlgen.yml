@@ -53,7 +53,35 @@ models:
         resolver: true
       joinUrl:
         resolver: true
+      tables:
+        resolver: true
   RoomMessage:
     fields:
       author:
+        resolver: true
+  Table:
+    fields:
+      game:
+        resolver: true
+      mode:
+        resolver: true
+      king:
+        resolver: true
+      seats:
+        resolver: true
+      seatSlots:
+        resolver: true
+      canStart:
+        resolver: true
+      canDiscard:
+        resolver: true
+      lookForGroupOptions:
+        resolver: true
+  TableSeat:
+    fields:
+      user:
+        resolver: true
+  TableSeatSlot:
+    fields:
+      user:
         resolver: true

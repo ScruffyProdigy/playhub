@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import GameLobby from './GameLobby'
 import { AuthProvider } from '../auth/AuthProvider'
+import { ActiveRoomProvider } from '../rooms/ActiveRoomProvider'
 import { mockAuthenticatedSession, mockUnauthenticatedSession } from '../../test/setup'
 import * as games from '../../lib/games'
 
@@ -17,7 +18,9 @@ vi.mock('../../lib/games', async (importOriginal) => {
 function renderGameLobby() {
   return render(
     <AuthProvider>
-      <GameLobby activeQueue={null} onQueueChange={vi.fn()} />
+      <ActiveRoomProvider>
+        <GameLobby activeQueue={null} activeTableSeat={null} onQueueChange={vi.fn()} onTableChange={vi.fn()} />
+      </ActiveRoomProvider>
     </AuthProvider>,
   )
 }
@@ -33,7 +36,10 @@ describe('GameLobby', () => {
         activeSessions: [{ id: 'session-1' }],
         modes: [
           {
+            id: 'mode-1',
             modeKey: 'duel',
+            displayName: 'Duel',
+            status: 'active',
             seats: [{ queuePath: null }, { queuePath: null }],
             queues: [{ id: 'queue-1', name: 'Default', status: 'active' }],
           },

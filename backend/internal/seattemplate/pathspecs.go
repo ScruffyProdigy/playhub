@@ -76,6 +76,22 @@ func PathSpecs(raw json.RawMessage) ([]PathSpec, error) {
 	return out, nil
 }
 
+// ValidateDistinctDisplayNames rejects templates whose paths share the same displayName.
+func ValidateDistinctDisplayNames(specs []PathSpec) error {
+	seen := map[string]string{}
+	for _, spec := range specs {
+		key := strings.ToLower(strings.TrimSpace(spec.DisplayName))
+		if key == "" {
+			continue
+		}
+		if other, ok := seen[key]; ok && other != spec.QueuePath {
+			return fmt.Errorf("duplicate displayName %q on paths %q and %q", spec.DisplayName, other, spec.QueuePath)
+		}
+		seen[key] = spec.QueuePath
+	}
+	return nil
+}
+
 // TotalPlayersToStart sums PlayersToStart across all paths.
 func TotalPlayersToStart(specs []PathSpec) int {
 	total := 0

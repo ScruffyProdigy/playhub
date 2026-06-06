@@ -11,6 +11,7 @@ import (
 // Return context kinds (extend with "room", "party", etc.).
 const (
 	ReturnKindCatalogLFG = "catalog_lfg"
+	ReturnKindRoom       = "room"
 )
 
 // ReturnContext tells the Lobby return hub where to send a player after a match.
@@ -20,6 +21,8 @@ type ReturnContext struct {
 	Path        string `json:"path"`
 	GameID      string `json:"gameId,omitempty"`
 	ModeQueueID string `json:"modeQueueId,omitempty"`
+	RoomID      string `json:"roomId,omitempty"`
+	TableID     string `json:"tableId,omitempty"`
 }
 
 // CatalogLFGReturnContext is the default when joining a catalog mode queue.
@@ -29,6 +32,22 @@ func CatalogLFGReturnContext(gameID, modeQueueID uuid.UUID) ReturnContext {
 		Path:        "/",
 		GameID:      gameID.String(),
 		ModeQueueID: modeQueueID.String(),
+	}
+}
+
+// RoomTableReturnContext sends players back to their room after a table match.
+func RoomTableReturnContext(inviteCode string, gameID, roomID, tableID uuid.UUID) ReturnContext {
+	path := "/"
+	code := strings.TrimSpace(inviteCode)
+	if code != "" {
+		path = "/room/" + code
+	}
+	return ReturnContext{
+		Kind:    ReturnKindRoom,
+		Path:    path,
+		GameID:  gameID.String(),
+		RoomID:  roomID.String(),
+		TableID: tableID.String(),
 	}
 }
 

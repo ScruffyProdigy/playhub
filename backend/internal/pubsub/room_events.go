@@ -6,15 +6,17 @@ import (
 )
 
 const (
-	RoomEventUpdated = "updated"
-	RoomEventMessage = "message"
+	RoomEventUpdated      = "updated"
+	RoomEventMessage      = "message"
+	RoomEventTableUpdated = "table_updated"
 )
 
-// RoomEvent is published on a room channel for membership or chat updates.
+// RoomEvent is published on a room channel for membership, chat, or table updates.
 type RoomEvent struct {
 	Type      string `json:"type"`
 	RoomID    string `json:"roomId"`
 	MessageID string `json:"messageId,omitempty"`
+	TableID   string `json:"tableId,omitempty"`
 }
 
 // RoomChannel returns the Redis channel for room updates.

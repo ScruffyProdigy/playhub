@@ -10,6 +10,7 @@ import RoomPanel from './components/rooms/RoomPanel'
 import RoomSheet from './components/rooms/RoomSheet'
 import { AuthProvider, useAuth } from './components/auth/AuthProvider'
 import { useActiveQueue } from './components/games/useActiveQueue'
+import { useActiveTableSeat } from './components/games/useActiveTableSeat'
 import { APP_NAME, APP_TAGLINE } from './lib/brand'
 import { parseRoomInviteCode } from './lib/rooms'
 import { MOBILE_ROOM_QUERY, useMediaQuery } from './lib/useMediaQuery'
@@ -19,12 +20,22 @@ import './App.css'
 
 function CatalogPage() {
   const { user, loading: authLoading } = useAuth()
-  const { activeQueue, busy, refresh, handleLeave } = useActiveQueue()
+  const { activeQueue, busy: queueBusy, refresh: refreshQueue, handleLeave: leaveQueue } = useActiveQueue()
+  const { activeTableSeat, busy: tableBusy, refresh: refreshTable, handleLeave: leaveTableSeat } =
+    useActiveTableSeat()
+
+  const bannerBusy = queueBusy || tableBusy
+  const onLeaveIntent = activeQueue?.queueId ? leaveQueue : leaveTableSeat
 
   return (
     <main className="app-shell app-shell--catalog">
       {!authLoading && user ? (
-        <ActiveQueueBanner activeQueue={activeQueue} busy={busy} onLeave={handleLeave} />
+        <ActiveQueueBanner
+          activeQueue={activeQueue}
+          activeTableSeat={activeTableSeat}
+          busy={bannerBusy}
+          onLeave={onLeaveIntent}
+        />
       ) : null}
 
       <header className="app-header">
@@ -34,18 +45,26 @@ function CatalogPage() {
 
       <AuthPanel />
       {!authLoading && user ? <CreateRoomPanel /> : null}
-      <GameLobby activeQueue={activeQueue} onQueueChange={refresh} />
+      <GameLobby
+        activeQueue={activeQueue}
+        activeTableSeat={activeTableSeat}
+        onQueueChange={refreshQueue}
+        onTableChange={refreshTable}
+      />
     </main>
   )
 }
 
 function MainLayout() {
+  const pathname = usePathname()
+  const inviteCode = parseRoomInviteCode(pathname)
   const { user } = useAuth()
-  const { room, roomOpen, dismissRoom, openRoom, unreadCount } = useActiveRoom()
+  const { room, roomOpen, dismissRoom, openRoom, unreadCount, hasRoomMembership } = useActiveRoom()
   const isMobile = useMediaQuery(MOBILE_ROOM_QUERY)
-  const showDesktopRoom = Boolean(room && user && !isMobile)
-  const showMobileSheet = Boolean(room && user && isMobile)
-  const showDock = Boolean(room && user && isMobile)
+  const inRoomContext = Boolean(room || inviteCode || hasRoomMembership)
+  const showDesktopRoom = Boolean(room && user && !isMobile && roomOpen)
+  const showMobileSheet = Boolean(user && isMobile && roomOpen)
+  const showDock = Boolean(user && isMobile && inRoomContext)
 
   useEffect(() => {
     const root = document.getElementById('root')

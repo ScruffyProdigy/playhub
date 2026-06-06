@@ -74,6 +74,8 @@ func TestSchemaFilesExist(t *testing.T) {
 		"core.graphqls",
 		"game.graphqls",
 		"match.graphqls",
+		"rooms.graphqls",
+		"tables.graphqls",
 		"users.graphqls",
 		"goods.graphqls",
 	}
@@ -109,6 +111,8 @@ func resolverGeneratedFiles(projectRoot string) []string {
 		filepath.Join(projectRoot, "backend/graph/catalog.resolvers.go"),
 		filepath.Join(projectRoot, "backend/graph/match.resolvers.go"),
 		filepath.Join(projectRoot, "backend/graph/users.resolvers.go"),
+		filepath.Join(projectRoot, "backend/graph/rooms.resolvers.go"),
+		filepath.Join(projectRoot, "backend/graph/tables.resolvers.go"),
 	}
 }
 
