@@ -64,8 +64,11 @@ fi
 . "$ROOT/scripts/lib/lobby-smtp.sh"
 # shellcheck source=lib/lobby-auth-peppers.sh
 . "$ROOT/scripts/lib/lobby-auth-peppers.sh"
+# shellcheck source=lib/lobby-openai.sh
+. "$ROOT/scripts/lib/lobby-openai.sh"
 load_lobby_smtp_env_from_file
 load_lobby_auth_peppers_env_from_file
+load_lobby_openai_env_from_file
 
 # Start shared PostgreSQL for local development
 if command -v docker &> /dev/null; then

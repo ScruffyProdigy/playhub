@@ -19,6 +19,7 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/gameclient"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
+	"github.com/scruffyprodigy/playhub/internal/spiritanimal"
 	"github.com/scruffyprodigy/playhub/internal/store"
 	"github.com/scruffyprodigy/playhub/internal/testdb"
 	_ "github.com/lib/pq"
@@ -74,6 +75,7 @@ func newQueueIntegrationEnv(t *testing.T) *queueIntegrationEnv {
 	t.Cleanup(func() { _ = st.RestorePrimaryGameHandoffURLs(context.Background()) })
 
 	resolver := NewResolver(st, authService, pubsub.NewMemory(), store.DemoGamePlayURL)
+	resolver.SpiritAnimal = spiritanimal.NewRunnerFromEnv(st, "https://joinquest.test")
 	env := &queueIntegrationEnv{
 		Store:    st,
 		Signer:   signer,

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { logout } from '../../lib/auth'
 import { needsProfileSetup } from '../../lib/avatars'
+import { fetchSpiritAnimalJourneyEligibility, formatSpiritAnimalJourneyCooldown } from '../../lib/spiritAnimal'
 import { useAuth } from './AuthProvider'
 import PlayerProfileEditor from '../avatars/PlayerProfileEditor'
+import SpiritAnimalFlow from '../avatars/SpiritAnimalFlow'
 import PlayerAvatar from '../avatars/PlayerAvatar'
 
 export default function UserSessionCard({ user }) {
@@ -11,6 +13,29 @@ export default function UserSessionCard({ user }) {
   const [error, setError] = useState('')
   const setupRequired = needsProfileSetup(user)
   const [editorOpen, setEditorOpen] = useState(setupRequired)
+  const [spiritFlowOpen, setSpiritFlowOpen] = useState(false)
+  const [journeyEligibility, setJourneyEligibility] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void fetchSpiritAnimalJourneyEligibility()
+      .then((eligibility) => {
+        if (!cancelled) {
+          setJourneyEligibility(eligibility)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setJourneyEligibility(null)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
+  const canBeginSpiritAnimal = journeyEligibility?.canBegin === true
+  const eligibilityPending = journeyEligibility === null
 
   useEffect(() => {
     if (needsProfileSetup(user)) {
@@ -36,7 +61,13 @@ export default function UserSessionCard({ user }) {
   function handleSaved(updated) {
     if (!needsProfileSetup(updated)) {
       setEditorOpen(false)
+      setSpiritFlowOpen(false)
     }
+  }
+
+  function handleSpiritComplete(updated) {
+    handleSaved(updated)
+    void fetchSpiritAnimalJourneyEligibility().then(setJourneyEligibility).catch(() => {})
   }
 
   return (
@@ -50,21 +81,48 @@ export default function UserSessionCard({ user }) {
         </div>
       </div>
 
-      {editorOpen ? (
+      {spiritFlowOpen ? (
+        <SpiritAnimalFlow
+          onComplete={handleSpiritComplete}
+          onCancel={() => setSpiritFlowOpen(false)}
+        />
+      ) : editorOpen ? (
         <PlayerProfileEditor
           user={user}
           required={setupRequired}
           onSaved={handleSaved}
           onCancel={setupRequired ? undefined : () => setEditorOpen(false)}
+          onBeginSpiritAnimal={canBeginSpiritAnimal ? () => {
+            setEditorOpen(false)
+            setSpiritFlowOpen(true)
+          } : undefined}
         />
       ) : (
-        <button
-          type="button"
-          className="game-list-button game-list-button-secondary"
-          onClick={() => setEditorOpen(true)}
-        >
-          Change display
-        </button>
+        <>
+          <button
+            type="button"
+            className="game-list-button game-list-button-secondary"
+            onClick={() => setEditorOpen(true)}
+          >
+            Change display
+          </button>
+          {eligibilityPending ? null : canBeginSpiritAnimal ? (
+            <button
+              type="button"
+              className="game-list-button game-list-button-secondary"
+              onClick={() => setSpiritFlowOpen(true)}
+            >
+              Find my spirit animal
+            </button>
+          ) : (
+            <p className="spirit-animal__hint">
+              {formatSpiritAnimalJourneyCooldown(
+                journeyEligibility?.daysRemaining,
+                journeyEligibility?.cooldownEndsAt,
+              )}
+            </p>
+          )}
+        </>
       )}
 
       <button type="button" onClick={handleLogout} disabled={status === 'loading'}>

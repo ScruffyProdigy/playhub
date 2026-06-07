@@ -1166,6 +1166,390 @@
   margin-bottom: 0.75rem;
 }
 
+.spirit-animal__lead {
+  margin: 0 0 1rem;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.spirit-animal__step {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.spirit-animal__journey-anchor {
+  scroll-margin-top: 1.25rem;
+}
+
+.spirit-animal__hint {
+  margin: 0 0 1rem;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.92rem;
+}
+
+.spirit-animal__wait {
+  margin-top: 1rem;
+}
+
+.spirit-animal__countdown {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: rgba(190, 200, 255, 0.95);
+}
+
+.spirit-animal__slot-strip {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.spirit-animal__slot-strip-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.15rem;
+  border-radius: 12px;
+  opacity: 0.72;
+  border: 1px solid transparent;
+  transition: opacity 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+}
+
+.spirit-animal__slot-strip-item--active {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.spirit-animal__slot-strip-icon {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.spirit-animal__slot-strip-name {
+  font-size: 0.7rem;
+  text-align: center;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.spirit-animal__question-panel {
+  overflow: hidden;
+  transition:
+    max-height 0.7s ease-in,
+    opacity 0.55s ease,
+    transform 0.7s ease-in;
+  max-height: 120rem;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.spirit-animal__question-panel--open {
+  max-height: 120rem;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition:
+    max-height 0.65s ease-out,
+    opacity 0.5s ease,
+    transform 0.65s ease-out;
+}
+
+.spirit-animal__question-panel--closing,
+.spirit-animal__question-panel--closed {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-1.25rem);
+  pointer-events: none;
+}
+
+.spirit-animal__question-panel--opening {
+  max-height: 120rem;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: none;
+  animation: spirit-animal-panel-enter 0.65s ease-out;
+}
+
+@keyframes spirit-animal-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.spirit-animal__question-panel-inner {
+  padding-top: 0.25rem;
+}
+
+.spirit-animal__slot-guide {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.spirit-animal__slot-guide-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.spirit-animal__slot-guide-item--active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.spirit-animal__slot-guide-step {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.55);
+  min-width: 1rem;
+  text-align: center;
+}
+
+.spirit-animal__slot-guide-icon {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.spirit-animal__slot-guide-name {
+  margin: 0;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.spirit-animal__slot-guide-prompt {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.spirit-animal__reading {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.spirit-animal__reading-block {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.45;
+}
+
+.spirit-animal__reading-label {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.spirit-animal__question {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  line-height: 1.35;
+}
+
+.spirit-animal__answers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.spirit-animal__answer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.spirit-animal__answer-id {
+  font-weight: 700;
+  min-width: 1.25rem;
+}
+
+.spirit-animal__totems {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.spirit-animal__totem {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 0.85rem;
+  align-items: start;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.spirit-animal__totem-image {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+}
+
+.spirit-animal__affinity {
+  margin: 0 0 0.35rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 600;
+}
+
+/* Must follow base spirit-animal / profile-editor rules so light-mode colors win. */
+@media (prefers-color-scheme: light) {
+  .profile-editor__lead {
+    color: #555;
+  }
+
+  .profile-editor__label {
+    color: #444;
+  }
+
+  .profile-editor__input {
+    border-color: rgba(0, 0, 0, 0.15);
+    background: #fff;
+  }
+
+  .spirit-animal,
+  .spirit-animal h3 {
+    color: #213547;
+  }
+
+  .spirit-animal__lead {
+    color: #444;
+  }
+
+  .spirit-animal__step {
+    color: #666;
+  }
+
+  .spirit-animal__hint {
+    color: #666;
+  }
+
+  .spirit-animal__countdown {
+    color: #5558aa;
+  }
+
+  .spirit-animal__slot-strip-item--active {
+    background: rgba(100, 108, 255, 0.08);
+    border-color: rgba(100, 108, 255, 0.25);
+  }
+
+  .spirit-animal__slot-strip-icon {
+    border-color: rgba(0, 0, 0, 0.12);
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  .spirit-animal__slot-strip-name {
+    color: #444;
+  }
+
+  .spirit-animal__slot-guide-item {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .spirit-animal__slot-guide-item--active {
+    background: rgba(100, 108, 255, 0.08);
+    border-color: rgba(100, 108, 255, 0.25);
+  }
+
+  .spirit-animal__slot-guide-step {
+    color: #888;
+  }
+
+  .spirit-animal__slot-guide-icon {
+    border-color: rgba(0, 0, 0, 0.12);
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  .spirit-animal__slot-guide-name {
+    color: #213547;
+  }
+
+  .spirit-animal__slot-guide-prompt {
+    color: #666;
+  }
+
+  .spirit-animal__reading {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .spirit-animal__reading-block {
+    color: #444;
+  }
+
+  .spirit-animal__reading-label {
+    color: #213547;
+  }
+
+  .spirit-animal__answer {
+    border-color: rgba(0, 0, 0, 0.12);
+    background: #fff;
+    color: #213547;
+  }
+
+  .spirit-animal__answer:hover:not(:disabled) {
+    border-color: rgba(100, 108, 255, 0.45);
+    background: rgba(100, 108, 255, 0.06);
+  }
+
+  .spirit-animal__totem {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .spirit-animal__affinity {
+    color: #5558aa;
+  }
+
+  .user-card .spirit-animal__hint {
+    color: #666;
+  }
+}
+
 .room-members__item {
   display: flex;
   align-items: center;

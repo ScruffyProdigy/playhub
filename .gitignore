@@ -91,6 +91,7 @@ jspm_packages/
 public
 !frontend/public/avatars/
 !frontend/public/avatars/**
+data/spirit-avatars/
 
 # Storybook build outputs
 .out

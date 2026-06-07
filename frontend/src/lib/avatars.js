@@ -61,7 +61,8 @@ export function isProvisionalDisplayName(name) {
 }
 
 export function needsProfileSetup(user) {
-  return !user?.avatarKey || isProvisionalDisplayName(user?.displayName)
+  const hasAvatar = Boolean(user?.avatarKey) || (user?.avatarSource === 'SPIRIT_ANIMAL' && user?.avatarUrl)
+  return !hasAvatar || isProvisionalDisplayName(user?.displayName)
 }
 
 export function defaultDisplayNameInput(user) {

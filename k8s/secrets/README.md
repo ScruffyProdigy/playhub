@@ -11,6 +11,7 @@ cp k8s/secrets/jwks-secret.example.yaml   k8s/secrets/jwks-secret.yaml   # or: c
 cp k8s/secrets/lobby-smtp.example.yaml    k8s/secrets/lobby-smtp.yaml
 cp k8s/secrets/lobby-game-service.example.yaml k8s/secrets/lobby-game-service.yaml
 cp k8s/secrets/lobby-auth-peppers.example.yaml   k8s/secrets/lobby-auth-peppers.yaml
+cp k8s/secrets/lobby-openai.example.yaml      k8s/secrets/lobby-openai.yaml
 ```
 
 Edit each file:
@@ -19,6 +20,7 @@ Edit each file:
 - **`lobby-smtp.yaml`** — paste your Resend API key in `SMTP_PASSWORD`. The backend sends via Resend’s HTTP API by default (same key); set `RESEND_USE_SMTP=true` on the deployment to use SMTP instead.
 - **`lobby-auth-peppers.yaml`** — paste two generated peppers (`openssl rand -base64 32` × 2) into `MAGIC_LINK_PEPPER` and `LOBBY_GAME_TOKEN_PEPPER`. Recommended for production.
 - **`lobby-game-service.yaml`** — optional legacy global token; prefer **`lobby-auth-peppers.yaml`** for per-game `serviceToken` on provision.
+- **`lobby-openai.yaml`** — paste your OpenAI API key in `OPENAI_API_KEY` for the spirit-animal avatar flow (real tarot questions + GPT Image mascots). Without it, the backend uses mock responses.
 
 ## Apply to a cluster
 
@@ -33,7 +35,7 @@ Deploy scripts apply secrets from this folder and wire SMTP into `lobby-backend`
 
 ## Local dev (no Kubernetes)
 
-`./scripts/dev.sh` reads **`k8s/secrets/lobby-smtp.yaml`** (`SMTP_*`) and **`lobby-auth-peppers.yaml`** (`MAGIC_LINK_PEPPER`, `LOBBY_GAME_TOKEN_PEPPER`) automatically — same values as GKE. Override in `.env` if needed.
+`./scripts/dev.sh` reads **`k8s/secrets/lobby-smtp.yaml`** (`SMTP_*`), **`lobby-auth-peppers.yaml`** (`MAGIC_LINK_PEPPER`, `LOBBY_GAME_TOKEN_PEPPER`), and **`lobby-openai.yaml`** (`OPENAI_API_KEY`) automatically — same values as GKE. Override in `.env` if needed.
 
 ## Per environment
 

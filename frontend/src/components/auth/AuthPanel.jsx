@@ -11,7 +11,7 @@ function SessionLoading() {
 }
 
 export default function AuthPanel() {
-  const { user, loading, error } = useAuth()
+  const { user, loading, error, sessionUnavailable, refreshSession } = useAuth()
 
   if (loading) {
     return <SessionLoading />
@@ -24,7 +24,13 @@ export default function AuthPanel() {
   return (
     <>
       {error ? <p className="status-message status-message-error">{error}</p> : null}
-      <LoginForm />
+      {sessionUnavailable ? (
+        <button type="button" className="button-secondary" onClick={() => void refreshSession()}>
+          Try again
+        </button>
+      ) : (
+        <LoginForm />
+      )}
     </>
   )
 }

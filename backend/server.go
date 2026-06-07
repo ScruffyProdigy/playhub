@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/scruffyprodigy/playhub/graph"
 	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
+	"github.com/scruffyprodigy/playhub/internal/spiritanimal"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
@@ -55,12 +57,19 @@ func main() {
 	}
 
 	resolver := graph.NewResolver(dataStore, authService, broker, gameClientBaseURL)
+	resolver.SpiritAnimal = spiritanimal.NewRunnerFromEnv(dataStore, auth.LobbyPublicURL())
+	go resolver.SpiritAnimal.ResumeAllStale(context.Background())
 
 	mux := http.NewServeMux()
 
 	gql := graph.NewGraphQLServer(signer, resolver)
 
 	mux.Handle("/graphql", auth.Middleware(signer, gql))
+	spiritAvatarDir := strings.TrimSpace(os.Getenv("SPIRIT_AVATAR_STORAGE_DIR"))
+	if spiritAvatarDir == "" {
+		spiritAvatarDir = "data/spirit-avatars"
+	}
+	mux.Handle("/spirit-avatars/", http.StripPrefix("/spirit-avatars/", http.FileServer(http.Dir(filepath.Clean(spiritAvatarDir)))))
 	if !auth.IsProductionEnv() {
 		mux.Handle("/", playground.Handler("GraphQL", "/graphql"))
 	} else {

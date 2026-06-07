@@ -178,6 +178,78 @@ type Session struct {
 	Players   []*User       `json:"players"`
 }
 
+type SpiritAnimalAnswer struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
+type SpiritAnimalCardQuestion struct {
+	Slot                 string                `json:"slot"`
+	SlotName             string                `json:"slotName"`
+	Card                 string                `json:"card"`
+	CardMeaningInGeneral string                `json:"cardMeaningInGeneral"`
+	CardMeaningForSlot   string                `json:"cardMeaningForSlot"`
+	Question             string                `json:"question"`
+	Answers              []*SpiritAnimalAnswer `json:"answers"`
+}
+
+type SpiritAnimalJourneyEligibility struct {
+	CanBegin       bool       `json:"canBegin"`
+	CooldownEndsAt *time.Time `json:"cooldownEndsAt,omitempty"`
+	DaysRemaining  *int       `json:"daysRemaining,omitempty"`
+}
+
+type SpiritAnimalJourneySummary struct {
+	Compass  string `json:"compass"`
+	Coin     string `json:"coin"`
+	Storm    string `json:"storm"`
+	Campfire string `json:"campfire"`
+	Beacon   string `json:"beacon"`
+}
+
+type SpiritAnimalPersonality struct {
+	Overview       string                      `json:"overview"`
+	JourneySummary *SpiritAnimalJourneySummary `json:"journeySummary"`
+	CoreThemes     []string                    `json:"coreThemes"`
+	Strengths      []string                    `json:"strengths"`
+	Tensions       []string                    `json:"tensions"`
+	SocialIdentity string                      `json:"socialIdentity"`
+}
+
+type SpiritAnimalReading struct {
+	ID                string                      `json:"id"`
+	Status            SpiritAnimalReadingStatus   `json:"status"`
+	Draw              []int                       `json:"draw"`
+	CardQuestions     []*SpiritAnimalCardQuestion `json:"cardQuestions,omitempty"`
+	Personality       *SpiritAnimalPersonality    `json:"personality,omitempty"`
+	MascotOverview    *string                     `json:"mascotOverview,omitempty"`
+	Totems            []*SpiritAnimalTotem        `json:"totems,omitempty"`
+	SelectedTotemName *string                     `json:"selectedTotemName,omitempty"`
+	ErrorMessage      *string                     `json:"errorMessage,omitempty"`
+	ImagesMissing     bool                        `json:"imagesMissing"`
+	// When status is GENERATING_QUESTIONS or PROCESSING, when the current wait began.
+	PhaseStartedAt *time.Time `json:"phaseStartedAt,omitempty"`
+	// Approximate total seconds for the current processing phase, based on recent readings.
+	EstimatedPhaseSeconds *int `json:"estimatedPhaseSeconds,omitempty"`
+}
+
+type SpiritAnimalTotem struct {
+	Name                    string   `json:"name"`
+	Animal                  string   `json:"animal"`
+	SocialArchetype         string   `json:"socialArchetype"`
+	CoreConcept             string   `json:"coreConcept"`
+	ColorPalette            []string `json:"colorPalette"`
+	PersonalitySummary      string   `json:"personalitySummary"`
+	WhyThisAnimal           string   `json:"whyThisAnimal"`
+	OriginStory             string   `json:"originStory"`
+	ImageURL                *string  `json:"imageUrl,omitempty"`
+	FitScore                *int     `json:"fitScore,omitempty"`
+	Affinity                *string  `json:"affinity,omitempty"`
+	ReadingEmphasis         *string  `json:"readingEmphasis,omitempty"`
+	WhyThisAnimalMakesSense *string  `json:"whyThisAnimalMakesSense,omitempty"`
+	WhyChooseThisAvatar     *string  `json:"whyChooseThisAvatar,omitempty"`
+}
+
 type StarterAvatar struct {
 	Key      string `json:"key"`
 	Name     string `json:"name"`
@@ -515,6 +587,69 @@ func (e *SessionStatus) UnmarshalJSON(b []byte) error {
 }
 
 func (e SessionStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type SpiritAnimalReadingStatus string
+
+const (
+	SpiritAnimalReadingStatusGeneratingQuestions SpiritAnimalReadingStatus = "GENERATING_QUESTIONS"
+	SpiritAnimalReadingStatusAwaitingAnswers     SpiritAnimalReadingStatus = "AWAITING_ANSWERS"
+	SpiritAnimalReadingStatusProcessing          SpiritAnimalReadingStatus = "PROCESSING"
+	SpiritAnimalReadingStatusReady               SpiritAnimalReadingStatus = "READY"
+	SpiritAnimalReadingStatusCompleted           SpiritAnimalReadingStatus = "COMPLETED"
+	SpiritAnimalReadingStatusFailed              SpiritAnimalReadingStatus = "FAILED"
+)
+
+var AllSpiritAnimalReadingStatus = []SpiritAnimalReadingStatus{
+	SpiritAnimalReadingStatusGeneratingQuestions,
+	SpiritAnimalReadingStatusAwaitingAnswers,
+	SpiritAnimalReadingStatusProcessing,
+	SpiritAnimalReadingStatusReady,
+	SpiritAnimalReadingStatusCompleted,
+	SpiritAnimalReadingStatusFailed,
+}
+
+func (e SpiritAnimalReadingStatus) IsValid() bool {
+	switch e {
+	case SpiritAnimalReadingStatusGeneratingQuestions, SpiritAnimalReadingStatusAwaitingAnswers, SpiritAnimalReadingStatusProcessing, SpiritAnimalReadingStatusReady, SpiritAnimalReadingStatusCompleted, SpiritAnimalReadingStatusFailed:
+		return true
+	}
+	return false
+}
+
+func (e SpiritAnimalReadingStatus) String() string {
+	return string(e)
+}
+
+func (e *SpiritAnimalReadingStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SpiritAnimalReadingStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SpiritAnimalReadingStatus", str)
+	}
+	return nil
+}
+
+func (e SpiritAnimalReadingStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *SpiritAnimalReadingStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e SpiritAnimalReadingStatus) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

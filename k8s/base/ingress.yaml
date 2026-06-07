@@ -20,6 +20,10 @@ spec:
             pathType: Exact
             backend:
               service: { name: lobby-backend, port: { number: 80 } }
+          - path: /spirit-avatars
+            pathType: Prefix
+            backend:
+              service: { name: lobby-backend, port: { number: 80 } }
           - path: /
             pathType: Prefix
             backend:

@@ -7,7 +7,7 @@ import {
 } from '../../lib/avatars'
 import { useAuth } from '../auth/AuthProvider'
 
-export default function PlayerProfileEditor({ user, required = false, onSaved, onCancel }) {
+export default function PlayerProfileEditor({ user, required = false, onSaved, onCancel, onBeginSpiritAnimal }) {
   const { acceptSessionUser } = useAuth()
   const [options, setOptions] = useState([])
   const [displayName, setDisplayName] = useState(() => defaultDisplayNameInput(user))
@@ -102,6 +102,16 @@ export default function PlayerProfileEditor({ user, required = false, onSaved, o
         <button type="submit" className="game-list-button" disabled={!canSave}>
           {busy ? 'Saving…' : 'Save display'}
         </button>
+        {onBeginSpiritAnimal ? (
+          <button
+            type="button"
+            className="game-list-button game-list-button-secondary"
+            disabled={busy}
+            onClick={onBeginSpiritAnimal}
+          >
+            Find my spirit animal
+          </button>
+        ) : null}
         {!required && onCancel ? (
           <button type="button" className="game-list-button game-list-button-secondary" disabled={busy} onClick={onCancel}>
             Cancel

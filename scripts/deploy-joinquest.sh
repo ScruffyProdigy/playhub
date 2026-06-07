@@ -11,6 +11,8 @@ cd "$ROOT"
 . "$ROOT/scripts/lib/lobby-game-service.sh"
 # shellcheck source=lib/lobby-auth-peppers.sh
 . "$ROOT/scripts/lib/lobby-auth-peppers.sh"
+# shellcheck source=lib/lobby-openai.sh
+. "$ROOT/scripts/lib/lobby-openai.sh"
 
 NAMESPACE="joinquest"
 CONTEXT="${KUBE_CONTEXT:-}"
@@ -81,13 +83,44 @@ kubectl set env deployment/lobby-backend -n "$NAMESPACE" \
 apply_lobby_smtp_secret
 apply_lobby_auth_peppers_secret
 apply_lobby_game_service_secret
+apply_lobby_openai_secret
 
 echo "Waiting for Postgres..."
 kubectl wait --for=condition=ready --timeout=300s pod -l app=pg -n "$NAMESPACE"
 
-echo "Running database migrations..."
+# GKE nodes may cache :latest; pin to the digest we just pushed when available locally.
+BACKEND_IMAGE="docker.io/scruffyprodigy/playhub-backend:latest"
+FRONTEND_IMAGE="docker.io/scruffyprodigy/playhub-frontend:latest"
+
+resolve_local_image() {
+  local ref=$1
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "$ref"
+    return
+  fi
+  local digest
+  digest=$(docker image inspect "$ref" --format '{{index .RepoDigests 0}}' 2>/dev/null | sed 's/.*@//')
+  if [ -n "$digest" ]; then
+    echo "${ref%%@*}@${digest}"
+  else
+    echo "$ref"
+  fi
+}
+
+pin_deployment_image() {
+  local deploy=$1 container=$2 ref=$3
+  echo "Pinning ${deploy}/${container} to ${ref}"
+  kubectl set image "deployment/${deploy}" -n "$NAMESPACE" "${container}=${ref}"
+}
+
+BACKEND_IMAGE="$(resolve_local_image "$BACKEND_IMAGE")"
+FRONTEND_IMAGE="$(resolve_local_image "$FRONTEND_IMAGE")"
+
+echo "Running database migrations with ${BACKEND_IMAGE}..."
 kubectl delete job playhub-db-migrate -n "$NAMESPACE" --ignore-not-found
-sed 's/namespace: playhub/namespace: joinquest/g' k8s/jobs/migration.yaml | kubectl apply -f -
+sed 's/namespace: playhub/namespace: joinquest/g' k8s/jobs/migration.yaml \
+  | sed "s|docker.io/scruffyprodigy/playhub-backend:latest|${BACKEND_IMAGE}|" \
+  | kubectl apply -f -
 kubectl wait --for=condition=complete --timeout=120s job/playhub-db-migrate -n "$NAMESPACE"
 kubectl logs job/playhub-db-migrate -n "$NAMESPACE"
 
@@ -97,21 +130,8 @@ sed 's/namespace: playhub/namespace: joinquest/g' k8s/jobs/stale-session-cleanup
 echo "Patching game catalog handoff URLs for production..."
 run_patch_game_handoff_urls_job "$NAMESPACE"
 
-# GKE nodes may cache :latest; pin to the digest we just pushed when available locally.
-pin_local_image() {
-  local deploy=$1 container=$2 ref=$3
-  local digest
-  digest=$(docker image inspect "$ref" --format '{{index .RepoDigests 0}}' 2>/dev/null | sed 's/.*@//')
-  if [ -n "$digest" ]; then
-    echo "Pinning ${deploy} to digest ${digest}"
-    kubectl set image "deployment/${deploy}" -n "$NAMESPACE" "${container}=${ref%%@*}@${digest}"
-  fi
-}
-
-if command -v docker >/dev/null 2>&1; then
-  pin_local_image lobby-frontend frontend docker.io/scruffyprodigy/playhub-frontend:latest
-  pin_local_image lobby-backend backend docker.io/scruffyprodigy/playhub-backend:latest
-fi
+pin_deployment_image lobby-backend backend "$BACKEND_IMAGE"
+pin_deployment_image lobby-frontend frontend "$FRONTEND_IMAGE"
 
 echo "Waiting for app deployments..."
 kubectl wait --for=condition=available --timeout=300s deployment/lobby-backend -n "$NAMESPACE"

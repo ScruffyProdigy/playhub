@@ -6,11 +6,16 @@ metadata:
   labels: { app: lobby-backend }
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector: { matchLabels: { app: lobby-backend } }
   template:
     metadata:
       labels: { app: lobby-backend }
     spec:
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: backend
           image: docker.io/scruffyprodigy/playhub-backend:latest
@@ -33,6 +38,11 @@ spec:
                 secretKeyRef:
                   name: jwks
                   key: PRIV_PEM
+            - name: SPIRIT_AVATAR_STORAGE_DIR
+              value: /var/lib/spirit-avatars
+          volumeMounts:
+            - name: spirit-avatars
+              mountPath: /var/lib/spirit-avatars
           readinessProbe:
             httpGet: { path: /healthz, port: 8080 }
             initialDelaySeconds: 3
@@ -42,6 +52,22 @@ spec:
           resources:
             requests: { cpu: "200m", memory: "256Mi" }
             limits:   { cpu: "1",    memory: "1Gi" }
+      volumes:
+        - name: spirit-avatars
+          persistentVolumeClaim:
+            claimName: spirit-avatars
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: spirit-avatars
+  namespace: playhub
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
 ---
 apiVersion: v1
 kind: Service

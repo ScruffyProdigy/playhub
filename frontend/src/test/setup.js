@@ -88,6 +88,29 @@ function createFetchMock(handlers) {
       data = { games: handlers.games ?? [] }
     } else if (query.includes('starterAvatars')) {
       data = { starterAvatars: handlers.starterAvatars ?? [] }
+    } else if (query.includes('mySpiritAnimalJourneyEligibility')) {
+      data = {
+        mySpiritAnimalJourneyEligibility: handlers.mySpiritAnimalJourneyEligibility ?? {
+          canBegin: true,
+          cooldownEndsAt: null,
+          daysRemaining: null,
+        },
+      }
+    } else if (query.includes('mySpiritAnimalReading')) {
+      data = { mySpiritAnimalReading: handlers.mySpiritAnimalReading ?? null }
+    } else if (query.includes('beginSpiritAnimalReading')) {
+      data = { beginSpiritAnimalReading: handlers.beginSpiritAnimalReading ?? null }
+    } else if (query.includes('submitSpiritAnimalAnswers')) {
+      data = { submitSpiritAnimalAnswers: handlers.submitSpiritAnimalAnswers ?? null }
+    } else if (query.includes('selectSpiritAnimalTotem')) {
+      data = {
+        selectSpiritAnimalTotem: handlers.selectSpiritAnimalTotem ?? {
+          ...handlers.me,
+          avatarSource: 'SPIRIT_ANIMAL',
+          avatarUrl: '/spirit-avatars/mock/ember-fox.png',
+          avatarKey: null,
+        },
+      }
     } else if (query.includes('updatePlayerProfile')) {
       data = {
         updatePlayerProfile: handlers.updatePlayerProfile ?? {

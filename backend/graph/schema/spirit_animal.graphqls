@@ -1,0 +1,92 @@
+enum SpiritAnimalReadingStatus {
+  GENERATING_QUESTIONS
+  AWAITING_ANSWERS
+  PROCESSING
+  READY
+  COMPLETED
+  FAILED
+}
+
+type SpiritAnimalAnswer {
+  id: ID!
+  label: String!
+}
+
+type SpiritAnimalCardQuestion {
+  slot: String!
+  slotName: String!
+  card: String!
+  cardMeaningInGeneral: String!
+  cardMeaningForSlot: String!
+  question: String!
+  answers: [SpiritAnimalAnswer!]!
+}
+
+type SpiritAnimalJourneySummary {
+  compass: String!
+  coin: String!
+  storm: String!
+  campfire: String!
+  beacon: String!
+}
+
+type SpiritAnimalPersonality {
+  overview: String!
+  journeySummary: SpiritAnimalJourneySummary!
+  coreThemes: [String!]!
+  strengths: [String!]!
+  tensions: [String!]!
+  socialIdentity: String!
+}
+
+type SpiritAnimalTotem {
+  name: String!
+  animal: String!
+  socialArchetype: String!
+  coreConcept: String!
+  colorPalette: [String!]!
+  personalitySummary: String!
+  whyThisAnimal: String!
+  originStory: String!
+  imageUrl: String
+  fitScore: Int
+  affinity: String
+  readingEmphasis: String
+  whyThisAnimalMakesSense: String
+  whyChooseThisAvatar: String
+}
+
+type SpiritAnimalReading {
+  id: ID!
+  status: SpiritAnimalReadingStatus!
+  draw: [Int!]!
+  cardQuestions: [SpiritAnimalCardQuestion!]
+  personality: SpiritAnimalPersonality
+  mascotOverview: String
+  totems: [SpiritAnimalTotem!]
+  selectedTotemName: String
+  errorMessage: String
+  imagesMissing: Boolean!
+  """When status is GENERATING_QUESTIONS or PROCESSING, when the current wait began."""
+  phaseStartedAt: Time
+  """Approximate total seconds for the current processing phase, based on recent readings."""
+  estimatedPhaseSeconds: Int
+}
+
+type SpiritAnimalJourneyEligibility {
+  canBegin: Boolean!
+  cooldownEndsAt: Time
+  daysRemaining: Int
+}
+
+extend type Query {
+  mySpiritAnimalReading: SpiritAnimalReading
+  mySpiritAnimalJourneyEligibility: SpiritAnimalJourneyEligibility!
+}
+
+extend type Mutation {
+  beginSpiritAnimalReading(forceRestart: Boolean = false): SpiritAnimalReading!
+  submitSpiritAnimalAnswers(answers: [ID!]!): SpiritAnimalReading!
+  regenerateSpiritAnimalImages: SpiritAnimalReading!
+  selectSpiritAnimalTotem(totemName: String!): User!
+}

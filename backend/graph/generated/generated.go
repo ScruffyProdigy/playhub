@@ -143,29 +143,33 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CompleteSignInWithCode func(childComplexity int, email string, code string) int
-		CompleteSignInWithLink func(childComplexity int, token string) int
-		CreatePrivateTable     func(childComplexity int, gameID string, modeID string) int
-		CreateRoom             func(childComplexity int) int
-		CreateTable            func(childComplexity int, roomID string, gameID string, modeID string) int
-		DiscardTable           func(childComplexity int, tableID string) int
-		GrantGood              func(childComplexity int, userID string, goodID string, quantity *int) int
-		JoinQueue              func(childComplexity int, queueID string, queuePath *string) int
-		JoinRoom               func(childComplexity int, inviteCode string) int
-		LeaveQueue             func(childComplexity int, queueID string) int
-		LeaveRoom              func(childComplexity int) int
-		LeaveTable             func(childComplexity int, tableID string) int
-		Logout                 func(childComplexity int) int
-		RefreshGameManifest    func(childComplexity int, gameID string) int
-		RegisterGame           func(childComplexity int, input model.RegisterGameInput) int
-		ReportMatchResult      func(childComplexity int, matchID string, status model.MatchResultStatus, winnerLobbyUserIds []string, metadata map[string]any) int
-		ReportPlayerFinished   func(childComplexity int, matchID string, lobbyUserID string, reason model.PlayerFinishReason, placement *int, metadata map[string]any) int
-		RequestSignIn          func(childComplexity int, email string) int
-		RevokeGood             func(childComplexity int, userID string, goodID string, quantity *int) int
-		SendRoomMessage        func(childComplexity int, roomID string, body string) int
-		SitAtTable             func(childComplexity int, tableID string, seatKey string) int
-		StartTable             func(childComplexity int, tableID string) int
-		UpdatePlayerProfile    func(childComplexity int, displayName string, avatarKey string) int
+		BeginSpiritAnimalReading     func(childComplexity int, forceRestart *bool) int
+		CompleteSignInWithCode       func(childComplexity int, email string, code string) int
+		CompleteSignInWithLink       func(childComplexity int, token string) int
+		CreatePrivateTable           func(childComplexity int, gameID string, modeID string) int
+		CreateRoom                   func(childComplexity int) int
+		CreateTable                  func(childComplexity int, roomID string, gameID string, modeID string) int
+		DiscardTable                 func(childComplexity int, tableID string) int
+		GrantGood                    func(childComplexity int, userID string, goodID string, quantity *int) int
+		JoinQueue                    func(childComplexity int, queueID string, queuePath *string) int
+		JoinRoom                     func(childComplexity int, inviteCode string) int
+		LeaveQueue                   func(childComplexity int, queueID string) int
+		LeaveRoom                    func(childComplexity int) int
+		LeaveTable                   func(childComplexity int, tableID string) int
+		Logout                       func(childComplexity int) int
+		RefreshGameManifest          func(childComplexity int, gameID string) int
+		RegenerateSpiritAnimalImages func(childComplexity int) int
+		RegisterGame                 func(childComplexity int, input model.RegisterGameInput) int
+		ReportMatchResult            func(childComplexity int, matchID string, status model.MatchResultStatus, winnerLobbyUserIds []string, metadata map[string]any) int
+		ReportPlayerFinished         func(childComplexity int, matchID string, lobbyUserID string, reason model.PlayerFinishReason, placement *int, metadata map[string]any) int
+		RequestSignIn                func(childComplexity int, email string) int
+		RevokeGood                   func(childComplexity int, userID string, goodID string, quantity *int) int
+		SelectSpiritAnimalTotem      func(childComplexity int, totemName string) int
+		SendRoomMessage              func(childComplexity int, roomID string, body string) int
+		SitAtTable                   func(childComplexity int, tableID string, seatKey string) int
+		StartTable                   func(childComplexity int, tableID string) int
+		SubmitSpiritAnimalAnswers    func(childComplexity int, answers []string) int
+		UpdatePlayerProfile          func(childComplexity int, displayName string, avatarKey string) int
 	}
 
 	MyTableSeat struct {
@@ -188,23 +192,25 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Game              func(childComplexity int, id string) int
-		Games             func(childComplexity int, limit *int, offset *int) int
-		Goods             func(childComplexity int, gameID *string) int
-		Healthz           func(childComplexity int) int
-		Me                func(childComplexity int) int
-		MyActiveQueue     func(childComplexity int) int
-		MyInventory       func(childComplexity int, gameID *string) int
-		MyQueueStatus     func(childComplexity int, queueID string) int
-		MyRoom            func(childComplexity int) int
-		MyTableSeat       func(childComplexity int) int
-		Player            func(childComplexity int, id string) int
-		ReturnDestination func(childComplexity int, matchID *string) int
-		Room              func(childComplexity int, inviteCode string) int
-		Session           func(childComplexity int, id string) int
-		StarterAvatars    func(childComplexity int) int
-		SubscriptionAuth  func(childComplexity int) int
-		Version           func(childComplexity int) int
+		Game                             func(childComplexity int, id string) int
+		Games                            func(childComplexity int, limit *int, offset *int) int
+		Goods                            func(childComplexity int, gameID *string) int
+		Healthz                          func(childComplexity int) int
+		Me                               func(childComplexity int) int
+		MyActiveQueue                    func(childComplexity int) int
+		MyInventory                      func(childComplexity int, gameID *string) int
+		MyQueueStatus                    func(childComplexity int, queueID string) int
+		MyRoom                           func(childComplexity int) int
+		MySpiritAnimalJourneyEligibility func(childComplexity int) int
+		MySpiritAnimalReading            func(childComplexity int) int
+		MyTableSeat                      func(childComplexity int) int
+		Player                           func(childComplexity int, id string) int
+		ReturnDestination                func(childComplexity int, matchID *string) int
+		Room                             func(childComplexity int, inviteCode string) int
+		Session                          func(childComplexity int, id string) int
+		StarterAvatars                   func(childComplexity int) int
+		SubscriptionAuth                 func(childComplexity int) int
+		Version                          func(childComplexity int) int
 	}
 
 	QueueUpdate struct {
@@ -251,6 +257,76 @@ type ComplexityRoot struct {
 		ID        func(childComplexity int) int
 		Players   func(childComplexity int) int
 		Status    func(childComplexity int) int
+	}
+
+	SpiritAnimalAnswer struct {
+		ID    func(childComplexity int) int
+		Label func(childComplexity int) int
+	}
+
+	SpiritAnimalCardQuestion struct {
+		Answers              func(childComplexity int) int
+		Card                 func(childComplexity int) int
+		CardMeaningForSlot   func(childComplexity int) int
+		CardMeaningInGeneral func(childComplexity int) int
+		Question             func(childComplexity int) int
+		Slot                 func(childComplexity int) int
+		SlotName             func(childComplexity int) int
+	}
+
+	SpiritAnimalJourneyEligibility struct {
+		CanBegin       func(childComplexity int) int
+		CooldownEndsAt func(childComplexity int) int
+		DaysRemaining  func(childComplexity int) int
+	}
+
+	SpiritAnimalJourneySummary struct {
+		Beacon   func(childComplexity int) int
+		Campfire func(childComplexity int) int
+		Coin     func(childComplexity int) int
+		Compass  func(childComplexity int) int
+		Storm    func(childComplexity int) int
+	}
+
+	SpiritAnimalPersonality struct {
+		CoreThemes     func(childComplexity int) int
+		JourneySummary func(childComplexity int) int
+		Overview       func(childComplexity int) int
+		SocialIdentity func(childComplexity int) int
+		Strengths      func(childComplexity int) int
+		Tensions       func(childComplexity int) int
+	}
+
+	SpiritAnimalReading struct {
+		CardQuestions         func(childComplexity int) int
+		Draw                  func(childComplexity int) int
+		ErrorMessage          func(childComplexity int) int
+		EstimatedPhaseSeconds func(childComplexity int) int
+		ID                    func(childComplexity int) int
+		ImagesMissing         func(childComplexity int) int
+		MascotOverview        func(childComplexity int) int
+		Personality           func(childComplexity int) int
+		PhaseStartedAt        func(childComplexity int) int
+		SelectedTotemName     func(childComplexity int) int
+		Status                func(childComplexity int) int
+		Totems                func(childComplexity int) int
+	}
+
+	SpiritAnimalTotem struct {
+		Affinity                func(childComplexity int) int
+		Animal                  func(childComplexity int) int
+		ColorPalette            func(childComplexity int) int
+		CoreConcept             func(childComplexity int) int
+		FitScore                func(childComplexity int) int
+		ImageURL                func(childComplexity int) int
+		Name                    func(childComplexity int) int
+		OriginStory             func(childComplexity int) int
+		PersonalitySummary      func(childComplexity int) int
+		ReadingEmphasis         func(childComplexity int) int
+		SocialArchetype         func(childComplexity int) int
+		WhyChooseThisAvatar     func(childComplexity int) int
+		WhyThisAnimal           func(childComplexity int) int
+		WhyThisAnimalMakesSense func(childComplexity int) int
 	}
 
 	StarterAvatar struct {
@@ -344,6 +420,10 @@ type MutationResolver interface {
 	JoinRoom(ctx context.Context, inviteCode string) (*model.Room, error)
 	LeaveRoom(ctx context.Context) (bool, error)
 	SendRoomMessage(ctx context.Context, roomID string, body string) (*model.RoomMessage, error)
+	BeginSpiritAnimalReading(ctx context.Context, forceRestart *bool) (*model.SpiritAnimalReading, error)
+	SubmitSpiritAnimalAnswers(ctx context.Context, answers []string) (*model.SpiritAnimalReading, error)
+	RegenerateSpiritAnimalImages(ctx context.Context) (*model.SpiritAnimalReading, error)
+	SelectSpiritAnimalTotem(ctx context.Context, totemName string) (*model.User, error)
 	CreatePrivateTable(ctx context.Context, gameID string, modeID string) (*model.Table, error)
 	CreateTable(ctx context.Context, roomID string, gameID string, modeID string) (*model.Table, error)
 	SitAtTable(ctx context.Context, tableID string, seatKey string) (*model.Table, error)
@@ -368,6 +448,8 @@ type QueryResolver interface {
 	ReturnDestination(ctx context.Context, matchID *string) (*model.ReturnDestination, error)
 	Room(ctx context.Context, inviteCode string) (*model.Room, error)
 	MyRoom(ctx context.Context) (*model.Room, error)
+	MySpiritAnimalReading(ctx context.Context) (*model.SpiritAnimalReading, error)
+	MySpiritAnimalJourneyEligibility(ctx context.Context) (*model.SpiritAnimalJourneyEligibility, error)
 	MyTableSeat(ctx context.Context) (*model.MyTableSeat, error)
 }
 type RoomResolver interface {
@@ -787,6 +869,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ModeQueue.WaitingCount(childComplexity), true
 
+	case "Mutation.beginSpiritAnimalReading":
+		if e.complexity.Mutation.BeginSpiritAnimalReading == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_beginSpiritAnimalReading_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.BeginSpiritAnimalReading(childComplexity, args["forceRestart"].(*bool)), true
 	case "Mutation.completeSignInWithCode":
 		if e.complexity.Mutation.CompleteSignInWithCode == nil {
 			break
@@ -926,6 +1019,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RefreshGameManifest(childComplexity, args["gameId"].(string)), true
+	case "Mutation.regenerateSpiritAnimalImages":
+		if e.complexity.Mutation.RegenerateSpiritAnimalImages == nil {
+			break
+		}
+
+		return e.complexity.Mutation.RegenerateSpiritAnimalImages(childComplexity), true
 	case "Mutation.registerGame":
 		if e.complexity.Mutation.RegisterGame == nil {
 			break
@@ -981,6 +1080,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RevokeGood(childComplexity, args["userId"].(string), args["goodId"].(string), args["quantity"].(*int)), true
+	case "Mutation.selectSpiritAnimalTotem":
+		if e.complexity.Mutation.SelectSpiritAnimalTotem == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_selectSpiritAnimalTotem_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SelectSpiritAnimalTotem(childComplexity, args["totemName"].(string)), true
 	case "Mutation.sendRoomMessage":
 		if e.complexity.Mutation.SendRoomMessage == nil {
 			break
@@ -1014,6 +1124,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.StartTable(childComplexity, args["tableId"].(string)), true
+	case "Mutation.submitSpiritAnimalAnswers":
+		if e.complexity.Mutation.SubmitSpiritAnimalAnswers == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_submitSpiritAnimalAnswers_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SubmitSpiritAnimalAnswers(childComplexity, args["answers"].([]string)), true
 	case "Mutation.updatePlayerProfile":
 		if e.complexity.Mutation.UpdatePlayerProfile == nil {
 			break
@@ -1185,6 +1306,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.MyRoom(childComplexity), true
+	case "Query.mySpiritAnimalJourneyEligibility":
+		if e.complexity.Query.MySpiritAnimalJourneyEligibility == nil {
+			break
+		}
+
+		return e.complexity.Query.MySpiritAnimalJourneyEligibility(childComplexity), true
+	case "Query.mySpiritAnimalReading":
+		if e.complexity.Query.MySpiritAnimalReading == nil {
+			break
+		}
+
+		return e.complexity.Query.MySpiritAnimalReading(childComplexity), true
 	case "Query.myTableSeat":
 		if e.complexity.Query.MyTableSeat == nil {
 			break
@@ -1432,6 +1565,307 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Session.Status(childComplexity), true
+
+	case "SpiritAnimalAnswer.id":
+		if e.complexity.SpiritAnimalAnswer.ID == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalAnswer.ID(childComplexity), true
+	case "SpiritAnimalAnswer.label":
+		if e.complexity.SpiritAnimalAnswer.Label == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalAnswer.Label(childComplexity), true
+
+	case "SpiritAnimalCardQuestion.answers":
+		if e.complexity.SpiritAnimalCardQuestion.Answers == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalCardQuestion.Answers(childComplexity), true
+	case "SpiritAnimalCardQuestion.card":
+		if e.complexity.SpiritAnimalCardQuestion.Card == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalCardQuestion.Card(childComplexity), true
+	case "SpiritAnimalCardQuestion.cardMeaningForSlot":
+		if e.complexity.SpiritAnimalCardQuestion.CardMeaningForSlot == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalCardQuestion.CardMeaningForSlot(childComplexity), true
+	case "SpiritAnimalCardQuestion.cardMeaningInGeneral":
+		if e.complexity.SpiritAnimalCardQuestion.CardMeaningInGeneral == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalCardQuestion.CardMeaningInGeneral(childComplexity), true
+	case "SpiritAnimalCardQuestion.question":
+		if e.complexity.SpiritAnimalCardQuestion.Question == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalCardQuestion.Question(childComplexity), true
+	case "SpiritAnimalCardQuestion.slot":
+		if e.complexity.SpiritAnimalCardQuestion.Slot == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalCardQuestion.Slot(childComplexity), true
+	case "SpiritAnimalCardQuestion.slotName":
+		if e.complexity.SpiritAnimalCardQuestion.SlotName == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalCardQuestion.SlotName(childComplexity), true
+
+	case "SpiritAnimalJourneyEligibility.canBegin":
+		if e.complexity.SpiritAnimalJourneyEligibility.CanBegin == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalJourneyEligibility.CanBegin(childComplexity), true
+	case "SpiritAnimalJourneyEligibility.cooldownEndsAt":
+		if e.complexity.SpiritAnimalJourneyEligibility.CooldownEndsAt == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalJourneyEligibility.CooldownEndsAt(childComplexity), true
+	case "SpiritAnimalJourneyEligibility.daysRemaining":
+		if e.complexity.SpiritAnimalJourneyEligibility.DaysRemaining == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalJourneyEligibility.DaysRemaining(childComplexity), true
+
+	case "SpiritAnimalJourneySummary.beacon":
+		if e.complexity.SpiritAnimalJourneySummary.Beacon == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalJourneySummary.Beacon(childComplexity), true
+	case "SpiritAnimalJourneySummary.campfire":
+		if e.complexity.SpiritAnimalJourneySummary.Campfire == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalJourneySummary.Campfire(childComplexity), true
+	case "SpiritAnimalJourneySummary.coin":
+		if e.complexity.SpiritAnimalJourneySummary.Coin == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalJourneySummary.Coin(childComplexity), true
+	case "SpiritAnimalJourneySummary.compass":
+		if e.complexity.SpiritAnimalJourneySummary.Compass == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalJourneySummary.Compass(childComplexity), true
+	case "SpiritAnimalJourneySummary.storm":
+		if e.complexity.SpiritAnimalJourneySummary.Storm == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalJourneySummary.Storm(childComplexity), true
+
+	case "SpiritAnimalPersonality.coreThemes":
+		if e.complexity.SpiritAnimalPersonality.CoreThemes == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalPersonality.CoreThemes(childComplexity), true
+	case "SpiritAnimalPersonality.journeySummary":
+		if e.complexity.SpiritAnimalPersonality.JourneySummary == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalPersonality.JourneySummary(childComplexity), true
+	case "SpiritAnimalPersonality.overview":
+		if e.complexity.SpiritAnimalPersonality.Overview == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalPersonality.Overview(childComplexity), true
+	case "SpiritAnimalPersonality.socialIdentity":
+		if e.complexity.SpiritAnimalPersonality.SocialIdentity == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalPersonality.SocialIdentity(childComplexity), true
+	case "SpiritAnimalPersonality.strengths":
+		if e.complexity.SpiritAnimalPersonality.Strengths == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalPersonality.Strengths(childComplexity), true
+	case "SpiritAnimalPersonality.tensions":
+		if e.complexity.SpiritAnimalPersonality.Tensions == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalPersonality.Tensions(childComplexity), true
+
+	case "SpiritAnimalReading.cardQuestions":
+		if e.complexity.SpiritAnimalReading.CardQuestions == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.CardQuestions(childComplexity), true
+	case "SpiritAnimalReading.draw":
+		if e.complexity.SpiritAnimalReading.Draw == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.Draw(childComplexity), true
+	case "SpiritAnimalReading.errorMessage":
+		if e.complexity.SpiritAnimalReading.ErrorMessage == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.ErrorMessage(childComplexity), true
+	case "SpiritAnimalReading.estimatedPhaseSeconds":
+		if e.complexity.SpiritAnimalReading.EstimatedPhaseSeconds == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.EstimatedPhaseSeconds(childComplexity), true
+	case "SpiritAnimalReading.id":
+		if e.complexity.SpiritAnimalReading.ID == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.ID(childComplexity), true
+	case "SpiritAnimalReading.imagesMissing":
+		if e.complexity.SpiritAnimalReading.ImagesMissing == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.ImagesMissing(childComplexity), true
+	case "SpiritAnimalReading.mascotOverview":
+		if e.complexity.SpiritAnimalReading.MascotOverview == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.MascotOverview(childComplexity), true
+	case "SpiritAnimalReading.personality":
+		if e.complexity.SpiritAnimalReading.Personality == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.Personality(childComplexity), true
+	case "SpiritAnimalReading.phaseStartedAt":
+		if e.complexity.SpiritAnimalReading.PhaseStartedAt == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.PhaseStartedAt(childComplexity), true
+	case "SpiritAnimalReading.selectedTotemName":
+		if e.complexity.SpiritAnimalReading.SelectedTotemName == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.SelectedTotemName(childComplexity), true
+	case "SpiritAnimalReading.status":
+		if e.complexity.SpiritAnimalReading.Status == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.Status(childComplexity), true
+	case "SpiritAnimalReading.totems":
+		if e.complexity.SpiritAnimalReading.Totems == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalReading.Totems(childComplexity), true
+
+	case "SpiritAnimalTotem.affinity":
+		if e.complexity.SpiritAnimalTotem.Affinity == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.Affinity(childComplexity), true
+	case "SpiritAnimalTotem.animal":
+		if e.complexity.SpiritAnimalTotem.Animal == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.Animal(childComplexity), true
+	case "SpiritAnimalTotem.colorPalette":
+		if e.complexity.SpiritAnimalTotem.ColorPalette == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.ColorPalette(childComplexity), true
+	case "SpiritAnimalTotem.coreConcept":
+		if e.complexity.SpiritAnimalTotem.CoreConcept == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.CoreConcept(childComplexity), true
+	case "SpiritAnimalTotem.fitScore":
+		if e.complexity.SpiritAnimalTotem.FitScore == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.FitScore(childComplexity), true
+	case "SpiritAnimalTotem.imageUrl":
+		if e.complexity.SpiritAnimalTotem.ImageURL == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.ImageURL(childComplexity), true
+	case "SpiritAnimalTotem.name":
+		if e.complexity.SpiritAnimalTotem.Name == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.Name(childComplexity), true
+	case "SpiritAnimalTotem.originStory":
+		if e.complexity.SpiritAnimalTotem.OriginStory == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.OriginStory(childComplexity), true
+	case "SpiritAnimalTotem.personalitySummary":
+		if e.complexity.SpiritAnimalTotem.PersonalitySummary == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.PersonalitySummary(childComplexity), true
+	case "SpiritAnimalTotem.readingEmphasis":
+		if e.complexity.SpiritAnimalTotem.ReadingEmphasis == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.ReadingEmphasis(childComplexity), true
+	case "SpiritAnimalTotem.socialArchetype":
+		if e.complexity.SpiritAnimalTotem.SocialArchetype == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.SocialArchetype(childComplexity), true
+	case "SpiritAnimalTotem.whyChooseThisAvatar":
+		if e.complexity.SpiritAnimalTotem.WhyChooseThisAvatar == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.WhyChooseThisAvatar(childComplexity), true
+	case "SpiritAnimalTotem.whyThisAnimal":
+		if e.complexity.SpiritAnimalTotem.WhyThisAnimal == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.WhyThisAnimal(childComplexity), true
+	case "SpiritAnimalTotem.whyThisAnimalMakesSense":
+		if e.complexity.SpiritAnimalTotem.WhyThisAnimalMakesSense == nil {
+			break
+		}
+
+		return e.complexity.SpiritAnimalTotem.WhyThisAnimalMakesSense(childComplexity), true
 
 	case "StarterAvatar.imageUrl":
 		if e.complexity.StarterAvatar.ImageURL == nil {
@@ -2090,6 +2524,99 @@ extend type Subscription {
   roomMessageAdded(roomId: ID!): RoomMessage!
 }
 `, BuiltIn: false},
+	{Name: "../schema/spirit_animal.graphqls", Input: `enum SpiritAnimalReadingStatus {
+  GENERATING_QUESTIONS
+  AWAITING_ANSWERS
+  PROCESSING
+  READY
+  COMPLETED
+  FAILED
+}
+
+type SpiritAnimalAnswer {
+  id: ID!
+  label: String!
+}
+
+type SpiritAnimalCardQuestion {
+  slot: String!
+  slotName: String!
+  card: String!
+  cardMeaningInGeneral: String!
+  cardMeaningForSlot: String!
+  question: String!
+  answers: [SpiritAnimalAnswer!]!
+}
+
+type SpiritAnimalJourneySummary {
+  compass: String!
+  coin: String!
+  storm: String!
+  campfire: String!
+  beacon: String!
+}
+
+type SpiritAnimalPersonality {
+  overview: String!
+  journeySummary: SpiritAnimalJourneySummary!
+  coreThemes: [String!]!
+  strengths: [String!]!
+  tensions: [String!]!
+  socialIdentity: String!
+}
+
+type SpiritAnimalTotem {
+  name: String!
+  animal: String!
+  socialArchetype: String!
+  coreConcept: String!
+  colorPalette: [String!]!
+  personalitySummary: String!
+  whyThisAnimal: String!
+  originStory: String!
+  imageUrl: String
+  fitScore: Int
+  affinity: String
+  readingEmphasis: String
+  whyThisAnimalMakesSense: String
+  whyChooseThisAvatar: String
+}
+
+type SpiritAnimalReading {
+  id: ID!
+  status: SpiritAnimalReadingStatus!
+  draw: [Int!]!
+  cardQuestions: [SpiritAnimalCardQuestion!]
+  personality: SpiritAnimalPersonality
+  mascotOverview: String
+  totems: [SpiritAnimalTotem!]
+  selectedTotemName: String
+  errorMessage: String
+  imagesMissing: Boolean!
+  """When status is GENERATING_QUESTIONS or PROCESSING, when the current wait began."""
+  phaseStartedAt: Time
+  """Approximate total seconds for the current processing phase, based on recent readings."""
+  estimatedPhaseSeconds: Int
+}
+
+type SpiritAnimalJourneyEligibility {
+  canBegin: Boolean!
+  cooldownEndsAt: Time
+  daysRemaining: Int
+}
+
+extend type Query {
+  mySpiritAnimalReading: SpiritAnimalReading
+  mySpiritAnimalJourneyEligibility: SpiritAnimalJourneyEligibility!
+}
+
+extend type Mutation {
+  beginSpiritAnimalReading(forceRestart: Boolean = false): SpiritAnimalReading!
+  submitSpiritAnimalAnswers(answers: [ID!]!): SpiritAnimalReading!
+  regenerateSpiritAnimalImages: SpiritAnimalReading!
+  selectSpiritAnimalTotem(totemName: String!): User!
+}
+`, BuiltIn: false},
 	{Name: "../schema/tables.graphqls", Input: `type TableSeat {
   seatKey: String!
   user: User!
@@ -2197,6 +2724,17 @@ func (ec *executionContext) field_Game_activeSessions_args(ctx context.Context, 
 		return nil, err
 	}
 	args["limit"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_beginSpiritAnimalReading_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "forceRestart", ec.unmarshalOBoolean2ᚖbool)
+	if err != nil {
+		return nil, err
+	}
+	args["forceRestart"] = arg0
 	return args, nil
 }
 
@@ -2456,6 +2994,17 @@ func (ec *executionContext) field_Mutation_revokeGood_args(ctx context.Context, 
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_selectSpiritAnimalTotem_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "totemName", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["totemName"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_sendRoomMessage_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -2496,6 +3045,17 @@ func (ec *executionContext) field_Mutation_startTable_args(ctx context.Context, 
 		return nil, err
 	}
 	args["tableId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_submitSpiritAnimalAnswers_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "answers", ec.unmarshalNID2ᚕstringᚄ)
+	if err != nil {
+		return nil, err
+	}
+	args["answers"] = arg0
 	return args, nil
 }
 
@@ -5314,6 +5874,254 @@ func (ec *executionContext) fieldContext_Mutation_sendRoomMessage(ctx context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_beginSpiritAnimalReading(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_beginSpiritAnimalReading,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().BeginSpiritAnimalReading(ctx, fc.Args["forceRestart"].(*bool))
+		},
+		nil,
+		ec.marshalNSpiritAnimalReading2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalReading,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_beginSpiritAnimalReading(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_SpiritAnimalReading_id(ctx, field)
+			case "status":
+				return ec.fieldContext_SpiritAnimalReading_status(ctx, field)
+			case "draw":
+				return ec.fieldContext_SpiritAnimalReading_draw(ctx, field)
+			case "cardQuestions":
+				return ec.fieldContext_SpiritAnimalReading_cardQuestions(ctx, field)
+			case "personality":
+				return ec.fieldContext_SpiritAnimalReading_personality(ctx, field)
+			case "mascotOverview":
+				return ec.fieldContext_SpiritAnimalReading_mascotOverview(ctx, field)
+			case "totems":
+				return ec.fieldContext_SpiritAnimalReading_totems(ctx, field)
+			case "selectedTotemName":
+				return ec.fieldContext_SpiritAnimalReading_selectedTotemName(ctx, field)
+			case "errorMessage":
+				return ec.fieldContext_SpiritAnimalReading_errorMessage(ctx, field)
+			case "imagesMissing":
+				return ec.fieldContext_SpiritAnimalReading_imagesMissing(ctx, field)
+			case "phaseStartedAt":
+				return ec.fieldContext_SpiritAnimalReading_phaseStartedAt(ctx, field)
+			case "estimatedPhaseSeconds":
+				return ec.fieldContext_SpiritAnimalReading_estimatedPhaseSeconds(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SpiritAnimalReading", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_beginSpiritAnimalReading_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_submitSpiritAnimalAnswers(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_submitSpiritAnimalAnswers,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().SubmitSpiritAnimalAnswers(ctx, fc.Args["answers"].([]string))
+		},
+		nil,
+		ec.marshalNSpiritAnimalReading2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalReading,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_submitSpiritAnimalAnswers(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_SpiritAnimalReading_id(ctx, field)
+			case "status":
+				return ec.fieldContext_SpiritAnimalReading_status(ctx, field)
+			case "draw":
+				return ec.fieldContext_SpiritAnimalReading_draw(ctx, field)
+			case "cardQuestions":
+				return ec.fieldContext_SpiritAnimalReading_cardQuestions(ctx, field)
+			case "personality":
+				return ec.fieldContext_SpiritAnimalReading_personality(ctx, field)
+			case "mascotOverview":
+				return ec.fieldContext_SpiritAnimalReading_mascotOverview(ctx, field)
+			case "totems":
+				return ec.fieldContext_SpiritAnimalReading_totems(ctx, field)
+			case "selectedTotemName":
+				return ec.fieldContext_SpiritAnimalReading_selectedTotemName(ctx, field)
+			case "errorMessage":
+				return ec.fieldContext_SpiritAnimalReading_errorMessage(ctx, field)
+			case "imagesMissing":
+				return ec.fieldContext_SpiritAnimalReading_imagesMissing(ctx, field)
+			case "phaseStartedAt":
+				return ec.fieldContext_SpiritAnimalReading_phaseStartedAt(ctx, field)
+			case "estimatedPhaseSeconds":
+				return ec.fieldContext_SpiritAnimalReading_estimatedPhaseSeconds(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SpiritAnimalReading", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_submitSpiritAnimalAnswers_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_regenerateSpiritAnimalImages(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_regenerateSpiritAnimalImages,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Mutation().RegenerateSpiritAnimalImages(ctx)
+		},
+		nil,
+		ec.marshalNSpiritAnimalReading2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalReading,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_regenerateSpiritAnimalImages(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_SpiritAnimalReading_id(ctx, field)
+			case "status":
+				return ec.fieldContext_SpiritAnimalReading_status(ctx, field)
+			case "draw":
+				return ec.fieldContext_SpiritAnimalReading_draw(ctx, field)
+			case "cardQuestions":
+				return ec.fieldContext_SpiritAnimalReading_cardQuestions(ctx, field)
+			case "personality":
+				return ec.fieldContext_SpiritAnimalReading_personality(ctx, field)
+			case "mascotOverview":
+				return ec.fieldContext_SpiritAnimalReading_mascotOverview(ctx, field)
+			case "totems":
+				return ec.fieldContext_SpiritAnimalReading_totems(ctx, field)
+			case "selectedTotemName":
+				return ec.fieldContext_SpiritAnimalReading_selectedTotemName(ctx, field)
+			case "errorMessage":
+				return ec.fieldContext_SpiritAnimalReading_errorMessage(ctx, field)
+			case "imagesMissing":
+				return ec.fieldContext_SpiritAnimalReading_imagesMissing(ctx, field)
+			case "phaseStartedAt":
+				return ec.fieldContext_SpiritAnimalReading_phaseStartedAt(ctx, field)
+			case "estimatedPhaseSeconds":
+				return ec.fieldContext_SpiritAnimalReading_estimatedPhaseSeconds(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SpiritAnimalReading", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_selectSpiritAnimalTotem(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_selectSpiritAnimalTotem,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().SelectSpiritAnimalTotem(ctx, fc.Args["totemName"].(string))
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_selectSpiritAnimalTotem(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_selectSpiritAnimalTotem_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_createPrivateTable(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -6777,6 +7585,98 @@ func (ec *executionContext) fieldContext_Query_myRoom(_ context.Context, field g
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_mySpiritAnimalReading(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_mySpiritAnimalReading,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().MySpiritAnimalReading(ctx)
+		},
+		nil,
+		ec.marshalOSpiritAnimalReading2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalReading,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_mySpiritAnimalReading(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_SpiritAnimalReading_id(ctx, field)
+			case "status":
+				return ec.fieldContext_SpiritAnimalReading_status(ctx, field)
+			case "draw":
+				return ec.fieldContext_SpiritAnimalReading_draw(ctx, field)
+			case "cardQuestions":
+				return ec.fieldContext_SpiritAnimalReading_cardQuestions(ctx, field)
+			case "personality":
+				return ec.fieldContext_SpiritAnimalReading_personality(ctx, field)
+			case "mascotOverview":
+				return ec.fieldContext_SpiritAnimalReading_mascotOverview(ctx, field)
+			case "totems":
+				return ec.fieldContext_SpiritAnimalReading_totems(ctx, field)
+			case "selectedTotemName":
+				return ec.fieldContext_SpiritAnimalReading_selectedTotemName(ctx, field)
+			case "errorMessage":
+				return ec.fieldContext_SpiritAnimalReading_errorMessage(ctx, field)
+			case "imagesMissing":
+				return ec.fieldContext_SpiritAnimalReading_imagesMissing(ctx, field)
+			case "phaseStartedAt":
+				return ec.fieldContext_SpiritAnimalReading_phaseStartedAt(ctx, field)
+			case "estimatedPhaseSeconds":
+				return ec.fieldContext_SpiritAnimalReading_estimatedPhaseSeconds(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SpiritAnimalReading", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_mySpiritAnimalJourneyEligibility(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_mySpiritAnimalJourneyEligibility,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().MySpiritAnimalJourneyEligibility(ctx)
+		},
+		nil,
+		ec.marshalNSpiritAnimalJourneyEligibility2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalJourneyEligibility,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_mySpiritAnimalJourneyEligibility(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "canBegin":
+				return ec.fieldContext_SpiritAnimalJourneyEligibility_canBegin(ctx, field)
+			case "cooldownEndsAt":
+				return ec.fieldContext_SpiritAnimalJourneyEligibility_cooldownEndsAt(ctx, field)
+			case "daysRemaining":
+				return ec.fieldContext_SpiritAnimalJourneyEligibility_daysRemaining(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SpiritAnimalJourneyEligibility", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_myTableSeat(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -7905,6 +8805,1505 @@ func (ec *executionContext) fieldContext_Session_players(_ context.Context, fiel
 				return ec.fieldContext_User_isAdmin(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalAnswer_id(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalAnswer) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalAnswer_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalAnswer_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalAnswer",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalAnswer_label(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalAnswer) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalAnswer_label,
+		func(ctx context.Context) (any, error) {
+			return obj.Label, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalAnswer_label(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalAnswer",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalCardQuestion_slot(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalCardQuestion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalCardQuestion_slot,
+		func(ctx context.Context) (any, error) {
+			return obj.Slot, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalCardQuestion_slot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalCardQuestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalCardQuestion_slotName(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalCardQuestion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalCardQuestion_slotName,
+		func(ctx context.Context) (any, error) {
+			return obj.SlotName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalCardQuestion_slotName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalCardQuestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalCardQuestion_card(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalCardQuestion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalCardQuestion_card,
+		func(ctx context.Context) (any, error) {
+			return obj.Card, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalCardQuestion_card(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalCardQuestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalCardQuestion_cardMeaningInGeneral(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalCardQuestion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalCardQuestion_cardMeaningInGeneral,
+		func(ctx context.Context) (any, error) {
+			return obj.CardMeaningInGeneral, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalCardQuestion_cardMeaningInGeneral(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalCardQuestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalCardQuestion_cardMeaningForSlot(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalCardQuestion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalCardQuestion_cardMeaningForSlot,
+		func(ctx context.Context) (any, error) {
+			return obj.CardMeaningForSlot, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalCardQuestion_cardMeaningForSlot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalCardQuestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalCardQuestion_question(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalCardQuestion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalCardQuestion_question,
+		func(ctx context.Context) (any, error) {
+			return obj.Question, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalCardQuestion_question(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalCardQuestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalCardQuestion_answers(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalCardQuestion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalCardQuestion_answers,
+		func(ctx context.Context) (any, error) {
+			return obj.Answers, nil
+		},
+		nil,
+		ec.marshalNSpiritAnimalAnswer2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalAnswerᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalCardQuestion_answers(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalCardQuestion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_SpiritAnimalAnswer_id(ctx, field)
+			case "label":
+				return ec.fieldContext_SpiritAnimalAnswer_label(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SpiritAnimalAnswer", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalJourneyEligibility_canBegin(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalJourneyEligibility) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalJourneyEligibility_canBegin,
+		func(ctx context.Context) (any, error) {
+			return obj.CanBegin, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalJourneyEligibility_canBegin(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalJourneyEligibility",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalJourneyEligibility_cooldownEndsAt(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalJourneyEligibility) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalJourneyEligibility_cooldownEndsAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CooldownEndsAt, nil
+		},
+		nil,
+		ec.marshalOTime2ᚖtimeᚐTime,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalJourneyEligibility_cooldownEndsAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalJourneyEligibility",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalJourneyEligibility_daysRemaining(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalJourneyEligibility) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalJourneyEligibility_daysRemaining,
+		func(ctx context.Context) (any, error) {
+			return obj.DaysRemaining, nil
+		},
+		nil,
+		ec.marshalOInt2ᚖint,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalJourneyEligibility_daysRemaining(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalJourneyEligibility",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalJourneySummary_compass(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalJourneySummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalJourneySummary_compass,
+		func(ctx context.Context) (any, error) {
+			return obj.Compass, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalJourneySummary_compass(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalJourneySummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalJourneySummary_coin(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalJourneySummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalJourneySummary_coin,
+		func(ctx context.Context) (any, error) {
+			return obj.Coin, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalJourneySummary_coin(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalJourneySummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalJourneySummary_storm(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalJourneySummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalJourneySummary_storm,
+		func(ctx context.Context) (any, error) {
+			return obj.Storm, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalJourneySummary_storm(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalJourneySummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalJourneySummary_campfire(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalJourneySummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalJourneySummary_campfire,
+		func(ctx context.Context) (any, error) {
+			return obj.Campfire, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalJourneySummary_campfire(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalJourneySummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalJourneySummary_beacon(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalJourneySummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalJourneySummary_beacon,
+		func(ctx context.Context) (any, error) {
+			return obj.Beacon, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalJourneySummary_beacon(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalJourneySummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalPersonality_overview(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalPersonality) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalPersonality_overview,
+		func(ctx context.Context) (any, error) {
+			return obj.Overview, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalPersonality_overview(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalPersonality",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalPersonality_journeySummary(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalPersonality) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalPersonality_journeySummary,
+		func(ctx context.Context) (any, error) {
+			return obj.JourneySummary, nil
+		},
+		nil,
+		ec.marshalNSpiritAnimalJourneySummary2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalJourneySummary,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalPersonality_journeySummary(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalPersonality",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "compass":
+				return ec.fieldContext_SpiritAnimalJourneySummary_compass(ctx, field)
+			case "coin":
+				return ec.fieldContext_SpiritAnimalJourneySummary_coin(ctx, field)
+			case "storm":
+				return ec.fieldContext_SpiritAnimalJourneySummary_storm(ctx, field)
+			case "campfire":
+				return ec.fieldContext_SpiritAnimalJourneySummary_campfire(ctx, field)
+			case "beacon":
+				return ec.fieldContext_SpiritAnimalJourneySummary_beacon(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SpiritAnimalJourneySummary", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalPersonality_coreThemes(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalPersonality) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalPersonality_coreThemes,
+		func(ctx context.Context) (any, error) {
+			return obj.CoreThemes, nil
+		},
+		nil,
+		ec.marshalNString2ᚕstringᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalPersonality_coreThemes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalPersonality",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalPersonality_strengths(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalPersonality) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalPersonality_strengths,
+		func(ctx context.Context) (any, error) {
+			return obj.Strengths, nil
+		},
+		nil,
+		ec.marshalNString2ᚕstringᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalPersonality_strengths(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalPersonality",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalPersonality_tensions(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalPersonality) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalPersonality_tensions,
+		func(ctx context.Context) (any, error) {
+			return obj.Tensions, nil
+		},
+		nil,
+		ec.marshalNString2ᚕstringᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalPersonality_tensions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalPersonality",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalPersonality_socialIdentity(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalPersonality) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalPersonality_socialIdentity,
+		func(ctx context.Context) (any, error) {
+			return obj.SocialIdentity, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalPersonality_socialIdentity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalPersonality",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_id(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_status(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_status,
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		ec.marshalNSpiritAnimalReadingStatus2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalReadingStatus,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type SpiritAnimalReadingStatus does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_draw(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_draw,
+		func(ctx context.Context) (any, error) {
+			return obj.Draw, nil
+		},
+		nil,
+		ec.marshalNInt2ᚕintᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_draw(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_cardQuestions(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_cardQuestions,
+		func(ctx context.Context) (any, error) {
+			return obj.CardQuestions, nil
+		},
+		nil,
+		ec.marshalOSpiritAnimalCardQuestion2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalCardQuestionᚄ,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_cardQuestions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "slot":
+				return ec.fieldContext_SpiritAnimalCardQuestion_slot(ctx, field)
+			case "slotName":
+				return ec.fieldContext_SpiritAnimalCardQuestion_slotName(ctx, field)
+			case "card":
+				return ec.fieldContext_SpiritAnimalCardQuestion_card(ctx, field)
+			case "cardMeaningInGeneral":
+				return ec.fieldContext_SpiritAnimalCardQuestion_cardMeaningInGeneral(ctx, field)
+			case "cardMeaningForSlot":
+				return ec.fieldContext_SpiritAnimalCardQuestion_cardMeaningForSlot(ctx, field)
+			case "question":
+				return ec.fieldContext_SpiritAnimalCardQuestion_question(ctx, field)
+			case "answers":
+				return ec.fieldContext_SpiritAnimalCardQuestion_answers(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SpiritAnimalCardQuestion", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_personality(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_personality,
+		func(ctx context.Context) (any, error) {
+			return obj.Personality, nil
+		},
+		nil,
+		ec.marshalOSpiritAnimalPersonality2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalPersonality,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_personality(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "overview":
+				return ec.fieldContext_SpiritAnimalPersonality_overview(ctx, field)
+			case "journeySummary":
+				return ec.fieldContext_SpiritAnimalPersonality_journeySummary(ctx, field)
+			case "coreThemes":
+				return ec.fieldContext_SpiritAnimalPersonality_coreThemes(ctx, field)
+			case "strengths":
+				return ec.fieldContext_SpiritAnimalPersonality_strengths(ctx, field)
+			case "tensions":
+				return ec.fieldContext_SpiritAnimalPersonality_tensions(ctx, field)
+			case "socialIdentity":
+				return ec.fieldContext_SpiritAnimalPersonality_socialIdentity(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SpiritAnimalPersonality", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_mascotOverview(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_mascotOverview,
+		func(ctx context.Context) (any, error) {
+			return obj.MascotOverview, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_mascotOverview(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_totems(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_totems,
+		func(ctx context.Context) (any, error) {
+			return obj.Totems, nil
+		},
+		nil,
+		ec.marshalOSpiritAnimalTotem2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalTotemᚄ,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_totems(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_SpiritAnimalTotem_name(ctx, field)
+			case "animal":
+				return ec.fieldContext_SpiritAnimalTotem_animal(ctx, field)
+			case "socialArchetype":
+				return ec.fieldContext_SpiritAnimalTotem_socialArchetype(ctx, field)
+			case "coreConcept":
+				return ec.fieldContext_SpiritAnimalTotem_coreConcept(ctx, field)
+			case "colorPalette":
+				return ec.fieldContext_SpiritAnimalTotem_colorPalette(ctx, field)
+			case "personalitySummary":
+				return ec.fieldContext_SpiritAnimalTotem_personalitySummary(ctx, field)
+			case "whyThisAnimal":
+				return ec.fieldContext_SpiritAnimalTotem_whyThisAnimal(ctx, field)
+			case "originStory":
+				return ec.fieldContext_SpiritAnimalTotem_originStory(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_SpiritAnimalTotem_imageUrl(ctx, field)
+			case "fitScore":
+				return ec.fieldContext_SpiritAnimalTotem_fitScore(ctx, field)
+			case "affinity":
+				return ec.fieldContext_SpiritAnimalTotem_affinity(ctx, field)
+			case "readingEmphasis":
+				return ec.fieldContext_SpiritAnimalTotem_readingEmphasis(ctx, field)
+			case "whyThisAnimalMakesSense":
+				return ec.fieldContext_SpiritAnimalTotem_whyThisAnimalMakesSense(ctx, field)
+			case "whyChooseThisAvatar":
+				return ec.fieldContext_SpiritAnimalTotem_whyChooseThisAvatar(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SpiritAnimalTotem", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_selectedTotemName(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_selectedTotemName,
+		func(ctx context.Context) (any, error) {
+			return obj.SelectedTotemName, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_selectedTotemName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_errorMessage(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_errorMessage,
+		func(ctx context.Context) (any, error) {
+			return obj.ErrorMessage, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_errorMessage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_imagesMissing(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_imagesMissing,
+		func(ctx context.Context) (any, error) {
+			return obj.ImagesMissing, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_imagesMissing(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_phaseStartedAt(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_phaseStartedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.PhaseStartedAt, nil
+		},
+		nil,
+		ec.marshalOTime2ᚖtimeᚐTime,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_phaseStartedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalReading_estimatedPhaseSeconds(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalReading) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalReading_estimatedPhaseSeconds,
+		func(ctx context.Context) (any, error) {
+			return obj.EstimatedPhaseSeconds, nil
+		},
+		nil,
+		ec.marshalOInt2ᚖint,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalReading_estimatedPhaseSeconds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalReading",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_name(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_name,
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_animal(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_animal,
+		func(ctx context.Context) (any, error) {
+			return obj.Animal, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_animal(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_socialArchetype(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_socialArchetype,
+		func(ctx context.Context) (any, error) {
+			return obj.SocialArchetype, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_socialArchetype(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_coreConcept(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_coreConcept,
+		func(ctx context.Context) (any, error) {
+			return obj.CoreConcept, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_coreConcept(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_colorPalette(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_colorPalette,
+		func(ctx context.Context) (any, error) {
+			return obj.ColorPalette, nil
+		},
+		nil,
+		ec.marshalNString2ᚕstringᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_colorPalette(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_personalitySummary(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_personalitySummary,
+		func(ctx context.Context) (any, error) {
+			return obj.PersonalitySummary, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_personalitySummary(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_whyThisAnimal(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_whyThisAnimal,
+		func(ctx context.Context) (any, error) {
+			return obj.WhyThisAnimal, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_whyThisAnimal(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_originStory(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_originStory,
+		func(ctx context.Context) (any, error) {
+			return obj.OriginStory, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_originStory(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_imageUrl(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_imageUrl,
+		func(ctx context.Context) (any, error) {
+			return obj.ImageURL, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_imageUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_fitScore(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_fitScore,
+		func(ctx context.Context) (any, error) {
+			return obj.FitScore, nil
+		},
+		nil,
+		ec.marshalOInt2ᚖint,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_fitScore(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_affinity(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_affinity,
+		func(ctx context.Context) (any, error) {
+			return obj.Affinity, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_affinity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_readingEmphasis(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_readingEmphasis,
+		func(ctx context.Context) (any, error) {
+			return obj.ReadingEmphasis, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_readingEmphasis(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_whyThisAnimalMakesSense(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_whyThisAnimalMakesSense,
+		func(ctx context.Context) (any, error) {
+			return obj.WhyThisAnimalMakesSense, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_whyThisAnimalMakesSense(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpiritAnimalTotem_whyChooseThisAvatar(ctx context.Context, field graphql.CollectedField, obj *model.SpiritAnimalTotem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SpiritAnimalTotem_whyChooseThisAvatar,
+		func(ctx context.Context) (any, error) {
+			return obj.WhyChooseThisAvatar, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_SpiritAnimalTotem_whyChooseThisAvatar(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpiritAnimalTotem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -11616,6 +14015,34 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "beginSpiritAnimalReading":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_beginSpiritAnimalReading(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "submitSpiritAnimalAnswers":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_submitSpiritAnimalAnswers(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "regenerateSpiritAnimalImages":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_regenerateSpiritAnimalImages(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "selectSpiritAnimalTotem":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_selectSpiritAnimalTotem(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "createPrivateTable":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createPrivateTable(ctx, field)
@@ -12143,6 +14570,47 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_myRoom(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "mySpiritAnimalReading":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_mySpiritAnimalReading(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "mySpiritAnimalJourneyEligibility":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_mySpiritAnimalJourneyEligibility(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -12762,6 +15230,441 @@ func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var spiritAnimalAnswerImplementors = []string{"SpiritAnimalAnswer"}
+
+func (ec *executionContext) _SpiritAnimalAnswer(ctx context.Context, sel ast.SelectionSet, obj *model.SpiritAnimalAnswer) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, spiritAnimalAnswerImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SpiritAnimalAnswer")
+		case "id":
+			out.Values[i] = ec._SpiritAnimalAnswer_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "label":
+			out.Values[i] = ec._SpiritAnimalAnswer_label(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var spiritAnimalCardQuestionImplementors = []string{"SpiritAnimalCardQuestion"}
+
+func (ec *executionContext) _SpiritAnimalCardQuestion(ctx context.Context, sel ast.SelectionSet, obj *model.SpiritAnimalCardQuestion) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, spiritAnimalCardQuestionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SpiritAnimalCardQuestion")
+		case "slot":
+			out.Values[i] = ec._SpiritAnimalCardQuestion_slot(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "slotName":
+			out.Values[i] = ec._SpiritAnimalCardQuestion_slotName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "card":
+			out.Values[i] = ec._SpiritAnimalCardQuestion_card(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cardMeaningInGeneral":
+			out.Values[i] = ec._SpiritAnimalCardQuestion_cardMeaningInGeneral(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cardMeaningForSlot":
+			out.Values[i] = ec._SpiritAnimalCardQuestion_cardMeaningForSlot(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "question":
+			out.Values[i] = ec._SpiritAnimalCardQuestion_question(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "answers":
+			out.Values[i] = ec._SpiritAnimalCardQuestion_answers(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var spiritAnimalJourneyEligibilityImplementors = []string{"SpiritAnimalJourneyEligibility"}
+
+func (ec *executionContext) _SpiritAnimalJourneyEligibility(ctx context.Context, sel ast.SelectionSet, obj *model.SpiritAnimalJourneyEligibility) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, spiritAnimalJourneyEligibilityImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SpiritAnimalJourneyEligibility")
+		case "canBegin":
+			out.Values[i] = ec._SpiritAnimalJourneyEligibility_canBegin(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cooldownEndsAt":
+			out.Values[i] = ec._SpiritAnimalJourneyEligibility_cooldownEndsAt(ctx, field, obj)
+		case "daysRemaining":
+			out.Values[i] = ec._SpiritAnimalJourneyEligibility_daysRemaining(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var spiritAnimalJourneySummaryImplementors = []string{"SpiritAnimalJourneySummary"}
+
+func (ec *executionContext) _SpiritAnimalJourneySummary(ctx context.Context, sel ast.SelectionSet, obj *model.SpiritAnimalJourneySummary) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, spiritAnimalJourneySummaryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SpiritAnimalJourneySummary")
+		case "compass":
+			out.Values[i] = ec._SpiritAnimalJourneySummary_compass(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "coin":
+			out.Values[i] = ec._SpiritAnimalJourneySummary_coin(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "storm":
+			out.Values[i] = ec._SpiritAnimalJourneySummary_storm(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "campfire":
+			out.Values[i] = ec._SpiritAnimalJourneySummary_campfire(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "beacon":
+			out.Values[i] = ec._SpiritAnimalJourneySummary_beacon(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var spiritAnimalPersonalityImplementors = []string{"SpiritAnimalPersonality"}
+
+func (ec *executionContext) _SpiritAnimalPersonality(ctx context.Context, sel ast.SelectionSet, obj *model.SpiritAnimalPersonality) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, spiritAnimalPersonalityImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SpiritAnimalPersonality")
+		case "overview":
+			out.Values[i] = ec._SpiritAnimalPersonality_overview(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "journeySummary":
+			out.Values[i] = ec._SpiritAnimalPersonality_journeySummary(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "coreThemes":
+			out.Values[i] = ec._SpiritAnimalPersonality_coreThemes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "strengths":
+			out.Values[i] = ec._SpiritAnimalPersonality_strengths(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "tensions":
+			out.Values[i] = ec._SpiritAnimalPersonality_tensions(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "socialIdentity":
+			out.Values[i] = ec._SpiritAnimalPersonality_socialIdentity(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var spiritAnimalReadingImplementors = []string{"SpiritAnimalReading"}
+
+func (ec *executionContext) _SpiritAnimalReading(ctx context.Context, sel ast.SelectionSet, obj *model.SpiritAnimalReading) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, spiritAnimalReadingImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SpiritAnimalReading")
+		case "id":
+			out.Values[i] = ec._SpiritAnimalReading_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._SpiritAnimalReading_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "draw":
+			out.Values[i] = ec._SpiritAnimalReading_draw(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cardQuestions":
+			out.Values[i] = ec._SpiritAnimalReading_cardQuestions(ctx, field, obj)
+		case "personality":
+			out.Values[i] = ec._SpiritAnimalReading_personality(ctx, field, obj)
+		case "mascotOverview":
+			out.Values[i] = ec._SpiritAnimalReading_mascotOverview(ctx, field, obj)
+		case "totems":
+			out.Values[i] = ec._SpiritAnimalReading_totems(ctx, field, obj)
+		case "selectedTotemName":
+			out.Values[i] = ec._SpiritAnimalReading_selectedTotemName(ctx, field, obj)
+		case "errorMessage":
+			out.Values[i] = ec._SpiritAnimalReading_errorMessage(ctx, field, obj)
+		case "imagesMissing":
+			out.Values[i] = ec._SpiritAnimalReading_imagesMissing(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "phaseStartedAt":
+			out.Values[i] = ec._SpiritAnimalReading_phaseStartedAt(ctx, field, obj)
+		case "estimatedPhaseSeconds":
+			out.Values[i] = ec._SpiritAnimalReading_estimatedPhaseSeconds(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var spiritAnimalTotemImplementors = []string{"SpiritAnimalTotem"}
+
+func (ec *executionContext) _SpiritAnimalTotem(ctx context.Context, sel ast.SelectionSet, obj *model.SpiritAnimalTotem) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, spiritAnimalTotemImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SpiritAnimalTotem")
+		case "name":
+			out.Values[i] = ec._SpiritAnimalTotem_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "animal":
+			out.Values[i] = ec._SpiritAnimalTotem_animal(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "socialArchetype":
+			out.Values[i] = ec._SpiritAnimalTotem_socialArchetype(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "coreConcept":
+			out.Values[i] = ec._SpiritAnimalTotem_coreConcept(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "colorPalette":
+			out.Values[i] = ec._SpiritAnimalTotem_colorPalette(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "personalitySummary":
+			out.Values[i] = ec._SpiritAnimalTotem_personalitySummary(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "whyThisAnimal":
+			out.Values[i] = ec._SpiritAnimalTotem_whyThisAnimal(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "originStory":
+			out.Values[i] = ec._SpiritAnimalTotem_originStory(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "imageUrl":
+			out.Values[i] = ec._SpiritAnimalTotem_imageUrl(ctx, field, obj)
+		case "fitScore":
+			out.Values[i] = ec._SpiritAnimalTotem_fitScore(ctx, field, obj)
+		case "affinity":
+			out.Values[i] = ec._SpiritAnimalTotem_affinity(ctx, field, obj)
+		case "readingEmphasis":
+			out.Values[i] = ec._SpiritAnimalTotem_readingEmphasis(ctx, field, obj)
+		case "whyThisAnimalMakesSense":
+			out.Values[i] = ec._SpiritAnimalTotem_whyThisAnimalMakesSense(ctx, field, obj)
+		case "whyChooseThisAvatar":
+			out.Values[i] = ec._SpiritAnimalTotem_whyChooseThisAvatar(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -14198,6 +17101,36 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 	return res
 }
 
+func (ec *executionContext) unmarshalNID2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNID2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNID2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNID2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v any) (int, error) {
 	res, err := graphql.UnmarshalInt(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -14212,6 +17145,36 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNInt2ᚕintᚄ(ctx context.Context, v any) ([]int, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]int, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNInt2int(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNInt2ᚕintᚄ(ctx context.Context, sel ast.SelectionSet, v []int) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNInt2int(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNJoinResult2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐJoinResult(ctx context.Context, sel ast.SelectionSet, v model.JoinResult) graphql.Marshaler {
@@ -14495,6 +17458,128 @@ func (ec *executionContext) marshalNSessionStatus2githubᚗcomᚋscruffyprodigy�
 	return v
 }
 
+func (ec *executionContext) marshalNSpiritAnimalAnswer2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalAnswerᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SpiritAnimalAnswer) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSpiritAnimalAnswer2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalAnswer(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNSpiritAnimalAnswer2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalAnswer(ctx context.Context, sel ast.SelectionSet, v *model.SpiritAnimalAnswer) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SpiritAnimalAnswer(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSpiritAnimalCardQuestion2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalCardQuestion(ctx context.Context, sel ast.SelectionSet, v *model.SpiritAnimalCardQuestion) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SpiritAnimalCardQuestion(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSpiritAnimalJourneyEligibility2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalJourneyEligibility(ctx context.Context, sel ast.SelectionSet, v model.SpiritAnimalJourneyEligibility) graphql.Marshaler {
+	return ec._SpiritAnimalJourneyEligibility(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSpiritAnimalJourneyEligibility2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalJourneyEligibility(ctx context.Context, sel ast.SelectionSet, v *model.SpiritAnimalJourneyEligibility) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SpiritAnimalJourneyEligibility(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSpiritAnimalJourneySummary2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalJourneySummary(ctx context.Context, sel ast.SelectionSet, v *model.SpiritAnimalJourneySummary) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SpiritAnimalJourneySummary(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSpiritAnimalReading2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalReading(ctx context.Context, sel ast.SelectionSet, v model.SpiritAnimalReading) graphql.Marshaler {
+	return ec._SpiritAnimalReading(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSpiritAnimalReading2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalReading(ctx context.Context, sel ast.SelectionSet, v *model.SpiritAnimalReading) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SpiritAnimalReading(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNSpiritAnimalReadingStatus2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalReadingStatus(ctx context.Context, v any) (model.SpiritAnimalReadingStatus, error) {
+	var res model.SpiritAnimalReadingStatus
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSpiritAnimalReadingStatus2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalReadingStatus(ctx context.Context, sel ast.SelectionSet, v model.SpiritAnimalReadingStatus) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNSpiritAnimalTotem2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalTotem(ctx context.Context, sel ast.SelectionSet, v *model.SpiritAnimalTotem) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SpiritAnimalTotem(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNStarterAvatar2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐStarterAvatarᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.StarterAvatar) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -14563,6 +17648,36 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNTable2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐTable(ctx context.Context, sel ast.SelectionSet, v model.Table) graphql.Marshaler {
@@ -15288,6 +18403,114 @@ func (ec *executionContext) marshalOSession2ᚖgithubᚗcomᚋscruffyprodigyᚋp
 		return graphql.Null
 	}
 	return ec._Session(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOSpiritAnimalCardQuestion2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalCardQuestionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SpiritAnimalCardQuestion) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSpiritAnimalCardQuestion2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalCardQuestion(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalOSpiritAnimalPersonality2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalPersonality(ctx context.Context, sel ast.SelectionSet, v *model.SpiritAnimalPersonality) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._SpiritAnimalPersonality(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOSpiritAnimalReading2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalReading(ctx context.Context, sel ast.SelectionSet, v *model.SpiritAnimalReading) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._SpiritAnimalReading(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOSpiritAnimalTotem2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalTotemᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SpiritAnimalTotem) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSpiritAnimalTotem2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐSpiritAnimalTotem(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v any) (*string, error) {
