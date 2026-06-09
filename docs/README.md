@@ -23,6 +23,7 @@ Documentation for **JoinQuest** — the platform that connects players to third-
 - **[Spirit animal avatars](spirit-animal-avatars.md)** — Planned: starter avatars + tarot-guided “Find my spirit animal” flow (TODO)
 - **[Game-minted launch URLs](game-minted-launch-urls.md)** — **HIGH PRIORITY TODO:** games return launch URLs on provision; Lobby attaches JWT
 - **[Developer self-service](developer-self-service.md)** — Planned: register games, integration dashboard, MCP, public release review
+- **[Player experience roadmap](player-experience-roadmap.md)** — Planned: queue wait estimates, bottleneck CTAs, richer game cards
 - **[Lobby ↔ Game Handoff](lobby-protocol-handoff.md)** — Provision, JWT, and integration rationale
 - **[Game Catalog Architecture](game-catalog-architecture.md)** — Modes, queues, manifest sync
 - **[Seat templates & LFG](seat-templates-and-matchmaking.md)** — Seat map contract and matchmaking spec

@@ -2,6 +2,7 @@
 
 **Status:** Planned  
 **Depends on:** [game-minted launch URLs](./game-minted-launch-urls.md) (remove catalog `playUrl`; game returns launch URLs on provision)  
+**Likely before Phase A:** [player experience roadmap](./player-experience-roadmap.md) — queue estimates, bottleneck CTAs, catalog icons/tags (overlaps dev registration metadata)  
 **Related:** [game-catalog-architecture.md](./game-catalog-architecture.md) · [lobby-protocol-handoff.md](./lobby-protocol-handoff.md) · [end-to-end-partner-checklist.md](./end-to-end-partner-checklist.md)
 
 Today, adding a game means backfilling the database or calling admin-only `registerGame`. That works for us, but it blocks the goal of **any web developer** plugging in their game. This spec is the v1 path from homepage curiosity → registered game → working integration → friends testing → public release.
@@ -26,7 +27,7 @@ Today, adding a game means backfilling the database or calling admin-only `regis
 | API URL | Public HTTPS only — **no `localhost`** | Optional tunnel/CLI helper (v2+) |
 | Play URL | From game provision response ([spec](./game-minted-launch-urls.md)) | — |
 | Player counts | From manifest | — |
-| Icons / tags | Nice to have before or during this work | Required for public release? TBD |
+| Icons / tags | See [player experience roadmap](./player-experience-roadmap.md) — likely before or with Phase A | Required for public release? TBD |
 | PDF guide | Hold or generate from same source as agent doc | Phase C |
 
 **Why no localhost:** Lobby servers must reach the game API to sync manifests and provision matches. A URL only you can hit from your laptop can't work in production. Devs should use a staging deploy, ngrok, or similar for early integration — we'll say that plainly in copy and errors.
