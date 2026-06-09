@@ -4,6 +4,7 @@ import {
   LEAVE_TABLE_SEAT,
   STOP_LOOKING,
   bannerIntentPlayingHint,
+  bannerIntentLaunchPendingHint,
   bannerIntentWaitingHint,
   bannerTableBackfillHint,
   bannerTableSeatHint,
@@ -50,7 +51,9 @@ export default function IntentBanner({ activeIntent, activeTableSeat, busy, onLe
       <aside className="intent-banner" role="region" aria-live="polite" aria-label="Your intent">
         <div className="intent-banner__copy">
           <p className="intent-banner__title">{title}</p>
-          <p className="intent-banner__hint">{bannerIntentPlayingHint()}</p>
+          <p className="intent-banner__hint">
+            {launchUrl ? bannerIntentPlayingHint() : bannerIntentLaunchPendingHint()}
+          </p>
         </div>
         <div className="intent-banner__actions">
           {launchUrl ? (

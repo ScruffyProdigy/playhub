@@ -60,6 +60,10 @@ export function bannerIntentPlayingHint() {
   return 'Launch when you are ready — your seat is reserved.'
 }
 
+export function bannerIntentLaunchPendingHint() {
+  return 'Preparing your launch link…'
+}
+
 export function bannerIntentWaitingHint() {
   return 'We will notify you here when your group is ready.'
 }

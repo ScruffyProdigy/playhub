@@ -257,15 +257,11 @@ func parseBannedLobbyUserIDs(ids []string) []uuid.UUID {
 	return out
 }
 
-// signLaunchURL ensures the game has the roster (idempotent provision), then mints a seat JWT.
-// Called from finalizeMatchedSession and from queue status/subscription refresh paths so
-// a launch link is never issued before the game has the match.
+// signLaunchURL pushes the roster to the game when possible, then mints a seat JWT.
+// Provision errors are logged and do not block minting so refresh can recover a link
+// after a match was committed but handoff failed mid-flight.
 func (r *Resolver) signLaunchURL(ctx context.Context, game *store.Game, sessionID, userID uuid.UUID) (string, error) {
 	st, err := r.requireStore()
-	if err != nil {
-		return "", err
-	}
-	authService, err := r.requireAuth()
 	if err != nil {
 		return "", err
 	}
@@ -278,9 +274,21 @@ func (r *Resolver) signLaunchURL(ctx context.Context, game *store.Game, sessionI
 		return "", fmt.Errorf("session has no seated participants")
 	}
 	if err := r.provisionParticipantsOnGame(ctx, game, sessionID, participants); err != nil {
+		log.Printf("handoff: provision session %s before launch url: %v", sessionID, err)
+	}
+	return r.mintLaunchURLForUser(ctx, game, sessionID, userID, participants)
+}
+
+func (r *Resolver) mintLaunchURLForUser(
+	ctx context.Context,
+	game *store.Game,
+	sessionID, userID uuid.UUID,
+	participants []store.SessionParticipant,
+) (string, error) {
+	authService, err := r.requireAuth()
+	if err != nil {
 		return "", err
 	}
-
 	playURL := gamePlayURL(game, r.GameClientBaseURL)
 	if playURL == "" {
 		return "", fmt.Errorf("game play URL is not configured")
@@ -289,7 +297,6 @@ func (r *Resolver) signLaunchURL(ctx context.Context, game *store.Game, sessionI
 	if audience == "" {
 		return "", fmt.Errorf("game API base URL is not configured")
 	}
-
 	for _, p := range participants {
 		if p.UserID == userID {
 			return launchURLForSeat(authService.Signer(), playURL, audience, sessionID.String(), userID, p.SeatKey, p.DisplayName)

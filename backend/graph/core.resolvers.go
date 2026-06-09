@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/google/uuid"
@@ -404,7 +405,10 @@ func (r *queryResolver) MyActiveIntent(ctx context.Context) (*model.ActiveIntent
 		if gErr != nil {
 			return nil, gErr
 		}
-		if launchURL, uErr := r.signLaunchURL(ctx, game, *active.SessionID, userID); uErr == nil && launchURL != "" {
+		launchURL, uErr := r.signLaunchURL(ctx, game, *active.SessionID, userID)
+		if uErr != nil {
+			log.Printf("myActiveIntent: launch url for session %s: %v", *active.SessionID, uErr)
+		} else if launchURL != "" {
 			resp.JoinURL = &launchURL
 		}
 	}

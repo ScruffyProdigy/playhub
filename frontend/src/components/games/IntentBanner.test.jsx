@@ -224,6 +224,7 @@ describe('IntentBanner', () => {
       />,
     )
     expect(screen.getByText(/Playing Word Hunt/)).toBeInTheDocument()
+    expect(screen.getByText(/Preparing your launch link/)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Launch game' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Leave game' })).toBeInTheDocument()
   })

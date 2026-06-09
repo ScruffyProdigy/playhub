@@ -48,7 +48,10 @@ func (r *mutationResolver) joinQueueInternal(ctx context.Context, modeQueueID uu
 		}
 		launchURLs, err = r.finalizeMatchedSession(ctx, game, *result.SessionID, result.NotifyUserIDs)
 		if err != nil {
-			return nil, err
+			if rbErr := st.RollbackMatchedSession(ctx, *result.SessionID, nil); rbErr != nil {
+				return nil, fmt.Errorf("match setup failed: %w (rollback: %v)", err, rbErr)
+			}
+			return nil, fmt.Errorf("match setup failed: %w", err)
 		}
 	}
 
