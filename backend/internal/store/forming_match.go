@@ -121,7 +121,7 @@ func seedFormingAssignmentsFromSeatsTx(ctx context.Context, tx *sql.Tx, formingM
 				forming_match_id, seat_key, queue_path, affinity_key, source
 			) VALUES ($1, $2, $3, $4, 'solo')
 			ON CONFLICT (forming_match_id, seat_key) DO NOTHING
-		`, formingMatchID, seat.SeatKey, nullQueuePathColumn(queuePath), affinity); err != nil {
+		`, formingMatchID, seat.SeatKey, queuePathColumnValue(queuePath), affinity); err != nil {
 			return err
 		}
 	}

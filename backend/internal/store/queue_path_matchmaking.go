@@ -97,6 +97,11 @@ func nullQueuePathColumn(value string) any {
 	return trimmed
 }
 
+// queuePathColumnValue returns a value safe for NOT NULL queue_path columns (fifo uses "").
+func queuePathColumnValue(value string) string {
+	return strings.TrimSpace(value)
+}
+
 func nullUUIDColumn(value *uuid.UUID) any {
 	if value == nil {
 		return nil

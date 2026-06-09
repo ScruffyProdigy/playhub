@@ -39,8 +39,6 @@ func TestMatchSeatsFromTemplateWordHunt(t *testing.T) {
 	}
 }
 
-func strPtr(s string) *string { return &s }
-
 func TestValidateJoinQueuePath(t *testing.T) {
 	dps := "DPS"
 	seats := []GameModeSeat{{SeatKey: "1"}}
@@ -59,3 +57,17 @@ func TestValidateJoinQueuePath(t *testing.T) {
 		t.Fatalf("valid path: %v", err)
 	}
 }
+
+func TestQueuePathColumnValueUsesEmptyStringForFifo(t *testing.T) {
+	if got := queuePathColumnValue(""); got != "" {
+		t.Fatalf("queuePathColumnValue(\"\") = %q, want empty string", got)
+	}
+	if got := queuePathColumnValue("  DPS  "); got != "DPS" {
+		t.Fatalf("queuePathColumnValue trimmed = %q, want DPS", got)
+	}
+	if nullQueuePathColumn("") != nil {
+		t.Fatal("nullQueuePathColumn(\"\") should stay nil for nullable game_queues.queue_path")
+	}
+}
+
+func strPtr(s string) *string { return &s }
