@@ -32,6 +32,8 @@ JoinQuest is **shared infrastructure for indie and small-studio web games**:
 
 **Integrate with us** and players can discover your title, queue up, get matched into seats, and land on your game with a signed identity — without you rebuilding a lobby product first.
 
+**Open to developers:** Anyone can register a game and integrate on their own timeline. **Public listing** in the main catalog is reviewed so players see quality titles — register freely, ship privately, go public when you're ready. See [developer self-service](./developer-self-service.md).
+
 You **keep independence**: your game still lives on **your** domain and codebase. You can add your own login, billing, or analytics anytime. Most teams won’t need to — the point is to do the boring parts **once**, well, for everyone.
 
 ---
@@ -60,7 +62,7 @@ Wire details: [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md). Layout
 | Reader | Start here |
 |--------|------------|
 | **Visitor / potential game partner** | This doc → [`README.md`](../README.md) |
-| **Game developer integrating** | [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md), [`game-catalog-architecture.md`](./game-catalog-architecture.md) |
+| **Game developer integrating** | [`developer-self-service.md`](./developer-self-service.md) (register & ship) · [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md) · [`game-catalog-architecture.md`](./game-catalog-architecture.md) |
 | **JoinQuest contributor** | [`development.md`](./development.md), [`architecture.md`](./architecture.md), [`contributing.md`](./contributing.md) |
 | **Agent / implementer** | [`seat-templates-and-matchmaking.md`](./seat-templates-and-matchmaking.md), [`game-catalog-architecture.md`](./game-catalog-architecture.md) |
 
@@ -71,7 +73,8 @@ Wire details: [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md). Layout
 1. **Games own fun; we own plumbing** — Matchmaking, identity across origins, and catalog UX stay on our side unless a title explicitly opts out.
 2. **Contract clarity** — Games receive a **final seat map** (`seatKey` + user id), not queue algorithms. Less to misunderstand, easier to test.
 3. **Fail closed, recover gracefully** — Bad manifests don’t list; banned users trigger re-matchmake, not silent broken matches.
-4. **Same platform, many games** — One account, one inventory layer, many `play_url`s — the “arcade” experience for players and a distribution channel for authors.
+4. **Same platform, many games** — One account, one inventory layer, many games on many URLs — the “arcade” experience for players and a distribution channel for authors.
+5. **Register freely, list when ready** — Developers integrate without gatekeeping; the public catalog is curated through review, not through who you know.
 
 ---
 
