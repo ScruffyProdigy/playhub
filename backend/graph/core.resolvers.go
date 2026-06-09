@@ -370,10 +370,12 @@ func (r *queryResolver) MyActiveIntent(ctx context.Context) (*model.ActiveIntent
 	if active.ModeQueueID != uuid.Nil {
 		queueID := active.ModeQueueID.String()
 		resp.QueueID = &queueID
-	}
-	if active.ModeName != "" {
-		modeName := active.ModeName
-		resp.ModeName = &modeName
+		if modeQueue, mqErr := st.GetModeQueueByID(ctx, active.ModeQueueID); mqErr == nil {
+			if mode, mErr := st.GetGameModeByID(ctx, modeQueue.ModeID); mErr == nil {
+				modeName := mode.DisplayName
+				resp.ModeName = &modeName
+			}
+		}
 	}
 	if active.Waiting {
 		resp.Status = model.QueueStatusWaiting

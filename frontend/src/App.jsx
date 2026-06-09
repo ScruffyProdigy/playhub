@@ -19,7 +19,7 @@ import './App.css'
 
 function CatalogPage() {
   const { user, loading: authLoading } = useAuth()
-  const { activeIntent, activeTableSeat, busy, refresh, handleLeave } = useActiveIntent()
+  const { activeIntent, activeTableSeat, busy, refresh, notifyQueueJoined, handleLeave } = useActiveIntent()
 
   return (
     <main className="app-shell app-shell--catalog">
@@ -43,6 +43,7 @@ function CatalogPage() {
         activeIntent={activeIntent}
         activeTableSeat={activeTableSeat}
         onQueueChange={refresh}
+        onQueueJoined={notifyQueueJoined}
         onTableChange={refresh}
       />
     </main>

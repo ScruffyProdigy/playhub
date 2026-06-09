@@ -51,7 +51,7 @@ func (s *Store) GetUserActiveIntent(ctx context.Context, userID uuid.UUID) (*Use
 		return nil, err
 	} else if waiting != nil {
 		entry, err := s.GetWaitingModeQueueEntry(ctx, waiting.ModeQueueID, userID)
-		if err != nil {
+		if err != nil && !errors.Is(err, ErrNotFound) {
 			return nil, err
 		}
 		count, err := s.CountWaitingInModeQueue(ctx, waiting.ModeQueueID)
@@ -62,14 +62,17 @@ func (s *Store) GetUserActiveIntent(ctx context.Context, userID uuid.UUID) (*Use
 		if err != nil {
 			return nil, err
 		}
-		return &UserActiveIntent{
+		out := &UserActiveIntent{
 			GameID:      waiting.GameID,
 			GameName:    game.Name,
 			ModeQueueID: waiting.ModeQueueID,
 			Waiting:     true,
 			QueuedCount: count,
-			QueuePath:   entry.QueuePath,
-		}, nil
+		}
+		if entry != nil {
+			out.QueuePath = entry.QueuePath
+		}
+		return out, nil
 	}
 
 	session, modeQueueID, err := s.getUserMatchedModeQueueAny(ctx, userID)

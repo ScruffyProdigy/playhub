@@ -12,6 +12,7 @@ function ModeRow({
   activeIntent,
   activeTableSeat,
   onQueueChange,
+  onQueueJoined,
   onTableChange,
 }) {
   const { refresh: refreshRoom, openRoom } = useActiveRoom()
@@ -39,7 +40,21 @@ function ModeRow({
       setTableError('Leave your table seat before looking for a group.')
       return
     }
-    await queue.handleJoin(queuePath)
+    const pathLabel =
+      joinOptions?.kind === 'composition'
+        ? joinOptions.paths
+            .map((path) => (typeof path === 'string' ? { queuePath: path, displayName: path } : path))
+            .find((entry) => entry.queuePath === queuePath)?.displayName
+        : null
+    const result = await queue.handleJoin(queuePath)
+    if (result) {
+      onQueueJoined?.(defaultQueue?.id, result, {
+        gameId: game.id,
+        gameName: game.name,
+        modeName: mode.displayName,
+        queuePathDisplayName: pathLabel ?? null,
+      })
+    }
     await onQueueChange?.()
   }
 
@@ -92,6 +107,16 @@ function ModeRow({
             {tableError}
           </p>
         ) : null}
+        {queue.error ? (
+          <p className="status-message status-message-error" role="status">
+            {queue.error}
+          </p>
+        ) : null}
+        {queue.notice ? (
+          <p className="status-message" role="status">
+            {queue.notice}
+          </p>
+        ) : null}
         {seatedHere ? (
           <p className="game-list-meta" role="status">
             You are seated at a private table for this mode.
@@ -124,7 +149,7 @@ function ModeRow({
   )
 }
 
-export default function GameListItem({ game, activeIntent, activeTableSeat, onQueueChange, onTableChange }) {
+export default function GameListItem({ game, activeIntent, activeTableSeat, onQueueChange, onQueueJoined, onTableChange }) {
   const modes = (game.modes ?? []).filter((mode) => mode.status === 'active')
 
   return (
@@ -148,6 +173,7 @@ export default function GameListItem({ game, activeIntent, activeTableSeat, onQu
               activeIntent={activeIntent}
               activeTableSeat={activeTableSeat}
               onQueueChange={onQueueChange}
+              onQueueJoined={onQueueJoined}
               onTableChange={onTableChange}
             />
           ))}

@@ -19,6 +19,10 @@ function applyJoinResponse(result, handlers) {
       handlers,
     )
   }
+  if (result?.sessionId) {
+    applyQueueUpdate({ status: 'MATCHED', queuedCount: 0 }, handlers)
+    return true
+  }
   if (result?.queued) {
     return applyQueueUpdate(
       { status: 'WAITING', queuedCount: result.queuedCount ?? 1 },
@@ -29,11 +33,13 @@ function applyJoinResponse(result, handlers) {
 }
 
 function applyQueueUpdate(update, { setQueueState, setJoinUrl, setQueuedCount, setError, setSelectedQueuePath }) {
-  if (update.status === 'MATCHED' && update.joinUrl) {
+  if (update.status === 'MATCHED') {
     setQueueState('matched')
-    setJoinUrl(update.joinUrl)
+    if (update.joinUrl) {
+      setJoinUrl(update.joinUrl)
+    }
     setError('')
-    return true
+    return Boolean(update.joinUrl)
   }
   if (update.status === 'WAITING') {
     setQueueState('waiting')
@@ -239,7 +245,7 @@ export function useGameQueue(queueId, { skipSubscription = false } = {}) {
   async function handleJoin(queuePath) {
     if (!queueId) {
       setError('This game is not available for group matchmaking yet')
-      return
+      return null
     }
     setBusy(true)
     setError('')
@@ -259,8 +265,10 @@ export function useGameQueue(queueId, { skipSubscription = false } = {}) {
         setNotice,
         setSelectedQueuePath,
       })
+      return result
     } catch (err) {
       setError(err.message || 'Could not start looking for a group')
+      return null
     } finally {
       setBusy(false)
     }

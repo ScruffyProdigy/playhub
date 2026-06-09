@@ -23,7 +23,11 @@ func (r *activeIntentResolver) FormingGaps(ctx context.Context, obj *model.Activ
 	if err != nil {
 		return nil, err
 	}
-	return r.formingGapsForModeQueue(ctx, modeQueueID)
+	gaps, err := r.formingGapsForModeQueue(ctx, modeQueueID)
+	if err != nil {
+		return []*model.QueuePathGap{}, nil
+	}
+	return gaps, nil
 }
 
 // ActiveSessions is the resolver for the activeSessions field.

@@ -56,10 +56,15 @@ export function useActiveIntent() {
     }
     setLoading(true)
     try {
-      const [result, tableSeat] = await Promise.all([fetchMyActiveIntent(), fetchMyTableSeat()])
-      setActiveIntent(await enrichMatchedJoinUrl(result, tableSeat))
-    } catch {
-      setActiveIntent(null)
+      const [intentResult, tableResult] = await Promise.allSettled([
+        fetchMyActiveIntent(),
+        fetchMyTableSeat(),
+      ])
+      if (intentResult.status === 'rejected') {
+        return
+      }
+      const tableSeat = tableResult.status === 'fulfilled' ? tableResult.value : null
+      setActiveIntent(await enrichMatchedJoinUrl(intentResult.value, tableSeat))
     } finally {
       setLoading(false)
     }
@@ -208,12 +213,43 @@ export function useActiveIntent() {
     await leaveTableSeat()
   }, [activeIntent?.status, activeTableSeat?.status, leaveQueueIntent, leaveTableSeat, refresh])
 
+  const notifyQueueJoined = useCallback((queueId, result, { gameId, gameName, modeName, queuePathDisplayName } = {}) => {
+    if (!result) {
+      return
+    }
+    if (result.queued) {
+      setActiveIntent({
+        queueId,
+        gameId,
+        gameName,
+        modeName,
+        status: 'WAITING',
+        queuedCount: result.queuedCount ?? 1,
+        queuePath: result.queuePath ?? null,
+        queuePathDisplayName: queuePathDisplayName ?? null,
+        formingGaps: [],
+      })
+      return
+    }
+    if (result.sessionId) {
+      setActiveIntent({
+        queueId,
+        gameId,
+        gameName,
+        modeName,
+        status: 'MATCHED',
+        joinUrl: result.joinUrl ?? null,
+      })
+    }
+  }, [])
+
   return {
     activeIntent,
     activeTableSeat,
     loading: loading || tableLoading,
     busy: busy || tableBusy,
     refresh,
+    notifyQueueJoined,
     handleLeave,
   }
 }
