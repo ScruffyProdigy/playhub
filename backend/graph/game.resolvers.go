@@ -14,6 +14,18 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
+// FormingGaps is the resolver for the formingGaps field.
+func (r *activeIntentResolver) FormingGaps(ctx context.Context, obj *model.ActiveIntent) ([]*model.QueuePathGap, error) {
+	if obj == nil || obj.Status != model.QueueStatusWaiting || obj.QueueID == nil {
+		return []*model.QueuePathGap{}, nil
+	}
+	modeQueueID, err := parseUUID(*obj.QueueID, "queue id")
+	if err != nil {
+		return nil, err
+	}
+	return r.formingGapsForModeQueue(ctx, modeQueueID)
+}
+
 // ActiveSessions is the resolver for the activeSessions field.
 func (r *gameResolver) ActiveSessions(ctx context.Context, obj *model.Game, limit *int) ([]*model.Session, error) {
 	st, err := r.requireStore()
@@ -91,11 +103,15 @@ func (r *sessionResolver) Players(ctx context.Context, obj *model.Session) ([]*m
 	return ToGraphQLUsers(users), nil
 }
 
+// ActiveIntent returns generated.ActiveIntentResolver implementation.
+func (r *Resolver) ActiveIntent() generated.ActiveIntentResolver { return &activeIntentResolver{r} }
+
 // Game returns generated.GameResolver implementation.
 func (r *Resolver) Game() generated.GameResolver { return &gameResolver{r} }
 
 // Session returns generated.SessionResolver implementation.
 func (r *Resolver) Session() generated.SessionResolver { return &sessionResolver{r} }
 
+type activeIntentResolver struct{ *Resolver }
 type gameResolver struct{ *Resolver }
 type sessionResolver struct{ *Resolver }

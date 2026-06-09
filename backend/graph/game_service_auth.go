@@ -12,7 +12,7 @@ func requireGameServiceAuth(ctx context.Context) error {
 	if auth.GameServiceFromContext(ctx) {
 		return nil
 	}
-	if auth.GameServiceTokenFromEnv() == "" {
+	if !auth.GameServiceAuthEnabled() {
 		return nil
 	}
 	return fmt.Errorf("game service authentication required")

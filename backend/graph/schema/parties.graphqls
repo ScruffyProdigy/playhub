@@ -1,0 +1,10 @@
+input PartyMemberInput {
+  userId: ID!
+  queuePath: String!
+}
+
+input PartyNodeInput {
+  role: String
+  children: [PartyNodeInput!]
+  members: [PartyMemberInput!]
+}

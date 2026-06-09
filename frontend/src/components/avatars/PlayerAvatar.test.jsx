@@ -20,4 +20,12 @@ describe('PlayerAvatar', () => {
     const img = container.querySelector('img.player-avatar')
     expect(img?.getAttribute('src')).toBe('/avatars/storm.png')
   })
+
+  it('wraps the avatar in a gold ring when ring is king', () => {
+    const { container } = render(
+      <PlayerAvatar user={{ displayName: 'Pat', avatarUrl: '/avatars/compass.png' }} ring="king" />,
+    )
+    expect(container.querySelector('.player-avatar-frame--king')).toBeTruthy()
+    expect(container.querySelector('.player-avatar-frame--king img.player-avatar')).toBeTruthy()
+  })
 })

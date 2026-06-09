@@ -1,5 +1,8 @@
 import { graphqlRequest } from './graphql'
 import { USER_AVATAR_FIELDS } from './avatars'
+import { createClient } from 'graphql-ws'
+import { getGraphQLWsUrl } from './env'
+import { prefetchSubscriptionAuth } from './queue'
 
 export { USER_AVATAR_FIELDS }
 
@@ -15,6 +18,11 @@ export const TABLE_FIELDS = `
   mode {
     id
     displayName
+    queuePaths {
+      queuePath
+      minPlayers
+      maxPlayers
+    }
   }
   king {
     ${USER_AVATAR_FIELDS}
@@ -41,6 +49,13 @@ export const TABLE_FIELDS = `
     visible
     enabled
   }
+  backfillActive
+  formingGaps {
+    queuePath
+    displayName
+    assigned
+    needed
+  }
 `
 
 export const MY_TABLE_SEAT_QUERY = `
@@ -54,6 +69,15 @@ export const MY_TABLE_SEAT_QUERY = `
       modeName
       seatKey
       seatDisplayName
+      status
+      joinUrl
+      backfillActive
+      formingGaps {
+        queuePath
+        displayName
+        assigned
+        needed
+      }
     }
   }
 `
@@ -96,6 +120,17 @@ const START_TABLE = `
   }
 `
 
+const START_TABLE_BACKFILL = `
+  mutation StartTableBackfill($tableId: ID!, $queueId: ID!) {
+    startTableBackfill(tableId: $tableId, queueId: $queueId) {
+      queued
+      sessionId
+      joinUrl
+      queuedCount
+    }
+  }
+`
+
 export async function fetchMyTableSeat() {
   const data = await graphqlRequest(MY_TABLE_SEAT_QUERY)
   return data.myTableSeat ?? null
@@ -124,6 +159,101 @@ export async function discardTable(tableId) {
 export async function startTable(tableId) {
   const data = await graphqlRequest(START_TABLE, { tableId })
   return data.startTable
+}
+
+export async function startTableBackfill(tableId, queueId) {
+  const data = await graphqlRequest(START_TABLE_BACKFILL, { tableId, queueId })
+  return data.startTableBackfill
+}
+
+const MY_TABLE_SEAT_UPDATED_SUBSCRIPTION = `
+  subscription MyTableSeatUpdated {
+    myTableSeatUpdated {
+      tableId
+      roomId
+      inviteCode
+      gameId
+      gameName
+      modeName
+      seatKey
+      seatDisplayName
+      status
+      joinUrl
+      backfillActive
+      formingGaps {
+        queuePath
+        displayName
+        assigned
+        needed
+      }
+    }
+  }
+`
+
+let wsClient = null
+
+function getSubscriptionConnectionParams() {
+  return async () => {
+    const header = await prefetchSubscriptionAuth()
+    if (!header) {
+      throw new Error('Sign in required for live updates')
+    }
+    return { Authorization: header }
+  }
+}
+
+function getWsClient() {
+  if (!wsClient) {
+    wsClient = createClient({
+      url: getGraphQLWsUrl(),
+      connectionParams: getSubscriptionConnectionParams(),
+      retryAttempts: 10,
+      retryWait: async (retries) => Math.min(500 * retries, 5000),
+      shouldRetry: () => true,
+      lazy: false,
+    })
+  }
+  return wsClient
+}
+
+function formatSubscriptionError(err) {
+  if (!err) {
+    return 'Live updates unavailable'
+  }
+  if (typeof err === 'string') {
+    return err
+  }
+  if (Array.isArray(err)) {
+    return err[0]?.message || 'Live updates unavailable'
+  }
+  if (err.message) {
+    return err.message
+  }
+  return 'Live updates unavailable'
+}
+
+export async function subscribeToMyTableSeat({ onUpdate, onError } = {}) {
+  await prefetchSubscriptionAuth()
+  const client = getWsClient()
+
+  return client.subscribe(
+    {
+      query: MY_TABLE_SEAT_UPDATED_SUBSCRIPTION,
+    },
+    {
+      next: (payload) => {
+        if (payload?.errors?.length) {
+          onError?.(formatSubscriptionError(payload.errors))
+          return
+        }
+        if (payload?.data?.myTableSeatUpdated) {
+          onUpdate?.(payload.data.myTableSeatUpdated)
+        }
+      },
+      error: (err) => onError?.(formatSubscriptionError(err)),
+      complete: () => {},
+    },
+  )
 }
 
 /** Group seat slots by team prefix for column layout (e.g. Team-1 vs Team-2). */
@@ -307,6 +437,64 @@ export function mySeatDisplayName(table, userId) {
   }
   return sectionTitle || slot.displayName?.trim() || seatKey
 }
+
+/**
+ * Seat groups that share one Sit button and fill in template order:
+ * shared queue path (e.g. Guessers) or fifo seats with no role choice (e.g. 1v1 duel).
+ */
+export function isPooledRoleGroup(slots) {
+  if (!slots?.length) {
+    return false
+  }
+  const path = slots[0]?.queuePath?.trim()
+  if (path) {
+    return slots.every((slot) => slot.queuePath?.trim() === path)
+  }
+  return slots.length > 1 && slots.every((slot) => !(slot.queuePath?.trim()))
+}
+
+export function countSeatedInGroup(slots) {
+  return (slots ?? []).filter((slot) => slot.user).length
+}
+
+export function firstOpenSeatKey(slots) {
+  return (slots ?? []).find((slot) => !slot.user)?.seatKey ?? ''
+}
+
+export function queuePathMeta(mode, queuePath) {
+  if (!queuePath) {
+    return null
+  }
+  return (mode?.queuePaths ?? []).find((path) => path.queuePath === queuePath) ?? null
+}
+
+export function formatGroupSeatCaption(seatedCount, meta) {
+  if (!meta) {
+    return `${seatedCount} seated`
+  }
+  const max = meta.maxPlayers
+  const min = meta.minPlayers
+  let text = `${seatedCount}/${max} seated`
+  if (min > 0 && seatedCount < min) {
+    text += ` · need ${min} to start`
+  } else if (min > 0 && seatedCount >= min) {
+    text += ` · ready`
+  }
+  return text
+}
+
+/** Remove tables that finished forming (started/discarded) from room snapshots. */
+export function tableShouldLeaveRoomList(table) {
+  if (!table) {
+    return false
+  }
+  const enriched = enrichTableSeats(table)
+  const seatedFromSlots = (enriched.seatSlots ?? []).filter((slot) => slot.user).length
+  const seated = enriched.seats?.length ?? seatedFromSlots
+  return seated === 0 && !enriched.canStart
+}
+
+export const TABLE_UPDATED_EVENT = 'lobby:table-updated'
 
 export function isKing(table, userId) {
   return Boolean(table?.king?.id && userId && table.king.id === userId)

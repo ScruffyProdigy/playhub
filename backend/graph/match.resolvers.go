@@ -75,11 +75,17 @@ func (r *mutationResolver) ReportMatchResult(ctx context.Context, matchID string
 		return false, err
 	}
 
+	table, _ := st.GetRoomTableBySessionID(ctx, sessionID)
+
 	if err := st.CompleteSession(ctx, sessionID, time.Now()); err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			return true, nil
 		}
 		return false, err
+	}
+
+	if table != nil {
+		_ = r.publishTableUpdated(ctx, table.RoomID, table.ID)
 	}
 
 	_ = status
@@ -108,7 +114,7 @@ func (r *queryResolver) ReturnDestination(ctx context.Context, matchID *string) 
 			return nil, err
 		}
 	} else {
-		view, vErr := st.GetUserActiveQueue(ctx, userID)
+		view, vErr := st.GetUserActiveIntent(ctx, userID)
 		if vErr != nil {
 			return nil, vErr
 		}

@@ -11,8 +11,8 @@ type Query {
   goods(gameId: ID): [DigitalGood!]!   # list goods globally or by game
   myInventory(gameId: ID): [Entitlement!]!
   myQueueStatus(queueId: ID!): JoinResult!
-  # Current waiting or matched queue anywhere in the catalog (at most one).
-  myActiveQueue: ActiveQueue
+  # Current catalog play intent: waiting or matched queue (at most one).
+  myActiveIntent: ActiveIntent
   # Game servers resolve lobbyUserId → display name (Bearer serviceToken from provision).
   player(id: ID!): PublicPlayer
 }
@@ -23,8 +23,10 @@ type Subscription {
 
 type Mutation {
   # Games & sessions
-  joinQueue(queueId: ID!, queuePath: String): JoinResult!
+  joinQueue(queueId: ID!, queuePath: String, party: PartyNodeInput): JoinResult!
   leaveQueue(queueId: ID!): Boolean!
+  """Abandon the current playing intent (matched queue or room table session)."""
+  leaveActiveGame: Boolean!
 
   # Digital goods (simple entitlement grant)
   grantGood(userId: ID!, goodId: ID!, quantity: Int = 1): Boolean!

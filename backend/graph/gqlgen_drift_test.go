@@ -80,6 +80,7 @@ func TestSchemaFilesExist(t *testing.T) {
 		"goods.graphqls",
 		"avatars.graphqls",
 		"spirit_animal.graphqls",
+		"parties.graphqls",
 	}
 
 	for _, filename := range expectedFiles {

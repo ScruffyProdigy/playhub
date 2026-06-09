@@ -166,24 +166,24 @@ func TestFullGameLoopReturnAndRequeue(t *testing.T) {
 	}
 	firstSessionID := *matchResp.Data.JoinQueue.SessionID
 
-	activeQuery := `query { myActiveQueue { queueId status sessionId joinUrl } }`
+	activeQuery := `query { myActiveIntent { queueId status sessionId joinUrl } }`
 	bodyBefore := postGraphQL(t, env.Handler, activeQuery, nil, cookieA)
 	var beforeResp struct {
 		Data struct {
-			MyActiveQueue *struct {
+			MyActiveIntent *struct {
 				Status    string  `json:"status"`
 				SessionID *string `json:"sessionId"`
-			} `json:"myActiveQueue"`
+			} `json:"myActiveIntent"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(bodyBefore, &beforeResp); err != nil {
 		t.Fatalf("decode active before: %v", err)
 	}
-	if beforeResp.Data.MyActiveQueue == nil || beforeResp.Data.MyActiveQueue.Status != "MATCHED" {
+	if beforeResp.Data.MyActiveIntent == nil || beforeResp.Data.MyActiveIntent.Status != "MATCHED" {
 		t.Fatalf("expected MATCHED before return, got %s", bodyBefore)
 	}
-	if beforeResp.Data.MyActiveQueue.SessionID == nil || *beforeResp.Data.MyActiveQueue.SessionID != firstSessionID {
-		t.Fatalf("active session = %v, want %s", beforeResp.Data.MyActiveQueue.SessionID, firstSessionID)
+	if beforeResp.Data.MyActiveIntent.SessionID == nil || *beforeResp.Data.MyActiveIntent.SessionID != firstSessionID {
+		t.Fatalf("active session = %v, want %s", beforeResp.Data.MyActiveIntent.SessionID, firstSessionID)
 	}
 
 	destQuery := `query Return($matchId: ID!) { returnDestination(matchId: $matchId) { path kind } }`
@@ -193,15 +193,15 @@ func TestFullGameLoopReturnAndRequeue(t *testing.T) {
 	bodyAfterReturn := postGraphQL(t, env.Handler, activeQuery, nil, cookieA)
 	var afterReturnResp struct {
 		Data struct {
-			MyActiveQueue *struct {
+			MyActiveIntent *struct {
 				Status string `json:"status"`
-			} `json:"myActiveQueue"`
+			} `json:"myActiveIntent"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(bodyAfterReturn, &afterReturnResp); err != nil {
 		t.Fatalf("decode active after return: %v", err)
 	}
-	if afterReturnResp.Data.MyActiveQueue != nil {
+	if afterReturnResp.Data.MyActiveIntent != nil {
 		t.Fatalf("expected no active queue after return, got %s", bodyAfterReturn)
 	}
 
@@ -241,20 +241,20 @@ func TestFullGameLoopReturnAndRequeue(t *testing.T) {
 	bodyRequeued := postGraphQL(t, env.Handler, activeQuery, nil, cookieA)
 	var requeuedActive struct {
 		Data struct {
-			MyActiveQueue *struct {
+			MyActiveIntent *struct {
 				Status    string  `json:"status"`
 				SessionID *string `json:"sessionId"`
-			} `json:"myActiveQueue"`
+			} `json:"myActiveIntent"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(bodyRequeued, &requeuedActive); err != nil {
 		t.Fatalf("decode active after requeue: %v", err)
 	}
-	if requeuedActive.Data.MyActiveQueue == nil || requeuedActive.Data.MyActiveQueue.Status != "MATCHED" {
+	if requeuedActive.Data.MyActiveIntent == nil || requeuedActive.Data.MyActiveIntent.Status != "MATCHED" {
 		t.Fatalf("expected MATCHED after requeue, got %s", bodyRequeued)
 	}
-	if requeuedActive.Data.MyActiveQueue.SessionID == nil || *requeuedActive.Data.MyActiveQueue.SessionID != secondSessionID {
-		t.Fatalf("active session after requeue = %v, want %s", requeuedActive.Data.MyActiveQueue.SessionID, secondSessionID)
+	if requeuedActive.Data.MyActiveIntent.SessionID == nil || *requeuedActive.Data.MyActiveIntent.SessionID != secondSessionID {
+		t.Fatalf("active session after requeue = %v, want %s", requeuedActive.Data.MyActiveIntent.SessionID, secondSessionID)
 	}
 }
 
@@ -281,19 +281,19 @@ func TestReturnDestinationClearsMatchedQueue(t *testing.T) {
 
 	matchID := provisioner.lastCall().Assignment.ExternalMatchID
 
-	activeBefore := `query { myActiveQueue { queueId status joinUrl } }`
+	activeBefore := `query { myActiveIntent { queueId status joinUrl } }`
 	bodyBefore := postGraphQL(t, env.Handler, activeBefore, nil, cookieA)
 	var beforeResp struct {
 		Data struct {
-			MyActiveQueue *struct {
+			MyActiveIntent *struct {
 				Status string `json:"status"`
-			} `json:"myActiveQueue"`
+			} `json:"myActiveIntent"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(bodyBefore, &beforeResp); err != nil {
 		t.Fatalf("decode before: %v", err)
 	}
-	if beforeResp.Data.MyActiveQueue == nil || beforeResp.Data.MyActiveQueue.Status != "MATCHED" {
+	if beforeResp.Data.MyActiveIntent == nil || beforeResp.Data.MyActiveIntent.Status != "MATCHED" {
 		t.Fatalf("expected MATCHED before return, got %s", bodyBefore)
 	}
 
@@ -305,15 +305,15 @@ func TestReturnDestinationClearsMatchedQueue(t *testing.T) {
 	bodyAfter := postGraphQL(t, env.Handler, activeBefore, nil, cookieA)
 	var afterResp struct {
 		Data struct {
-			MyActiveQueue *struct {
+			MyActiveIntent *struct {
 				Status string `json:"status"`
-			} `json:"myActiveQueue"`
+			} `json:"myActiveIntent"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(bodyAfter, &afterResp); err != nil {
 		t.Fatalf("decode after: %v", err)
 	}
-	if afterResp.Data.MyActiveQueue != nil {
+	if afterResp.Data.MyActiveIntent != nil {
 		t.Fatalf("expected no active queue after return hub, got %s", bodyAfter)
 	}
 }

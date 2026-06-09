@@ -22,7 +22,7 @@ func TestJoinModeQueueIdempotentWhileWaiting(t *testing.T) {
 	}
 	cleaner.TrackUser(user.ID)
 
-	first, err := st.JoinModeQueue(ctx, queueID, user.ID, "")
+	first, err := st.JoinModeQueue(ctx, queueID, user.ID, "", nil)
 	if err != nil {
 		t.Fatalf("first join: %v", err)
 	}
@@ -30,7 +30,7 @@ func TestJoinModeQueueIdempotentWhileWaiting(t *testing.T) {
 		t.Fatalf("expected waiting, got %s", first.Status)
 	}
 
-	second, err := st.JoinModeQueue(ctx, queueID, user.ID, "")
+	second, err := st.JoinModeQueue(ctx, queueID, user.ID, "", nil)
 	if err != nil {
 		t.Fatalf("second join: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestJoinModeQueueReplacesStaleWaitingRowForSameGame(t *testing.T) {
 	if err != nil {
 		t.Fatalf("insert legacy queue row: %v", err)
 	}
-	result, err := st.JoinModeQueue(ctx, queueID, user.ID, "")
+	result, err := st.JoinModeQueue(ctx, queueID, user.ID, "", nil)
 	if err != nil {
 		t.Fatalf("JoinModeQueue after legacy row: %v", err)
 	}
@@ -98,14 +98,14 @@ func TestJoinModeQueueRejectsWhenAlreadyMatched(t *testing.T) {
 	}
 	cleaner.TrackUser(userB.ID)
 
-	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, ""); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, "", nil); err != nil {
 		t.Fatalf("join A: %v", err)
 	}
-	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, ""); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, "", nil); err != nil {
 		t.Fatalf("join B: %v", err)
 	}
 
-	_, err = st.JoinModeQueue(ctx, queueID, userA.ID, "")
+	_, err = st.JoinModeQueue(ctx, queueID, userA.ID, "", nil)
 	if err == nil {
 		t.Fatal("expected error when joining queue while already matched")
 	}
@@ -159,7 +159,7 @@ func TestJoinModeQueueCompositionMatchmaking(t *testing.T) {
 	}
 	cleaner.TrackUser(userTank.ID)
 
-	first, err := st.JoinModeQueue(ctx, queueID, userDPS.ID, "DPS")
+	first, err := st.JoinModeQueue(ctx, queueID, userDPS.ID, "DPS", nil)
 	if err != nil {
 		t.Fatalf("join dps: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestJoinModeQueueCompositionMatchmaking(t *testing.T) {
 		t.Fatalf("expected waiting, got %s", first.Status)
 	}
 
-	second, err := st.JoinModeQueue(ctx, queueID, userTank.ID, "Tank")
+	second, err := st.JoinModeQueue(ctx, queueID, userTank.ID, "Tank", nil)
 	if err != nil {
 		t.Fatalf("join tank: %v", err)
 	}
@@ -252,7 +252,7 @@ func TestJoinModeQueueWordHuntFiresAtPartialCohortSizes(t *testing.T) {
 	paths := []string{"ClueGiver", "ClueGiver", "Guesser", "Guesser", "Guesser", "Guesser"}
 	var last *QueueJoinResult
 	for i, path := range paths {
-		last, err = st.JoinModeQueue(ctx, queueID, users[i], path)
+		last, err = st.JoinModeQueue(ctx, queueID, users[i], path, nil)
 		if err != nil {
 			t.Fatalf("join %d (%s): %v", i, path, err)
 		}

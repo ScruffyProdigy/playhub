@@ -9,9 +9,17 @@ import (
 type contextKeyGameService struct{}
 type contextKeyGameServiceGameID struct{}
 
-// GameServiceTokenFromEnv is Lobby's server-to-server secret (provision body + player GraphQL).
+// GameServiceTokenFromEnv is Lobby's legacy global server-to-server secret (dev fallback).
 func GameServiceTokenFromEnv() string {
 	return strings.TrimSpace(os.Getenv("LOBBY_GAME_SERVICE_TOKEN"))
+}
+
+// GameServiceAuthEnabled reports whether game servers must authenticate for player GraphQL.
+func GameServiceAuthEnabled() bool {
+	if strings.TrimSpace(os.Getenv("LOBBY_GAME_TOKEN_PEPPER")) != "" {
+		return true
+	}
+	return GameServiceTokenFromEnv() != ""
 }
 
 // WithGameServiceAuth marks the context as authenticated via LOBBY_GAME_SERVICE_TOKEN.

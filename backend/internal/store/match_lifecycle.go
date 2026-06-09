@@ -155,6 +155,10 @@ func (s *Store) CompleteSession(ctx context.Context, sessionID uuid.UUID, endedA
 		}
 	}
 
+	if err := resetRoomTableAfterSessionTx(ctx, tx, sessionID); err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }
 

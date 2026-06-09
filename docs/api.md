@@ -19,6 +19,8 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 - **Real-time**: `queueUpdated` subscription via Redis pub/sub; **`roomUpdated` / `roomMessageAdded`** for chat rooms
 - **Post-game**: `returnDestination`, `reportPlayerFinished`, `reportMatchResult` — see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md), [player-return-routing.md](./player-return-routing.md)
 - **Rooms (Step 1)**: `createRoom`, `joinRoom`, `leaveRoom`, `sendRoomMessage`, `room`, `myRoom` — see [rooms-and-tables.md](./rooms-and-tables.md)
+- **Tables (Step 2)**: forming tables, seat-level sitting, king controls — see [rooms-and-tables.md](./rooms-and-tables.md)
+- **LFG forming match (Phase B)**: persistent forming map, parties, `myActiveIntent`, `formingGaps`, `startTableBackfill`, `PartyNodeInput` on `joinQueue` — [lfg-phase-b-plan.md](./lfg-phase-b-plan.md)
 
 ### 🚧 In Development
 - **Player-facing goods**: purchase/trade flows
@@ -26,7 +28,7 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 
 ### 📋 Planned
 - **File uploads**: game assets and user avatars
-- **LFG forming match** (parties, `affinity_key`, variable `sizeForQueue`) — see [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md); **shipped today:** `seatTemplate` expansion + `queuePath` join/matchmaking only
+- **Phase C LFG**: weighted dequeue, `allocations` by affinity — see [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md)
 
 ## Base URL
 
@@ -251,12 +253,12 @@ mutation {
 
 ### Queue / group matchmaking
 
-#### `myActiveQueue` ✅
-The player’s current **waiting or matched** mode queue anywhere in the catalog (at most one waiting row globally). Used by the sticky lobby banner.
+#### `myActiveIntent` ✅
+The player’s current **catalog play intent** — waiting or matched in a mode queue (at most one waiting row globally). Used by the sticky intent banner.
 
 ```graphql
 query {
-  myActiveQueue {
+  myActiveIntent {
     queueId
     gameId
     gameName
@@ -265,6 +267,7 @@ query {
     queuePath
     queuePathDisplayName   # human label from seatTemplate (e.g. "Clue Giver")
     joinUrl   # when MATCHED
+    formingGaps { queuePath displayName assigned needed }
   }
 }
 ```

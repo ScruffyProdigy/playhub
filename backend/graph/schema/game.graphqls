@@ -28,17 +28,28 @@ type JoinResult {
   message: String
 }
 
-# User's single active queue membership (waiting or matched), if any.
-type ActiveQueue {
-  queueId: ID!
+type QueuePathGap {
+  queuePath: String!
+  displayName: String!
+  assigned: Int!
+  needed: Int!
+}
+
+# User's single play intent: waiting for a group, ready to launch, or seated at a forming table.
+type ActiveIntent {
+  queueId: ID
   gameId: ID!
   gameName: String!
+  modeName: String
+  seatDisplayName: String
   status: QueueStatus!
   queuedCount: Int
   queuePath: String
   """Human label for queuePath from the mode seatTemplate (e.g. Clue Giver)."""
   queuePathDisplayName: String
   joinUrl: String
+  """Remaining role needs for the active forming match (catalog wait)."""
+  formingGaps: [QueuePathGap!]!
 }
 
 enum QueueStatus {
@@ -55,4 +66,5 @@ type QueueUpdate {
   joinUrl: String
   queuedCount: Int!
   message: String
+  formingGaps: [QueuePathGap!]!
 }

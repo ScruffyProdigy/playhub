@@ -14,23 +14,22 @@ export async function joinRockPaperQueue(page) {
 }
 
 export async function expectWaitingBanner(page) {
-  const banner = page.getByRole('region', { name: 'Your group' })
+  const banner = page.getByRole('region', { name: 'Your intent' })
   await expect(banner).toBeVisible()
   await expect(banner).toContainText('Looking for a group')
 }
 
 export async function expectMatchedBanner(page) {
-  const banner = page.getByRole('region', { name: 'Your group' })
+  const banner = page.getByRole('region', { name: 'Your intent' })
   await expect(banner).toBeVisible({ timeout: 20000 })
-  await expect(banner).toContainText('Your group is ready')
+  await expect(banner).toContainText('Playing')
 }
 
-export async function expectNoActiveQueueBanner(page) {
-  await expect(page.getByRole('region', { name: 'Your group' })).not.toBeVisible()
+export async function expectNoIntentBanner(page) {
+  await expect(page.getByRole('region', { name: 'Your intent' })).not.toBeVisible()
 }
-
 export async function readLaunchMatchId(page) {
-  const launchLink = page.getByRole('region', { name: 'Your group' }).getByRole('link', {
+  const launchLink = page.getByRole('region', { name: 'Your intent' }).getByRole('link', {
     name: 'Launch game',
   })
   await expect(launchLink).toBeVisible()

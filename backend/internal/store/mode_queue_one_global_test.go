@@ -41,7 +41,7 @@ func TestJoinModeQueueSwitchesFromOtherQueueWhileWaiting(t *testing.T) {
 		_, _ = st.db.ExecContext(context.Background(), `DELETE FROM game_modes WHERE id = $1`, secondModeID)
 	})
 
-	first, err := st.JoinModeQueue(ctx, DemoDefaultQueueID, user.ID, "")
+	first, err := st.JoinModeQueue(ctx, DemoDefaultQueueID, user.ID, "", nil)
 	if err != nil {
 		t.Fatalf("first join: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestJoinModeQueueSwitchesFromOtherQueueWhileWaiting(t *testing.T) {
 		t.Fatalf("expected waiting, got %s", first.Status)
 	}
 
-	second, err := st.JoinModeQueue(ctx, secondQueueID, user.ID, "")
+	second, err := st.JoinModeQueue(ctx, secondQueueID, user.ID, "", nil)
 	if err != nil {
 		t.Fatalf("second join: %v", err)
 	}

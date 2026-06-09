@@ -77,4 +77,4 @@ Wire details: [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md). Layout
 
 ## Status
 
-Core **catalog, auth, FIFO queues, provision, and JWT handoff** are implemented. **Template-based LFG**, richer parties, and full **commerce** are specified and in progress. See feature lists in [`README.md`](../README.md) and implementation notes in the architecture docs.
+Core **catalog, auth, forming LFG, provision, and JWT handoff** are implemented. **Phase C** (weighted dequeue, affinity allocations) and full **commerce** are specified next. See feature lists in [`README.md`](../README.md) and implementation notes in the architecture docs.

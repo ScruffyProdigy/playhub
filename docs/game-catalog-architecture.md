@@ -25,18 +25,22 @@ Game
 **Full spec (game authors + Lobby LFG):** [`seat-templates-and-matchmaking.md`](./seat-templates-and-matchmaking.md) —
 `seatTemplate` → seat map (game contract); constraint-based LFG fills the map before provision.
 
-## Seat fill (current implementation vs target)
+## Seat fill (shipped vs Phase C target)
 
-**Today (shipped):** games publish **`seatTemplate` only** (flat `seats[]` is rejected on sync).
-Lobby expands the template to leaf seats (`seat_key`, `queue_path`, `sort_order`), stores
-`seat_template` on the mode, and auto-creates one default queue per mode. Matchmaking pairs
-waiting players to seats by **`queue_path`** (fifo within each path). Modes with a single
-path (often `""`) show one **Look for group** button; modes with multiple paths show **Join as …**
-per role bucket. See [composition-and-join-options.md](./composition-and-join-options.md).
+**Shipped (Phase A + B):** games publish **`seatTemplate` only** (flat `seats[]` is rejected on sync).
+Lobby expands the template to leaf seats (`seat_key`, `queue_path`, `affinity_key`, `sort_order`),
+stores `seat_template` on the mode, and auto-creates one default queue per mode.
 
-**Target (Phase B):** **forming match** filled by constraint-based LFG (parties, affinity
-gaps, weighted dequeue, variable `sizeForQueue`); games still receive final `seatKey`
-assignments only. See the linked doc.
+**Catalog LFG:** solo **Look for group** / **Join as …** joins a **persistent forming match** per
+mode queue; players are placed incrementally on the working seat map; **`formingGaps`** show
+remaining role needs on the intent banner.
+
+**Table backfill:** friends sit at a table → king **Look for group** → same forming match fills
+from catalog. **`startTableBackfill`** + gap visibility on `TableCard`.
+
+**Phase C (target):** weighted dequeue, `allocations` by affinity, optional relocation of players
+already on the map. Games still receive final `seatKey` assignments only. See
+[seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md).
 
 ## Admin registration
 
@@ -90,7 +94,7 @@ games {
     seats { seatKey affinityKey slotKind }
   }
 }
-joinQueue(queueId: ID!, party: PartyInput): JoinResult!
+joinQueue(queueId: ID!, queuePath: String, party: PartyNodeInput): JoinResult!
 queueUpdated(queueId: ID!): QueueUpdate!  # include message/reason when kicked
 ```
 
@@ -112,4 +116,4 @@ Non-queue start paths (party, direct) are **v2**; schema keeps `queue_id` nullab
 - Signed provision requests (allowlist `lobbyId` + shared Bearer today).
 - Webhook when manifest changes.
 - Populate `team` / `role` on provision seats from manifest.
-- Seat map LFG engine (`seat-templates-and-matchmaking.md`).
+- Phase C LFG: weighted dequeue, `allocations` by affinity ([seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md)).

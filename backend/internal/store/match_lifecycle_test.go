@@ -25,16 +25,16 @@ func TestCompleteSessionReleasesMatchedQueueRows(t *testing.T) {
 	}
 	cleaner.TrackUser(userB.ID)
 
-	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, ""); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, "", nil); err != nil {
 		t.Fatalf("join A: %v", err)
 	}
-	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, ""); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, "", nil); err != nil {
 		t.Fatalf("join B: %v", err)
 	}
 
-	view, err := st.GetUserActiveQueue(ctx, userA.ID)
+	view, err := st.GetUserActiveIntent(ctx, userA.ID)
 	if err != nil {
-		t.Fatalf("GetUserActiveQueue: %v", err)
+		t.Fatalf("GetUserActiveIntent: %v", err)
 	}
 	if view == nil || !view.Matched || view.SessionID == nil {
 		t.Fatal("expected matched session")
@@ -54,9 +54,9 @@ func TestCompleteSessionReleasesMatchedQueueRows(t *testing.T) {
 	}
 
 	for _, uid := range []uuid.UUID{userA.ID, userB.ID} {
-		active, err := st.GetUserActiveQueue(ctx, uid)
+		active, err := st.GetUserActiveIntent(ctx, uid)
 		if err != nil {
-			t.Fatalf("GetUserActiveQueue(%s): %v", uid, err)
+			t.Fatalf("GetUserActiveIntent(%s): %v", uid, err)
 		}
 		if active != nil && active.Matched {
 			t.Fatalf("user %s still matched after CompleteSession", uid)

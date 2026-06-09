@@ -52,6 +52,7 @@ type UserTableSeatView struct {
 	ModeID     uuid.UUID
 	ModeName   string
 	SeatKey    string
+	SessionID  *uuid.UUID
 }
 
 // StartTableResult is returned when a table starts a session.
@@ -103,6 +104,34 @@ func seatByKey(seats []GameModeSeat, seatKey string) (*GameModeSeat, error) {
 		}
 	}
 	return nil, fmt.Errorf("store: invalid seat key %q", seatKey)
+}
+
+func allSeatsShareQueuePath(modeSeats []GameModeSeat, queuePath string) bool {
+	if len(modeSeats) <= 1 {
+		return false
+	}
+	for _, seat := range modeSeats {
+		if seatQueuePathValue(seat) != queuePath {
+			return false
+		}
+	}
+	return true
+}
+
+func firstOpenSeatKeyInPath(modeSeats []GameModeSeat, seated []TableSeat, queuePath string) string {
+	occupied := make(map[string]struct{}, len(seated))
+	for _, s := range seated {
+		occupied[s.SeatKey] = struct{}{}
+	}
+	for _, seat := range modeSeats {
+		if seatQueuePathValue(seat) != queuePath {
+			continue
+		}
+		if _, taken := occupied[seat.SeatKey]; !taken {
+			return seat.SeatKey
+		}
+	}
+	return ""
 }
 
 func countSeatedByPath(seated []TableSeat, seats []GameModeSeat, queuePath string) int {
@@ -281,7 +310,7 @@ func (s *Store) loadTableContext(ctx context.Context, q sqlQueryRowContext, tabl
 	if mode.Status != ModeStatusActive {
 		return nil, nil, nil, nil, fmt.Errorf("store: game mode is not active")
 	}
-	seats, err := listGameModeSeatsQuery(ctx, q, mode.ID)
+	seats, err := listGameModeSeats(ctx, q, mode.ID)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -339,6 +368,10 @@ func (s *Store) CreateTable(ctx context.Context, roomID, gameID, modeID, userID 
 		return nil, err
 	}
 	defer tx.Rollback()
+
+	if err := ensureNotInActiveGameTx(ctx, tx, userID); err != nil {
+		return nil, err
+	}
 
 	table, err := s.createTableTx(ctx, tx, roomID, gameID, modeID)
 	if err != nil {
@@ -445,6 +478,35 @@ func (s *Store) GetUserTableSeat(ctx context.Context, userID uuid.UUID) (*UserTa
 	return &view, nil
 }
 
+// GetUserStartedTableSession returns the user's active launch from a started room table.
+func (s *Store) GetUserStartedTableSession(ctx context.Context, userID uuid.UUID) (*UserTableSeatView, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT rt.id, rt.room_id, r.invite_code, g.id, g.name, gm.id, gm.display_name, gsp.seat_key, gs.id
+		FROM game_session_participants gsp
+		INNER JOIN game_sessions gs ON gs.id = gsp.session_id AND gs.status = 'active'
+		INNER JOIN room_tables rt ON rt.session_id = gs.id AND rt.status = $2
+		INNER JOIN rooms r ON r.id = rt.room_id
+		INNER JOIN games g ON g.id = rt.game_id
+		INNER JOIN game_modes gm ON gm.id = rt.mode_id
+		WHERE gsp.user_id = $1
+		ORDER BY rt.updated_at DESC
+		LIMIT 1
+	`, userID, TableStatusStarted)
+	var view UserTableSeatView
+	var sessionID uuid.UUID
+	if err := row.Scan(
+		&view.TableID, &view.RoomID, &view.InviteCode,
+		&view.GameID, &view.GameName, &view.ModeID, &view.ModeName, &view.SeatKey, &sessionID,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	view.SessionID = &sessionID
+	return &view, nil
+}
+
 // SitAtTable seats the user at a specific seat key, leaving queue and other table seats first.
 func (s *Store) SitAtTable(ctx context.Context, tableID, userID uuid.UUID, seatKey string) (*RoomTable, error) {
 	seatKey = strings.TrimSpace(seatKey)
@@ -459,6 +521,9 @@ func (s *Store) SitAtTable(ctx context.Context, tableID, userID uuid.UUID, seatK
 	defer tx.Rollback()
 
 	if err := ensureNotQueueMatchedTx(ctx, tx, userID); err != nil {
+		return nil, err
+	}
+	if err := ensureNotInActiveGameTx(ctx, tx, userID); err != nil {
 		return nil, err
 	}
 	if err := leaveUserWaitingQueuesTx(ctx, tx, userID); err != nil {
@@ -519,6 +584,12 @@ func (s *Store) SitAtTable(ctx context.Context, tableID, userID uuid.UUID, seatK
 			if countSeatedByPath(seated, modeSeats, path)+1 > spec.Max {
 				return nil, fmt.Errorf("store: role is full")
 			}
+		}
+	}
+	if path != "" || allSeatsShareQueuePath(modeSeats, "") {
+		next := firstOpenSeatKeyInPath(modeSeats, seated, path)
+		if next != "" && seatKey != next {
+			return nil, fmt.Errorf("store: sit the next open seat in this group first")
 		}
 	}
 

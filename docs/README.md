@@ -21,6 +21,7 @@ Documentation for **JoinQuest** — the platform that connects players to third-
 - **[Composition & join options](composition-and-join-options.md)** — Role queues vs game-backed eligibility
 - **[Rooms & tables](rooms-and-tables.md)** — Private rooms, forming tables, invite/QR, queue exclusion
 - **[Spirit animal avatars](spirit-animal-avatars.md)** — Planned: starter avatars + tarot-guided “Find my spirit animal” flow (TODO)
+- **[Game-minted launch URLs](game-minted-launch-urls.md)** — **HIGH PRIORITY TODO:** games return launch URLs on provision; Lobby attaches JWT
 - **[Lobby ↔ Game Handoff](lobby-protocol-handoff.md)** — Provision, JWT, and integration rationale
 - **[Game Catalog Architecture](game-catalog-architecture.md)** — Modes, queues, manifest sync
 - **[Seat templates & LFG](seat-templates-and-matchmaking.md)** — Seat map contract and matchmaking spec

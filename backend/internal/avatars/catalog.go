@@ -44,12 +44,32 @@ func PublicAssetURL(publicOrigin, file string) string {
 	return fmt.Sprintf("%s/avatars/%s", base, strings.TrimPrefix(file, "/"))
 }
 
+// AbsolutizePublicAssetURL turns a stored relative avatar path into an absolute URL
+// for cross-origin game clients. Absolute URLs are returned unchanged.
+func AbsolutizePublicAssetURL(publicOrigin, url string) string {
+	trimmed := strings.TrimSpace(url)
+	if trimmed == "" {
+		return ""
+	}
+	if strings.HasPrefix(trimmed, "http://") || strings.HasPrefix(trimmed, "https://") {
+		return trimmed
+	}
+	if strings.HasPrefix(trimmed, "/") {
+		base := strings.TrimRight(strings.TrimSpace(publicOrigin), "/")
+		if base == "" {
+			base = "http://localhost:5173"
+		}
+		return base + trimmed
+	}
+	return trimmed
+}
+
 // ResolveURL returns the user's public avatar URL, preferring a stored value.
 func ResolveURL(publicOrigin string, storedURL, avatarKey *string) *string {
 	if storedURL != nil {
 		trimmed := strings.TrimSpace(*storedURL)
 		if trimmed != "" {
-			out := trimmed
+			out := AbsolutizePublicAssetURL(publicOrigin, trimmed)
 			return &out
 		}
 	}

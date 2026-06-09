@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -91,7 +90,7 @@ func (s *Store) loadModeQueueJoinContext(ctx context.Context, q sqlQueryRowConte
 		return nil, err
 	}
 
-	seats, err := listGameModeSeatsQuery(ctx, q, mode.ID)
+	seats, err := listGameModeSeats(ctx, q, mode.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +121,7 @@ func getGameModeByID(ctx context.Context, q sqlQueryRowContext, modeID uuid.UUID
 }
 
 // JoinModeQueue enqueues the user in a mode queue and starts a session when full.
-func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID, queuePath string) (*QueueJoinResult, error) {
+func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID, queuePath string, party *JoinPartyInput) (*QueueJoinResult, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -130,6 +129,9 @@ func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID
 	defer tx.Rollback()
 
 	if _, _, err := s.leaveTableSeatTx(ctx, tx, userID); err != nil {
+		return nil, err
+	}
+	if err := ensureNotInActiveGameTx(ctx, tx, userID); err != nil {
 		return nil, err
 	}
 
@@ -141,87 +143,7 @@ func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID
 		return nil, err
 	}
 
-	matchSeats, err := matchSeatsFromTemplate(joinCtx.Seats, joinCtx.Mode.SeatTemplate)
-	if err != nil {
-		return nil, err
-	}
-	playersToStart := len(matchSeats)
-	if playersToStart < 1 {
-		playersToStart = joinCtx.ModeQueue.PlayersToStart
-		if playersToStart < 1 {
-			playersToStart = len(joinCtx.Seats)
-		}
-		matchSeats = joinCtx.Seats[:playersToStart]
-	}
-	if playersToStart > len(joinCtx.Seats) {
-		return nil, fmt.Errorf("store: queue requires %d players but mode only defines %d seats", playersToStart, len(joinCtx.Seats))
-	}
-
-	enqueue, err := enqueueModeQueueTx(ctx, tx, joinCtx.Game.ID, modeQueueID, userID, queuePath)
-	if err != nil {
-		return nil, err
-	}
-
-	waiting, err := listWaitingModeQueueEntriesTx(ctx, tx, modeQueueID)
-	if err != nil {
-		return nil, err
-	}
-
-	assignments, ok := tryFormMatch(matchSeats, waiting)
-	if !ok {
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
-		return &QueueJoinResult{
-			GameID:         joinCtx.Game.ID,
-			ModeQueueID:    modeQueueID,
-			Status:         QueueStatusWaiting,
-			QueuedCount:    len(waiting),
-			QueuePath:      optionalQueuePathRef(queuePath),
-			NotifyUserIDs:  []uuid.UUID{userID},
-			AlreadyInQueue: enqueue.alreadyInQueue,
-			SwitchedFrom:   enqueue.switchedFrom,
-		}, nil
-	}
-
-	session, err := createModeQueueSessionTx(ctx, tx, joinCtx.Game.ID, joinCtx.Mode.ID, modeQueueID)
-	if err != nil {
-		return nil, err
-	}
-	if err := completePriorActiveSessionsForModeQueueTx(ctx, tx, modeQueueID, session.ID, time.Now()); err != nil {
-		return nil, err
-	}
-
-	notifyIDs := make([]uuid.UUID, 0, len(assignments))
-	seenNotify := make(map[uuid.UUID]struct{}, len(assignments))
-	for _, assignment := range assignments {
-		if err := markQueueEntryMatchedTx(ctx, tx, assignment.Entry.ID); err != nil {
-			return nil, err
-		}
-		returnCtx := CatalogLFGReturnContext(joinCtx.Game.ID, modeQueueID)
-		if err := addSessionParticipantTx(ctx, tx, session.ID, assignment.Entry.UserID, assignment.SeatKey, returnCtx); err != nil {
-			return nil, err
-		}
-		if _, ok := seenNotify[assignment.Entry.UserID]; !ok {
-			seenNotify[assignment.Entry.UserID] = struct{}{}
-			notifyIDs = append(notifyIDs, assignment.Entry.UserID)
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return &QueueJoinResult{
-		GameID:        joinCtx.Game.ID,
-		ModeQueueID:   modeQueueID,
-		Status:        QueueStatusMatched,
-		SessionID:     &session.ID,
-		QueuedCount:   0,
-		QueuePath:     optionalQueuePathRef(queuePath),
-		NotifyUserIDs: notifyIDs,
-		SwitchedFrom:  enqueue.switchedFrom,
-	}, nil
+	return s.joinModeQueueFormingTx(ctx, tx, joinCtx, modeQueueID, userID, queuePath, party)
 }
 
 func optionalQueuePathRef(value string) *string {
@@ -260,7 +182,7 @@ type enqueueOutcome struct {
 	switchedFrom   *SwitchedFromQueue
 }
 
-func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, userID uuid.UUID, queuePath string) (enqueueOutcome, error) {
+func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, userID uuid.UUID, queuePath string, partyID *uuid.UUID) (enqueueOutcome, error) {
 	var out enqueueOutcome
 	if _, err := getMatchedModeQueueEntryTx(ctx, tx, modeQueueID, userID); err == nil {
 		return out, ErrAlreadyMatched
@@ -304,9 +226,9 @@ func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, us
 		}
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE game_queues
-			SET queue_path = $2, joined_at = NOW()
+			SET queue_path = $2, joined_at = NOW(), party_id = $3
 			WHERE id = $1 AND status = 'waiting'
-		`, existing.ID, nullQueuePathColumn(queuePath)); err != nil {
+		`, existing.ID, nullQueuePathColumn(queuePath), nullUUIDColumn(partyID)); err != nil {
 			return out, err
 		}
 		return out, nil
@@ -318,10 +240,10 @@ func enqueueModeQueueTx(ctx context.Context, tx *sql.Tx, gameID, modeQueueID, us
 		return out, err
 	}
 	row = tx.QueryRowContext(ctx, `
-		INSERT INTO game_queues (game_id, user_id, status, mode_queue_id, queue_path)
-		VALUES ($1, $2, 'waiting', $3, $4)
+		INSERT INTO game_queues (game_id, user_id, status, mode_queue_id, queue_path, party_id)
+		VALUES ($1, $2, 'waiting', $3, $4, $5)
 		RETURNING `+queueColumns+`
-	`, gameID, userID, modeQueueID, nullQueuePathColumn(queuePath))
+	`, gameID, userID, modeQueueID, nullQueuePathColumn(queuePath), nullUUIDColumn(partyID))
 	if _, err := scanQueueEntry(row); err != nil {
 		if isUniqueViolation(err) {
 			if _, rbErr := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT gq_enqueue"); rbErr != nil {

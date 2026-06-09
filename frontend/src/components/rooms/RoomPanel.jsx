@@ -3,7 +3,7 @@ import LoginForm from '../auth/LoginForm'
 import { useAuth } from '../auth/AuthProvider'
 import { useActiveRoom } from './ActiveRoomProvider'
 import { sendRoomMessage } from '../../lib/rooms'
-import { discardTable, displayName, leaveTable, sitAtTable, startTable } from '../../lib/tables'
+import { discardTable, displayName, leaveTable, sitAtTable, startTable, startTableBackfill } from '../../lib/tables'
 import { IconClose } from '../icons/ShareIcons'
 import RoomShareToolbar from './RoomShareToolbar'
 import TableCard from './TableCard'
@@ -106,6 +106,15 @@ export default function RoomPanel({ compact = false }) {
     })
   }
 
+  async function handleLookForGroup(tableId, queueId) {
+    await runTableAction(async () => {
+      const result = await startTableBackfill(tableId, queueId)
+      if (result?.joinUrl) {
+        window.location.assign(result.joinUrl)
+      }
+    })
+  }
+
   async function handleDiscardTable(tableId) {
     await runTableAction(async () => {
       await discardTable(tableId)
@@ -164,6 +173,7 @@ export default function RoomPanel({ compact = false }) {
             onSit={(seatKey) => handleSit(table.id, seatKey)}
             onLeave={() => handleLeaveTable(table.id)}
             onStart={() => handleStartTable(table.id)}
+            onLookForGroup={(queueId) => handleLookForGroup(table.id, queueId)}
             onDiscard={() => handleDiscardTable(table.id)}
           />
         </li>

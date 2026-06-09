@@ -25,16 +25,16 @@ func TestRequeueAfterReturnUsesNewSessionNotStaleActive(t *testing.T) {
 	}
 	cleaner.TrackUser(userB.ID)
 
-	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, ""); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, "", nil); err != nil {
 		t.Fatalf("first join A: %v", err)
 	}
-	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, ""); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, "", nil); err != nil {
 		t.Fatalf("first join B: %v", err)
 	}
 
-	first, err := st.GetUserActiveQueue(ctx, userA.ID)
+	first, err := st.GetUserActiveIntent(ctx, userA.ID)
 	if err != nil {
-		t.Fatalf("GetUserActiveQueue after first match: %v", err)
+		t.Fatalf("GetUserActiveIntent after first match: %v", err)
 	}
 	if first == nil || first.SessionID == nil {
 		t.Fatal("expected first matched session")
@@ -57,10 +57,10 @@ func TestRequeueAfterReturnUsesNewSessionNotStaleActive(t *testing.T) {
 		t.Fatalf("first session should still be active before re-queue, got %q", firstSession.Status)
 	}
 
-	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, ""); err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, "", nil); err != nil {
 		t.Fatalf("second join A: %v", err)
 	}
-	second, err := st.JoinModeQueue(ctx, queueID, userB.ID, "")
+	second, err := st.JoinModeQueue(ctx, queueID, userB.ID, "", nil)
 	if err != nil {
 		t.Fatalf("second join B: %v", err)
 	}
@@ -71,9 +71,9 @@ func TestRequeueAfterReturnUsesNewSessionNotStaleActive(t *testing.T) {
 		t.Fatalf("re-queue reused stale session %s", firstSessionID)
 	}
 
-	active, err := st.GetUserActiveQueue(ctx, userA.ID)
+	active, err := st.GetUserActiveIntent(ctx, userA.ID)
 	if err != nil {
-		t.Fatalf("GetUserActiveQueue after re-queue: %v", err)
+		t.Fatalf("GetUserActiveIntent after re-queue: %v", err)
 	}
 	if active == nil || active.SessionID == nil || *active.SessionID != *second.SessionID {
 		t.Fatalf("active queue session = %v, want %s", active, second.SessionID)

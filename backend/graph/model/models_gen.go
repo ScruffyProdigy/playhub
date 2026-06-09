@@ -10,16 +10,20 @@ import (
 	"time"
 )
 
-type ActiveQueue struct {
-	QueueID     string      `json:"queueId"`
-	GameID      string      `json:"gameId"`
-	GameName    string      `json:"gameName"`
-	Status      QueueStatus `json:"status"`
-	QueuedCount *int        `json:"queuedCount,omitempty"`
-	QueuePath   *string     `json:"queuePath,omitempty"`
+type ActiveIntent struct {
+	QueueID         *string     `json:"queueId,omitempty"`
+	GameID          string      `json:"gameId"`
+	GameName        string      `json:"gameName"`
+	ModeName        *string     `json:"modeName,omitempty"`
+	SeatDisplayName *string     `json:"seatDisplayName,omitempty"`
+	Status          QueueStatus `json:"status"`
+	QueuedCount     *int        `json:"queuedCount,omitempty"`
+	QueuePath       *string     `json:"queuePath,omitempty"`
 	// Human label for queuePath from the mode seatTemplate (e.g. Clue Giver).
 	QueuePathDisplayName *string `json:"queuePathDisplayName,omitempty"`
 	JoinURL              *string `json:"joinUrl,omitempty"`
+	// Remaining role needs for the active forming match (catalog wait).
+	FormingGaps []*QueuePathGap `json:"formingGaps"`
 }
 
 type DigitalGood struct {
@@ -111,6 +115,22 @@ type MyTableSeat struct {
 	ModeName        string `json:"modeName"`
 	SeatKey         string `json:"seatKey"`
 	SeatDisplayName string `json:"seatDisplayName"`
+	// forming while seated at a table; started when the table has launched a session.
+	Status         string          `json:"status"`
+	JoinURL        *string         `json:"joinUrl,omitempty"`
+	BackfillActive bool            `json:"backfillActive"`
+	FormingGaps    []*QueuePathGap `json:"formingGaps"`
+}
+
+type PartyMemberInput struct {
+	UserID    string `json:"userId"`
+	QueuePath string `json:"queuePath"`
+}
+
+type PartyNodeInput struct {
+	Role     *string             `json:"role,omitempty"`
+	Children []*PartyNodeInput   `json:"children,omitempty"`
+	Members  []*PartyMemberInput `json:"members,omitempty"`
 }
 
 type PublicPlayer struct {
@@ -123,14 +143,22 @@ type PublicPlayer struct {
 type Query struct {
 }
 
+type QueuePathGap struct {
+	QueuePath   string `json:"queuePath"`
+	DisplayName string `json:"displayName"`
+	Assigned    int    `json:"assigned"`
+	Needed      int    `json:"needed"`
+}
+
 type QueueUpdate struct {
-	GameID      string      `json:"gameId"`
-	QueueID     string      `json:"queueId"`
-	Status      QueueStatus `json:"status"`
-	SessionID   *string     `json:"sessionId,omitempty"`
-	JoinURL     *string     `json:"joinUrl,omitempty"`
-	QueuedCount int         `json:"queuedCount"`
-	Message     *string     `json:"message,omitempty"`
+	GameID      string          `json:"gameId"`
+	QueueID     string          `json:"queueId"`
+	Status      QueueStatus     `json:"status"`
+	SessionID   *string         `json:"sessionId,omitempty"`
+	JoinURL     *string         `json:"joinUrl,omitempty"`
+	QueuedCount int             `json:"queuedCount"`
+	Message     *string         `json:"message,omitempty"`
+	FormingGaps []*QueuePathGap `json:"formingGaps"`
 }
 
 type RegisterGameInput struct {
@@ -271,6 +299,10 @@ type Table struct {
 	CanStart            bool                       `json:"canStart"`
 	CanDiscard          bool                       `json:"canDiscard"`
 	LookForGroupOptions []*TableLookForGroupOption `json:"lookForGroupOptions"`
+	// True when this table has started lobby backfill (forming match seeded from seats).
+	BackfillActive bool `json:"backfillActive"`
+	// Roles still needed to start via backfill or from current seated counts.
+	FormingGaps []*QueuePathGap `json:"formingGaps"`
 }
 
 type TableLookForGroupOption struct {

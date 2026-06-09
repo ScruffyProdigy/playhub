@@ -40,7 +40,7 @@ query {
 
 **Fifo modes** return an empty `queuePaths` list; the UI shows a single **Look for group** control inside the same panel chrome.
 
-**`myActiveQueue`** returns `queuePath` and `queuePathDisplayName` while **WAITING** so the banner can say e.g. “Looking for a group in Word Hunt as Clue Giver”.
+**`myActiveIntent`** returns `queuePath`, `queuePathDisplayName`, and `formingGaps` while **WAITING** so the banner can say e.g. “Looking for a group in Word Hunt as Clue Giver · Need 1 Clue Giver”.
 
 See [api.md](./api.md) for `joinQueue` path switching and subscription fields.
 
@@ -63,7 +63,7 @@ Those should come from the **game server**, not from a fixed list in `seatTempla
 2. Before or during join, Lobby calls the game (authenticated as that player), e.g.  
    `GET /api/v1/players/{lobbyUserId}/queue-options?modeKey=…&queuePath=…`
 3. Game returns allowed options: `{ "choices": [{ "id": "wizard", "label": "Wizard", "locked": false }, …] }`
-4. JoinQuest UI shows only allowed choices; `joinQueue` sends the selected `queuePath` (party constraints via `PartyInput` are future).
+4. JoinQuest UI shows only allowed choices; `joinQueue` sends the selected `queuePath`. Optional `party: PartyNodeInput` tree for API/tests; friends use table backfill instead.
 5. After matchmaking, provision still sends **`seatKey`** — the game maps role → concrete character in-client if needed.
 
 Lobby caches responses **briefly** (seconds), not as source of truth. DLC and unlock changes stay on the game.
@@ -94,8 +94,8 @@ So: **not** replacing the game’s character select — **optional** pre-queue e
   **`GameMode.queuePaths`** with display names; composition modes show **Join as …** from that metadata;
   in-queue **role switching**; sticky banner cohort label; `joinQueue(queueId, queuePath)`
   and path-aware matchmaking with per-path **`sizeForQueue`** fire thresholds.
-- **Deferred:** LFG forming map (parties, affinity), game `queue-options` API, DLC-aware polling,
-  unlock progression, `PartyInput` on join.
+- **Deferred (Phase C+):** weighted dequeue, `allocations` by affinity, game `queue-options` API, DLC-aware polling,
+  unlock progression.
 - **Rooms & tables:** Step 1 = chat **rooms** (invite, QR, share); Step 2 = **tables** for forming games — [rooms-and-tables.md](./rooms-and-tables.md).
 
 For new composition demos, start with **static paths from `seatTemplate`**; add **game-backed options**

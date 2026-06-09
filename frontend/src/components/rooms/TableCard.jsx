@@ -1,27 +1,34 @@
 import { useAuth } from '../auth/AuthProvider'
 import {
   DISCARD,
+  formatFormingGapsFromLobbyLine,
   KING_LABEL,
   LOOK_FOR_GROUP,
   START_GAME,
 } from '../../lib/playerCopy'
 import {
+  countSeatedInGroup,
   displayName,
   enrichTableSeats,
+  firstOpenSeatKey,
+  formatGroupSeatCaption,
   groupSeatSlotsForDisplay,
   isKing,
+  isPooledRoleGroup,
   mySeatDisplayName,
   mySeatKeyOnTable,
+  queuePathMeta,
   seatLabelInSection,
 } from '../../lib/tables'
 import PlayerAvatar from '../avatars/PlayerAvatar'
 
-function SeatRow({ slot, seatLabel, mySeat, userId, currentUser, busy, onSit }) {
+function SeatRow({ slot, seatLabel, mySeat, userId, currentUser, kingUserId, busy, onSit }) {
   const taken = Boolean(slot.user)
   const isMine = mySeat === slot.seatKey || slot.user?.id === userId
   const showOccupant = taken || isMine
   const occupantUser = isMine ? currentUser ?? slot.user : slot.user
   const occupantLabel = isMine ? 'You' : displayName(slot.user)
+  const isTableKing = Boolean(kingUserId && occupantUser?.id === kingUserId)
 
   return (
     <li
@@ -32,7 +39,7 @@ function SeatRow({ slot, seatLabel, mySeat, userId, currentUser, busy, onSit }) 
       {seatLabel ? <span className="table-seat-row__label">{seatLabel}</span> : null}
       {showOccupant ? (
         <span className="table-seat-row__occupant" title={occupantLabel}>
-          <PlayerAvatar user={occupantUser} size="sm" />
+          <PlayerAvatar user={occupantUser} size="sm" ring={isTableKing ? 'king' : undefined} />
           <span className="table-seat-row__occupant-name">{occupantLabel}</span>
         </span>
       ) : null}
@@ -50,10 +57,71 @@ function SeatRow({ slot, seatLabel, mySeat, userId, currentUser, busy, onSit }) 
   )
 }
 
-function SeatSection({ title, slots, mySeat, userId, currentUser, busy, onSit }) {
+function SeatSection({ title, slots, mode, mySeat, userId, currentUser, kingUserId, busy, onSit }) {
+  const queuePath = slots[0]?.queuePath
+  const meta = queuePathMeta(mode, queuePath)
+  const seatedCount = countSeatedInGroup(slots)
+  const pooled = isPooledRoleGroup(slots)
+  const mineInGroup = slots.some((slot) => slot.seatKey === mySeat || slot.user?.id === userId)
+  const openSeatKey = firstOpenSeatKey(slots)
+
+  if (pooled) {
+    const occupants = slots.filter((slot) => slot.user || slot.seatKey === mySeat)
+    return (
+      <div className="table-card__team">
+        <div className="table-card__team-heading">
+          <h4 className="table-card__team-title">{title}</h4>
+          <p className="table-card__team-caption">{formatGroupSeatCaption(seatedCount, meta)}</p>
+        </div>
+        <div className="table-card__pooled">
+          <div className="table-card__pooled-avatars" aria-label={`${title} seats`}>
+            {occupants.length > 0 ? (
+              occupants.map((slot) => {
+                const isMine = mySeat === slot.seatKey || slot.user?.id === userId
+                const occupantUser = isMine ? currentUser ?? slot.user : slot.user
+                const occupantLabel = isMine ? 'You' : displayName(slot.user)
+                const isTableKing = Boolean(kingUserId && occupantUser?.id === kingUserId)
+                const seatBadge = seatLabelInSection(slot, title)
+                const titleText = seatBadge ? `${seatBadge} · ${occupantLabel}` : occupantLabel
+                return (
+                  <span
+                    key={slot.seatKey}
+                    className={`table-card__pooled-seat${isMine ? ' table-card__pooled-seat--mine' : ''}${
+                      isTableKing ? ' table-card__pooled-seat--king' : ''
+                    }`}
+                    title={titleText}
+                  >
+                    {seatBadge ? <span className="table-card__pooled-seat-label">{seatBadge}</span> : null}
+                    <PlayerAvatar user={occupantUser} size="sm" ring={isTableKing ? 'king' : undefined} />
+                    <span className="table-card__pooled-seat-name">{occupantLabel}</span>
+                  </span>
+                )
+              })
+            ) : (
+              <span className="table-card__pooled-empty">No one seated yet</span>
+            )}
+          </div>
+          {!mineInGroup && openSeatKey ? (
+            <button
+              type="button"
+              className="table-seat-row__sit"
+              disabled={busy}
+              onClick={() => onSit(openSeatKey)}
+            >
+              Sit
+            </button>
+          ) : null}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="table-card__team">
-      <h4 className="table-card__team-title">{title}</h4>
+      <div className="table-card__team-heading">
+        <h4 className="table-card__team-title">{title}</h4>
+        {meta ? <p className="table-card__team-caption">{formatGroupSeatCaption(seatedCount, meta)}</p> : null}
+      </div>
       <ul className="table-card__seats">
         {slots.map((slot) => (
           <SeatRow
@@ -63,6 +131,7 @@ function SeatSection({ title, slots, mySeat, userId, currentUser, busy, onSit })
             mySeat={mySeat}
             userId={userId}
             currentUser={currentUser}
+            kingUserId={kingUserId}
             busy={busy}
             onSit={onSit}
           />
@@ -72,16 +141,26 @@ function SeatSection({ title, slots, mySeat, userId, currentUser, busy, onSit })
   )
 }
 
-export default function TableCard({ table, busy, onSit, onLeave, onStart, onDiscard }) {
+export default function TableCard({ table, busy, onSit, onLeave, onStart, onLookForGroup, onDiscard }) {
   const { user } = useAuth()
   const enriched = enrichTableSeats(table)
   const mySeat = mySeatKeyOnTable(enriched, user?.id)
   const mySeatLabel = mySeatDisplayName(enriched, user?.id)
   const king = isKing(enriched, user?.id)
+  const kingUserId = enriched.king?.id
   const layout = groupSeatSlotsForDisplay(enriched.seatSlots ?? [])
   const seatedCount = enriched.seats?.length ?? 0
+  const gapsLine = formatFormingGapsFromLobbyLine(enriched.formingGaps)
 
-  const seatRowProps = { mySeat, userId: user?.id, currentUser: user, busy, onSit }
+  const seatRowProps = {
+    mode: enriched.mode,
+    mySeat,
+    userId: user?.id,
+    currentUser: user,
+    kingUserId,
+    busy,
+    onSit,
+  }
 
   return (
     <article className="table-card">
@@ -131,30 +210,24 @@ export default function TableCard({ table, busy, onSit, onLeave, onStart, onDisc
         ) : null}
 
         {layout.kind === 'flat' ? (
-          <ul className="table-card__seats table-card__seats--flat">
-            {layout.slots.map((slot) => (
-              <SeatRow
-                key={slot.seatKey}
-                slot={slot}
-                seatLabel={seatLabelInSection(slot, null)}
-                {...seatRowProps}
-              />
-            ))}
-          </ul>
+          isPooledRoleGroup(layout.slots) ? (
+            <SeatSection title="Players" slots={layout.slots} {...seatRowProps} />
+          ) : (
+            <ul className="table-card__seats table-card__seats--flat">
+              {layout.slots.map((slot) => (
+                <SeatRow
+                  key={slot.seatKey}
+                  slot={slot}
+                  seatLabel={seatLabelInSection(slot, null)}
+                  {...seatRowProps}
+                />
+              ))}
+            </ul>
+          )
         ) : null}
       </div>
 
-      {(enriched.lookForGroupOptions ?? []).some((opt) => opt.visible) ? (
-        <div className="table-card__lfg">
-          {enriched.lookForGroupOptions
-            .filter((opt) => opt.visible)
-            .map((opt) => (
-              <button key={opt.queueId} type="button" className="game-list-button" disabled>
-                {LOOK_FOR_GROUP} ({opt.queueName})
-              </button>
-            ))}
-        </div>
-      ) : null}
+      {gapsLine ? <p className="table-card__gaps">{gapsLine}</p> : null}
 
       <div className="table-card__actions">
         {mySeat ? (
@@ -167,6 +240,21 @@ export default function TableCard({ table, busy, onSit, onLeave, onStart, onDisc
             {START_GAME}
           </button>
         ) : null}
+        {king
+          ? enriched.lookForGroupOptions
+              ?.filter((opt) => opt.visible)
+              .map((opt) => (
+                <button
+                  key={opt.queueId}
+                  type="button"
+                  className="game-list-button"
+                  disabled={busy || !opt.enabled || enriched.backfillActive}
+                  onClick={() => onLookForGroup?.(opt.queueId)}
+                >
+                  {LOOK_FOR_GROUP} ({opt.queueName})
+                </button>
+              ))
+          : null}
         {enriched.canDiscard ? (
           <button
             type="button"

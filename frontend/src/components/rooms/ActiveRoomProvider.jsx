@@ -10,7 +10,7 @@ import {
 } from '../../lib/rooms'
 import { prefetchSubscriptionAuth } from '../../lib/queue'
 import { readRoomInviteHint, readRoomMemberHint, writeRoomDockHint } from '../../lib/roomDockHint'
-import { fetchMyTableSeat, mergeTableRecord } from '../../lib/tables'
+import { fetchMyTableSeat, mergeTableRecord, TABLE_UPDATED_EVENT, tableShouldLeaveRoomList } from '../../lib/tables'
 
 const ActiveRoomContext = createContext(null)
 
@@ -88,6 +88,19 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
     if (!updatedTable?.id) {
       return
     }
+    if (tableShouldLeaveRoomList(updatedTable)) {
+      setRoom((prev) => {
+        if (!prev) {
+          return prev
+        }
+        return {
+          ...prev,
+          tables: (prev.tables ?? []).filter((table) => table.id !== updatedTable.id),
+        }
+      })
+      window.dispatchEvent(new CustomEvent(TABLE_UPDATED_EVENT))
+      return
+    }
     setRoom((prev) => {
       if (!prev) {
         return prev
@@ -101,6 +114,7 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
       next[idx] = mergeTableRecord(tables[idx], updatedTable)
       return { ...prev, tables: next }
     })
+    window.dispatchEvent(new CustomEvent(TABLE_UPDATED_EVENT))
   }, [])
 
   const loadRoomSnapshot = useCallback(async () => {
@@ -301,6 +315,16 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
     }
     void refresh()
   }, [authLoading, user, pendingInviteCode, openRoomByCode, refresh])
+
+  useEffect(() => {
+    if (authLoading || !user || room?.inviteCode || pendingInviteCode) {
+      return
+    }
+    if (!tableSeatInviteCode && !readRoomInviteHint()) {
+      return
+    }
+    void refresh()
+  }, [authLoading, user, room?.inviteCode, tableSeatInviteCode, pendingInviteCode, refresh])
 
   useEffect(() => {
     if (roomOpen) {

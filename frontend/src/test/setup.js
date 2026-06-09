@@ -80,8 +80,8 @@ function createFetchMock(handlers) {
       data = { logout: true }
     } else if (query.includes('subscriptionAuth')) {
       data = { subscriptionAuth: handlers.subscriptionAuth ?? 'Bearer test-token' }
-    } else if (query.includes('myActiveQueue')) {
-      data = { myActiveQueue: handlers.myActiveQueue ?? null }
+    } else if (query.includes('myActiveIntent')) {
+      data = { myActiveIntent: handlers.myActiveIntent ?? null }
     } else if (query.includes('myQueueStatus')) {
       data = { myQueueStatus: handlers.myQueueStatus ?? defaultQueueStatus }
     } else if (query.includes('games {')) {
@@ -167,7 +167,7 @@ export function mockAuthenticatedSession(
     games: mockDemoGames,
     subscriptionAuth: 'Bearer test-token',
     myQueueStatus: defaultQueueStatus,
-    myActiveQueue: null,
+    myActiveIntent: null,
     myRoom: null,
   })
 }

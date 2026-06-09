@@ -37,4 +37,21 @@ func TestResolveURLFromKey(t *testing.T) {
 	}
 }
 
+func TestResolveURLAbsolutizesSpiritAvatarPath(t *testing.T) {
+	stored := "/spirit-avatars/reading-id/ember-fox.png"
+	got := ResolveURL("https://joinquest.cc", &stored, nil)
+	if got == nil || *got != "https://joinquest.cc/spirit-avatars/reading-id/ember-fox.png" {
+		t.Fatalf("unexpected url: %+v", got)
+	}
+}
+
+func TestAbsolutizePublicAssetURL(t *testing.T) {
+	if got := AbsolutizePublicAssetURL("https://joinquest.cc", "/avatars/storm.png"); got != "https://joinquest.cc/avatars/storm.png" {
+		t.Fatalf("relative: got %q", got)
+	}
+	if got := AbsolutizePublicAssetURL("https://joinquest.cc", "https://cdn.example/a.png"); got != "https://cdn.example/a.png" {
+		t.Fatalf("absolute: got %q", got)
+	}
+}
+
 func ptr(s string) *string { return &s }

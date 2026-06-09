@@ -4,7 +4,7 @@ import { fetchGames } from '../../lib/games'
 import GameListItem from './GameListItem'
 import { GAMES_HEADING, GAMES_INTRO } from '../../lib/playerCopy'
 
-export default function GameLobby({ activeQueue, activeTableSeat, onQueueChange, onTableChange }) {
+export default function GameLobby({ activeIntent, activeTableSeat, onQueueChange, onTableChange }) {
   const { user, loading: authLoading } = useAuth()
   const [games, setGames] = useState([])
   const [status, setStatus] = useState('idle')
@@ -74,7 +74,7 @@ export default function GameLobby({ activeQueue, activeTableSeat, onQueueChange,
             <GameListItem
               key={game.id}
               game={game}
-              activeQueue={activeQueue}
+              activeIntent={activeIntent}
               activeTableSeat={activeTableSeat}
               onQueueChange={onQueueChange}
               onTableChange={onTableChange}

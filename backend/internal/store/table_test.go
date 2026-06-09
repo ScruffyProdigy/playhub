@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/internal/gameclient"
@@ -135,6 +136,158 @@ func TestTableSitStart(t *testing.T) {
 	if len(participants) != 4 {
 		t.Fatalf("participant count = %d, want 4", len(participants))
 	}
+
+	for _, userID := range []uuid.UUID{host.ID, guest.ID, third.ID, fourth.ID} {
+		started, err := st.GetUserStartedTableSession(ctx, userID)
+		if err != nil {
+			t.Fatalf("GetUserStartedTableSession(%s): %v", userID, err)
+		}
+		if started == nil || started.SessionID == nil || *started.SessionID != result.SessionID {
+			t.Fatalf("user %s missing started table session", userID)
+		}
+	}
+
+	if err := st.CompleteSession(ctx, result.SessionID, time.Now()); err != nil {
+		t.Fatalf("CompleteSession: %v", err)
+	}
+
+	tableAfter, err := st.GetRoomTableByID(ctx, table.ID)
+	if err != nil {
+		t.Fatalf("GetRoomTableByID after complete: %v", err)
+	}
+	if tableAfter.Status != TableStatusForming {
+		t.Fatalf("table status = %q, want forming", tableAfter.Status)
+	}
+	seatedAfter, err := st.ListTableSeats(ctx, table.ID)
+	if err != nil {
+		t.Fatalf("ListTableSeats after complete: %v", err)
+	}
+	if len(seatedAfter) != 4 {
+		t.Fatalf("seated after complete = %d, want 4", len(seatedAfter))
+	}
+
+	for _, userID := range []uuid.UUID{host.ID, guest.ID, third.ID, fourth.ID} {
+		active, err := st.GetUserActiveSessionParticipation(ctx, userID)
+		if err != nil {
+			t.Fatalf("GetUserActiveSessionParticipation(%s): %v", userID, err)
+		}
+		if active != nil {
+			t.Fatalf("user %s still in active session after complete", userID)
+		}
+	}
+}
+
+func TestSitAtTableSequentialPathSeats(t *testing.T) {
+	st := openTestStore(t)
+	cleaner := st.NewTestCleaner(t)
+	ctx := context.Background()
+
+	host, err := st.CreateUser(ctx, CreateUserParams{Email: "table-seq-host@example.com"})
+	if err != nil {
+		t.Fatalf("create host: %v", err)
+	}
+	cleaner.TrackUser(host.ID)
+	guest, err := st.CreateUser(ctx, CreateUserParams{Email: "table-seq-guest@example.com"})
+	if err != nil {
+		t.Fatalf("create guest: %v", err)
+	}
+	cleaner.TrackUser(guest.ID)
+
+	game, mode, _ := setupWordHuntMode(t, st, cleaner)
+	room, err := st.CreateRoom(ctx, host.ID)
+	if err != nil {
+		t.Fatalf("create room: %v", err)
+	}
+	if err := st.addRoomMemberDirect(ctx, room.ID, guest.ID); err != nil {
+		t.Fatalf("add guest: %v", err)
+	}
+
+	table, err := st.CreateTable(ctx, room.ID, game.ID, mode.ID, host.ID)
+	if err != nil {
+		t.Fatalf("create table: %v", err)
+	}
+
+	seats, err := st.ListGameModeSeats(ctx, mode.ID)
+	if err != nil {
+		t.Fatalf("list seats: %v", err)
+	}
+
+	var clueRed, clueBlue, clueGreen string
+	for _, seat := range seats {
+		if seatQueuePathValue(seat) != "ClueGiver" {
+			continue
+		}
+		switch {
+		case clueRed == "":
+			clueRed = seat.SeatKey
+		case clueBlue == "":
+			clueBlue = seat.SeatKey
+		default:
+			clueGreen = seat.SeatKey
+		}
+	}
+	if clueRed == "" || clueBlue == "" || clueGreen == "" {
+		t.Fatalf("missing clue giver seats: red=%q blue=%q green=%q", clueRed, clueBlue, clueGreen)
+	}
+
+	if _, err := st.SitAtTable(ctx, table.ID, host.ID, clueRed); err != nil {
+		t.Fatalf("host sit red: %v", err)
+	}
+	if _, err := st.SitAtTable(ctx, table.ID, guest.ID, clueGreen); err == nil {
+		t.Fatal("expected error sitting green before blue")
+	}
+	if _, err := st.SitAtTable(ctx, table.ID, guest.ID, clueBlue); err != nil {
+		t.Fatalf("guest sit blue: %v", err)
+	}
+}
+
+func TestSitAtTableSequentialFifoSeats(t *testing.T) {
+	st := openTestStore(t)
+	cleaner := st.NewTestCleaner(t)
+	ctx := context.Background()
+
+	host, err := st.CreateUser(ctx, CreateUserParams{Email: "table-fifo-host@example.com"})
+	if err != nil {
+		t.Fatalf("create host: %v", err)
+	}
+	cleaner.TrackUser(host.ID)
+	guest, err := st.CreateUser(ctx, CreateUserParams{Email: "table-fifo-guest@example.com"})
+	if err != nil {
+		t.Fatalf("create guest: %v", err)
+	}
+	cleaner.TrackUser(guest.ID)
+
+	game, mode := setupDuelMode(t, st, cleaner)
+	room, err := st.CreateRoom(ctx, host.ID)
+	if err != nil {
+		t.Fatalf("create room: %v", err)
+	}
+	if err := st.addRoomMemberDirect(ctx, room.ID, guest.ID); err != nil {
+		t.Fatalf("add guest: %v", err)
+	}
+
+	table, err := st.CreateTable(ctx, room.ID, game.ID, mode.ID, host.ID)
+	if err != nil {
+		t.Fatalf("create table: %v", err)
+	}
+
+	seats, err := st.ListGameModeSeats(ctx, mode.ID)
+	if err != nil {
+		t.Fatalf("list seats: %v", err)
+	}
+	if len(seats) != 2 {
+		t.Fatalf("seat count = %d, want 2", len(seats))
+	}
+
+	if _, err := st.SitAtTable(ctx, table.ID, host.ID, seats[1].SeatKey); err == nil {
+		t.Fatal("expected error sitting second seat before first")
+	}
+	if _, err := st.SitAtTable(ctx, table.ID, host.ID, seats[0].SeatKey); err != nil {
+		t.Fatalf("host sit first: %v", err)
+	}
+	if _, err := st.SitAtTable(ctx, table.ID, guest.ID, seats[1].SeatKey); err != nil {
+		t.Fatalf("guest sit second: %v", err)
+	}
 }
 
 func TestTableQueueExclusion(t *testing.T) {
@@ -162,7 +315,7 @@ func TestTableQueueExclusion(t *testing.T) {
 		t.Fatalf("sit: %v", err)
 	}
 
-	if _, err := st.JoinModeQueue(ctx, modeQueueID, user.ID, "ClueGiver"); err != nil {
+	if _, err := st.JoinModeQueue(ctx, modeQueueID, user.ID, "ClueGiver", nil); err != nil {
 		t.Fatalf("join queue: %v", err)
 	}
 
@@ -215,6 +368,41 @@ func setupWordHuntMode(t *testing.T, st *Store, cleaner *TestCleaner) (*Game, *G
 	}
 	return result.Game, &modes[0], queues[0].ID
 }
+
+func setupDuelMode(t *testing.T, st *Store, cleaner *TestCleaner) (*Game, *GameMode) {
+	t.Helper()
+	ctx := context.Background()
+	slug := "table-duel-" + uuid.NewString()
+	manifest := &gameclient.Manifest{
+		Modes: []gameclient.ModeManifest{{
+			Key:          "duel",
+			DisplayName:  "1v1 Duel",
+			Min:          2,
+			Max:          2,
+			SeatTemplate: json.RawMessage(`{"count":2}`),
+		}},
+		Status:     gameclient.StatusResponse{Game: "Duel", Version: "1.0.0"},
+		ETag:       `"duel"`,
+		RawJSON:    []byte(`{"modes":[{"key":"duel"}]}`),
+		SHA256Hash: uuid.NewString(),
+	}
+	result, err := st.RegisterGame(ctx, RegisterGameParams{
+		Slug:       slug,
+		PlayURL:    "https://play.example.com/" + slug,
+		APIBaseURL: "https://api.example.com/" + slug,
+	}, manifest)
+	if err != nil {
+		t.Fatalf("RegisterGame: %v", err)
+	}
+	cleaner.TrackGame(result.Game.ID)
+
+	modes, err := st.ListGameModesByGameID(ctx, result.Game.ID)
+	if err != nil {
+		t.Fatalf("ListGameModesByGameID: %v", err)
+	}
+	return result.Game, &modes[0]
+}
+
 func (s *Store) addRoomMemberDirect(ctx context.Context, roomID, userID uuid.UUID) error {
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO room_members (room_id, user_id) VALUES ($1, $2)

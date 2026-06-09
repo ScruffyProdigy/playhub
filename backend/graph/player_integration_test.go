@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
@@ -91,12 +92,67 @@ func TestPlayerLookupRequiresServiceTokenWhenConfigured(t *testing.T) {
 	}
 }
 
+func TestPlayerLookupRequiresServiceTokenWithPepperOnly(t *testing.T) {
+	env := newQueueIntegrationEnv(t)
+	cleaner := env.newCleaner(t)
+	ctx := t.Context()
+
+	t.Setenv("LOBBY_GAME_TOKEN_PEPPER", "pepper-only-auth")
+	t.Setenv("LOBBY_GAME_SERVICE_TOKEN", "")
+
+	user, err := env.Store.CreateUser(ctx, store.CreateUserParams{
+		Email: "player-pepper-" + uuid.NewString() + "@example.com",
+		DisplayName: "Pepper Auth Player",
+	})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	cleaner.TrackUser(user.ID)
+
+	query := `query Player($id: ID!) { player(id: $id) { id displayName avatarUrl avatarSource } }`
+	vars := map[string]any{"id": user.ID.String()}
+
+	deniedBody := postGraphQLWithBearer(t, env.Handler, "", query, vars)
+	var denied struct {
+		Errors []struct {
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(deniedBody, &denied); err != nil {
+		t.Fatalf("decode denied: %v", err)
+	}
+	if len(denied.Errors) == 0 {
+		t.Fatalf("expected auth error without service token when pepper is configured, got %s", deniedBody)
+	}
+
+	gameID := uuid.MustParse(store.DemoPrimaryGameIDStr)
+	token, err := auth.FormatGameServiceToken(gameID)
+	if err != nil {
+		t.Fatalf("FormatGameServiceToken: %v", err)
+	}
+	okBody := postGraphQLWithBearer(t, env.Handler, token, query, vars)
+	var okResp struct {
+		Data struct {
+			Player *struct {
+				ID string `json:"id"`
+			} `json:"player"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(okBody, &okResp); err != nil {
+		t.Fatalf("decode ok: %v", err)
+	}
+	if okResp.Data.Player == nil || okResp.Data.Player.ID != user.ID.String() {
+		t.Fatalf("expected player with per-game token, got %s", okBody)
+	}
+}
+
 func TestPlayerLookupWithoutServiceTokenInDev(t *testing.T) {
 	env := newQueueIntegrationEnv(t)
 	cleaner := env.newCleaner(t)
 	ctx := t.Context()
 
 	t.Setenv("LOBBY_GAME_SERVICE_TOKEN", "")
+	t.Setenv("LOBBY_GAME_TOKEN_PEPPER", "")
 
 	user, err := env.Store.CreateUser(ctx, store.CreateUserParams{
 		Email: "player-open-" + uuid.NewString() + "@example.com",

@@ -15,12 +15,19 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/runtimeenv"
 )
 
+// ProvisionPlayer is presentation data games can show before any GraphQL lookup.
+type ProvisionPlayer struct {
+	DisplayName string `json:"displayName,omitempty"`
+	AvatarURL   string `json:"avatarUrl,omitempty"`
+}
+
 // AssignmentSeat is one seat in a Lobby-pushed roster.
 type AssignmentSeat struct {
-	SeatKey     string `json:"seatKey"`
-	LobbyUserID string `json:"lobbyUserId"`
-	Team        string `json:"team,omitempty"`
-	Role        string `json:"role,omitempty"`
+	SeatKey     string           `json:"seatKey"`
+	LobbyUserID string           `json:"lobbyUserId"`
+	Team        string           `json:"team,omitempty"`
+	Role        string           `json:"role,omitempty"`
+	Player      *ProvisionPlayer   `json:"player,omitempty"`
 }
 
 // LobbyInfo tells the game how to reach Lobby after and during a match.

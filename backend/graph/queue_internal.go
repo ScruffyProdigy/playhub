@@ -10,7 +10,7 @@ import (
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
 
-func (r *mutationResolver) joinQueueInternal(ctx context.Context, modeQueueID uuid.UUID, queuePath string) (*model.JoinResult, error) {
+func (r *mutationResolver) joinQueueInternal(ctx context.Context, modeQueueID uuid.UUID, queuePath string, partyInput *model.PartyNodeInput) (*model.JoinResult, error) {
 	st, err := r.requireStore()
 	if err != nil {
 		return nil, err
@@ -21,10 +21,18 @@ func (r *mutationResolver) joinQueueInternal(ctx context.Context, modeQueueID uu
 		return nil, err
 	}
 
-	result, err := st.JoinModeQueue(ctx, modeQueueID, userID, queuePath)
+	party, err := toStorePartyInput(ctx, userID, partyInput)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := st.JoinModeQueue(ctx, modeQueueID, userID, queuePath, party)
 	if err != nil {
 		if errors.Is(err, store.ErrAlreadyMatched) {
 			return nil, fmt.Errorf("you already have an active match; finish or leave your current queue first")
+		}
+		if errors.Is(err, store.ErrActiveGame) {
+			return nil, fmt.Errorf("you have a game in progress — use Leave game at the top of the page")
 		}
 		if errors.Is(err, store.ErrNotFound) {
 			return nil, fmt.Errorf("queue not found")

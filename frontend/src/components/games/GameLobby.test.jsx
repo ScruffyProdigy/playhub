@@ -19,7 +19,7 @@ function renderGameLobby() {
   return render(
     <AuthProvider>
       <ActiveRoomProvider>
-        <GameLobby activeQueue={null} activeTableSeat={null} onQueueChange={vi.fn()} onTableChange={vi.fn()} />
+        <GameLobby activeIntent={null} activeTableSeat={null} onQueueChange={vi.fn()} onTableChange={vi.fn()} />
       </ActiveRoomProvider>
     </AuthProvider>,
   )

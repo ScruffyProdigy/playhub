@@ -1,7 +1,7 @@
 import CompleteSignInPage from './components/auth/CompleteSignInPage'
 import ReturnPage from './components/auth/ReturnPage'
 import AuthPanel from './components/auth/AuthPanel'
-import ActiveQueueBanner from './components/games/ActiveQueueBanner'
+import IntentBanner from './components/games/IntentBanner'
 import GameLobby from './components/games/GameLobby'
 import CreateRoomPanel from './components/rooms/CreateRoomPanel'
 import { ActiveRoomProvider, useActiveRoom } from './components/rooms/ActiveRoomProvider'
@@ -9,8 +9,7 @@ import AppDock from './components/rooms/AppDock'
 import RoomPanel from './components/rooms/RoomPanel'
 import RoomSheet from './components/rooms/RoomSheet'
 import { AuthProvider, useAuth } from './components/auth/AuthProvider'
-import { useActiveQueue } from './components/games/useActiveQueue'
-import { useActiveTableSeat } from './components/games/useActiveTableSeat'
+import { useActiveIntent } from './components/games/useActiveIntent'
 import { APP_NAME, APP_TAGLINE } from './lib/brand'
 import { parseRoomInviteCode } from './lib/rooms'
 import { MOBILE_ROOM_QUERY, useMediaQuery } from './lib/useMediaQuery'
@@ -20,21 +19,16 @@ import './App.css'
 
 function CatalogPage() {
   const { user, loading: authLoading } = useAuth()
-  const { activeQueue, busy: queueBusy, refresh: refreshQueue, handleLeave: leaveQueue } = useActiveQueue()
-  const { activeTableSeat, busy: tableBusy, refresh: refreshTable, handleLeave: leaveTableSeat } =
-    useActiveTableSeat()
-
-  const bannerBusy = queueBusy || tableBusy
-  const onLeaveIntent = activeQueue?.queueId ? leaveQueue : leaveTableSeat
+  const { activeIntent, activeTableSeat, busy, refresh, handleLeave } = useActiveIntent()
 
   return (
     <main className="app-shell app-shell--catalog">
       {!authLoading && user ? (
-        <ActiveQueueBanner
-          activeQueue={activeQueue}
+        <IntentBanner
+          activeIntent={activeIntent}
           activeTableSeat={activeTableSeat}
-          busy={bannerBusy}
-          onLeave={onLeaveIntent}
+          busy={busy}
+          onLeave={handleLeave}
         />
       ) : null}
 
@@ -46,10 +40,10 @@ function CatalogPage() {
       <AuthPanel />
       {!authLoading && user ? <CreateRoomPanel /> : null}
       <GameLobby
-        activeQueue={activeQueue}
+        activeIntent={activeIntent}
         activeTableSeat={activeTableSeat}
-        onQueueChange={refreshQueue}
-        onTableChange={refreshTable}
+        onQueueChange={refresh}
+        onTableChange={refresh}
       />
     </main>
   )
@@ -59,12 +53,19 @@ function MainLayout() {
   const pathname = usePathname()
   const inviteCode = parseRoomInviteCode(pathname)
   const { user } = useAuth()
-  const { room, roomOpen, dismissRoom, openRoom, unreadCount, hasRoomMembership } = useActiveRoom()
+  const { room, roomOpen, dismissRoom, openRoom, unreadCount, hasRoomMembership, markRead } = useActiveRoom()
   const isMobile = useMediaQuery(MOBILE_ROOM_QUERY)
   const inRoomContext = Boolean(room || inviteCode || hasRoomMembership)
-  const showDesktopRoom = Boolean(room && user && !isMobile && roomOpen)
+  // Desktop keeps the room panel visible whenever the user belongs to a room; mobile toggles via dock/sheet.
+  const showDesktopRoom = Boolean(room && user && !isMobile)
   const showMobileSheet = Boolean(user && isMobile && roomOpen)
   const showDock = Boolean(user && isMobile && inRoomContext)
+
+  useEffect(() => {
+    if (showDesktopRoom) {
+      markRead()
+    }
+  }, [showDesktopRoom, markRead, room?.id])
 
   useEffect(() => {
     const root = document.getElementById('root')

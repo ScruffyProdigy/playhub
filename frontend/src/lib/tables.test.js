@@ -1,13 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import {
   enrichTableSeats,
+  firstOpenSeatKey,
+  formatGroupSeatCaption,
   groupSeatSlotsByTeam,
   groupSeatSlotsForDisplay,
+  isPooledRoleGroup,
   mergeTableRecord,
   mySeatDisplayName,
   mySeatKeyOnTable,
   seatLabelInSection,
   sectionTitleForSeat,
+  tableShouldLeaveRoomList,
 } from './tables'
 
 describe('groupSeatSlotsByTeam', () => {
@@ -67,6 +71,83 @@ describe('sectionTitleForSeat', () => {
   it('finds role section title for a seat key', () => {
     expect(sectionTitleForSeat('x', wordHuntSlots)).toBe('Clue Giver')
     expect(sectionTitleForSeat('y', wordHuntSlots)).toBe('Guesser')
+  })
+})
+
+describe('tableShouldLeaveRoomList', () => {
+  it('removes started tables with no seated players', () => {
+    expect(
+      tableShouldLeaveRoomList({
+        id: 't1',
+        canStart: false,
+        seats: [],
+        seatSlots: [{ seatKey: '1', displayName: '1' }],
+      }),
+    ).toBe(true)
+  })
+
+  it('keeps forming tables with open seats', () => {
+    expect(
+      tableShouldLeaveRoomList({
+        id: 't1',
+        canStart: false,
+        seats: [{ seatKey: '1', user: { id: 'u1' } }],
+        seatSlots: [{ seatKey: '1', displayName: '1', user: { id: 'u1' } }],
+      }),
+    ).toBe(false)
+  })
+})
+
+describe('pooled role helpers', () => {
+  const guesserSlots = [
+    { seatKey: 'Guesser-1', displayName: 'Guesser · 1', queuePath: 'Guesser' },
+    { seatKey: 'Guesser-2', displayName: 'Guesser · 2', queuePath: 'Guesser' },
+  ]
+  const clueGiverSlots = [
+    { seatKey: 'ClueGiver-Red', displayName: 'Clue Giver · Red', queuePath: 'ClueGiver' },
+    { seatKey: 'ClueGiver-Blue', displayName: 'Clue Giver · Blue', queuePath: 'ClueGiver' },
+    { seatKey: 'ClueGiver-Green', displayName: 'Clue Giver · Green', queuePath: 'ClueGiver' },
+  ]
+
+  it('detects pooled guesser groups', () => {
+    expect(isPooledRoleGroup(guesserSlots)).toBe(true)
+  })
+
+  it('detects pooled clue giver groups', () => {
+    expect(isPooledRoleGroup(clueGiverSlots)).toBe(true)
+  })
+
+  it('does not pool mixed or unpathed slots', () => {
+    expect(isPooledRoleGroup([])).toBe(false)
+    expect(isPooledRoleGroup([{ seatKey: '1', displayName: '1' }])).toBe(false)
+    expect(
+      isPooledRoleGroup([
+        { seatKey: 'a', queuePath: 'ClueGiver' },
+        { seatKey: 'b', queuePath: 'Guesser' },
+      ]),
+    ).toBe(false)
+  })
+
+  it('pools fifo duel seats without queue paths', () => {
+    expect(
+      isPooledRoleGroup([
+        { seatKey: '1', displayName: '1' },
+        { seatKey: '2', displayName: '2' },
+      ]),
+    ).toBe(true)
+  })
+
+  it('picks the first open seat in a pooled group', () => {
+    const slots = [
+      { seatKey: 'Guesser-1', displayName: 'Guesser · 1', user: { id: 'u1' } },
+      { seatKey: 'Guesser-2', displayName: 'Guesser · 2', user: null },
+    ]
+    expect(firstOpenSeatKey(slots)).toBe('Guesser-2')
+  })
+
+  it('formats min/max captions', () => {
+    expect(formatGroupSeatCaption(1, { minPlayers: 2, maxPlayers: 6 })).toBe('1/6 seated · need 2 to start')
+    expect(formatGroupSeatCaption(2, { minPlayers: 2, maxPlayers: 6 })).toBe('2/6 seated · ready')
   })
 })
 

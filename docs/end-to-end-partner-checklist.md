@@ -23,7 +23,7 @@ Use this to verify the **“sign in → queue → play → return”** story on 
 2. **Catalog** lists the game with an active default queue.
 3. **Look for group** — only one waiting search globally; joining another game **moves** the player out of the first and shows `joinQueue.message`.
 4. **Second browser / incognito** — second player joins the same queue.
-5. **Match** — both receive `joinUrl` (subscription or `myQueueStatus` / `myActiveQueue`).
+5. **Match** — both receive `joinUrl` (subscription or `myQueueStatus` / `myActiveIntent`).
 6. **Launch** — each player opens `joinUrl`, game claims `seatKey` from JWT.
 7. **Play** — match runs on the game origin (not JoinQuest).
 8. **Return** — game sends player to `{lobby.returnUrl}?match={externalMatchId}`; Lobby `/return` resolves per-player destination. See [player-return-routing.md](./player-return-routing.md).

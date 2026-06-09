@@ -18,7 +18,7 @@ import (
 )
 
 // JoinQueue is the resolver for the joinQueue field.
-func (r *mutationResolver) JoinQueue(ctx context.Context, queueID string, queuePath *string) (*model.JoinResult, error) {
+func (r *mutationResolver) JoinQueue(ctx context.Context, queueID string, queuePath *string, party *model.PartyNodeInput) (*model.JoinResult, error) {
 	modeQueueID, err := parseUUID(queueID, "queue id")
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (r *mutationResolver) JoinQueue(ctx context.Context, queueID string, queueP
 	if queuePath != nil {
 		path = strings.TrimSpace(*queuePath)
 	}
-	return r.joinQueueInternal(ctx, modeQueueID, path)
+	return r.joinQueueInternal(ctx, modeQueueID, path, party)
 }
 
 // LeaveQueue is the resolver for the leaveQueue field.
@@ -58,6 +58,44 @@ func (r *mutationResolver) LeaveQueue(ctx context.Context, queueID string) (bool
 	if err := r.publishQueueLeft(ctx, view.GameID, modeQueueID, userID, queuedCount, ""); err != nil {
 		return false, err
 	}
+	return true, nil
+}
+
+// LeaveActiveGame is the resolver for the leaveActiveGame field.
+func (r *mutationResolver) LeaveActiveGame(ctx context.Context) (bool, error) {
+	st, err := r.requireStore()
+	if err != nil {
+		return false, err
+	}
+
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	tableID, err := st.LeaveActiveGame(ctx, userID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if err := pubsub.PublishTableSeatEvent(ctx, r.PubSub, userID.String(), pubsub.TableSeatEvent{
+		Status: pubsub.TableSeatStatusLeft,
+	}); err != nil {
+		return false, err
+	}
+
+	if tableID != nil && *tableID != uuid.Nil {
+		table, tableErr := st.GetRoomTableByID(ctx, *tableID)
+		if tableErr == nil && table != nil {
+			if pubErr := r.publishTableUpdated(ctx, table.RoomID, table.ID); pubErr != nil {
+				return false, pubErr
+			}
+		}
+	}
+
 	return true, nil
 }
 
@@ -304,8 +342,8 @@ func (r *queryResolver) MyQueueStatus(ctx context.Context, queueID string) (*mod
 	return joinResultFromQueueView(view, launchURL), nil
 }
 
-// MyActiveQueue is the resolver for the myActiveQueue field.
-func (r *queryResolver) MyActiveQueue(ctx context.Context) (*model.ActiveQueue, error) {
+// MyActiveIntent is the resolver for the myActiveIntent field.
+func (r *queryResolver) MyActiveIntent(ctx context.Context) (*model.ActiveIntent, error) {
 	st, err := r.requireStore()
 	if err != nil {
 		return nil, err
@@ -316,7 +354,7 @@ func (r *queryResolver) MyActiveQueue(ctx context.Context) (*model.ActiveQueue, 
 		return nil, err
 	}
 
-	active, err := st.GetUserActiveQueue(ctx, userID)
+	active, err := st.GetUserActiveIntent(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -324,12 +362,18 @@ func (r *queryResolver) MyActiveQueue(ctx context.Context) (*model.ActiveQueue, 
 		return nil, nil
 	}
 
-	queueID := active.ModeQueueID.String()
 	gameID := active.GameID.String()
-	resp := &model.ActiveQueue{
-		QueueID:  queueID,
+	resp := &model.ActiveIntent{
 		GameID:   gameID,
 		GameName: active.GameName,
+	}
+	if active.ModeQueueID != uuid.Nil {
+		queueID := active.ModeQueueID.String()
+		resp.QueueID = &queueID
+	}
+	if active.ModeName != "" {
+		modeName := active.ModeName
+		resp.ModeName = &modeName
 	}
 	if active.Waiting {
 		resp.Status = model.QueueStatusWaiting
@@ -345,16 +389,20 @@ func (r *queryResolver) MyActiveQueue(ctx context.Context) (*model.ActiveQueue, 
 	}
 
 	resp.Status = model.QueueStatusMatched
+	if active.SeatKey != "" && active.ModeID != uuid.Nil {
+		if mode, mErr := st.GetGameModeByID(ctx, active.ModeID); mErr == nil {
+			if modeSeats, sErr := st.ListGameModeSeats(ctx, active.ModeID); sErr == nil {
+				display := seatDisplayName(modeSeats, active.SeatKey, mode.SeatTemplate)
+				resp.SeatDisplayName = &display
+			}
+		}
+	}
 	if active.SessionID != nil {
 		game, gErr := st.GetGameByID(ctx, active.GameID)
 		if gErr != nil {
 			return nil, gErr
 		}
-		launchURL, uErr := r.signLaunchURL(ctx, game, *active.SessionID, userID)
-		if uErr != nil {
-			return nil, fmt.Errorf("launch url: %w", uErr)
-		}
-		if launchURL != "" {
+		if launchURL, uErr := r.signLaunchURL(ctx, game, *active.SessionID, userID); uErr == nil && launchURL != "" {
 			resp.JoinURL = &launchURL
 		}
 	}
@@ -430,10 +478,15 @@ func (r *subscriptionResolver) QueueUpdated(ctx context.Context, queueID string)
 	if view.Matched && view.SessionID != nil {
 		initialLaunchURL, err = r.signLaunchURL(ctx, game, *view.SessionID, userID)
 		if err != nil {
-			return nil, fmt.Errorf("launch url: %w", err)
+			initialLaunchURL = ""
 		}
 	}
 	initial := queueUpdateFromView(view, initialLaunchURL)
+	if initial != nil {
+		if err := r.enrichQueueUpdateGaps(ctx, initial); err != nil {
+			return nil, err
+		}
+	}
 
 	messages, unsubscribe, err := r.PubSub.Subscribe(ctx, pubsub.UserQueueChannel(userID.String()))
 	if err != nil {
@@ -466,6 +519,9 @@ func (r *subscriptionResolver) QueueUpdated(ctx context.Context, queueID string)
 					continue
 				}
 				update := toGraphQLQueueUpdate(event)
+				if err := r.enrichQueueUpdateGaps(ctx, update); err != nil {
+					continue
+				}
 				select {
 				case updates <- update:
 				case <-ctx.Done():

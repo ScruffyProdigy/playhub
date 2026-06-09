@@ -30,6 +30,10 @@ type Table {
   canStart: Boolean!
   canDiscard: Boolean!
   lookForGroupOptions: [TableLookForGroupOption!]!
+  """True when this table has started lobby backfill (forming match seeded from seats)."""
+  backfillActive: Boolean!
+  """Roles still needed to start via backfill or from current seated counts."""
+  formingGaps: [QueuePathGap!]!
 }
 
 type MyTableSeat {
@@ -42,6 +46,11 @@ type MyTableSeat {
   modeName: String!
   seatKey: String!
   seatDisplayName: String!
+  """forming while seated at a table; started when the table has launched a session."""
+  status: String!
+  joinUrl: String
+  backfillActive: Boolean!
+  formingGaps: [QueuePathGap!]!
 }
 
 extend type Room {
@@ -59,8 +68,10 @@ extend type Mutation {
   leaveTable(tableId: ID!): Boolean!
   discardTable(tableId: ID!): Boolean!
   startTable(tableId: ID!): JoinResult!
+  startTableBackfill(tableId: ID!, queueId: ID!): JoinResult!
 }
 
 extend type Subscription {
   tableUpdated(roomId: ID!): Table!
+  myTableSeatUpdated: MyTableSeat!
 }

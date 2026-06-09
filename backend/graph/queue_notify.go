@@ -110,6 +110,7 @@ func queueUpdateFromView(view *store.UserQueueView, launchURL string) *model.Que
 		GameID:      gameIDStr,
 		QueueID:     queueIDStr,
 		QueuedCount: view.QueuedCount,
+		FormingGaps: []*model.QueuePathGap{},
 	}
 
 	if view.Matched && view.SessionID != nil {
@@ -136,6 +137,7 @@ func toGraphQLQueueUpdate(event pubsub.QueueEvent) *model.QueueUpdate {
 		GameID:      event.GameID,
 		QueueID:     event.QueueID,
 		QueuedCount: event.QueuedCount,
+		FormingGaps: []*model.QueuePathGap{},
 	}
 	switch event.Status {
 	case pubsub.QueueStatusMatched:
@@ -155,4 +157,26 @@ func toGraphQLQueueUpdate(event pubsub.QueueEvent) *model.QueueUpdate {
 		update.Message = &event.Message
 	}
 	return update
+}
+
+func (r *Resolver) enrichQueueUpdateGaps(ctx context.Context, update *model.QueueUpdate) error {
+	if update == nil {
+		return nil
+	}
+	if update.Status != model.QueueStatusWaiting || update.QueueID == "" {
+		if update.FormingGaps == nil {
+			update.FormingGaps = []*model.QueuePathGap{}
+		}
+		return nil
+	}
+	modeQueueID, err := parseUUID(update.QueueID, "queue id")
+	if err != nil {
+		return err
+	}
+	gaps, err := r.formingGapsForModeQueue(ctx, modeQueueID)
+	if err != nil {
+		return err
+	}
+	update.FormingGaps = gaps
+	return nil
 }

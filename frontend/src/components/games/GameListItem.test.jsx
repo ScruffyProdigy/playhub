@@ -44,7 +44,7 @@ function renderItem(props) {
     <ul>
       <GameListItem
         game={catalogGame}
-        activeQueue={null}
+        activeIntent={null}
         activeTableSeat={null}
         onQueueChange={vi.fn()}
         onTableChange={vi.fn()}
@@ -101,7 +101,7 @@ describe('GameListItem', () => {
     )
   })
 
-  it('refreshes the active-queue banner after joining', async () => {
+  it('refreshes the intent banner after joining', async () => {
     const onQueueChange = vi.fn()
     vi.mocked(queue.joinQueue).mockResolvedValue({ queued: true, queuedCount: 1 })
 
@@ -127,7 +127,7 @@ describe('GameListItem', () => {
       <ul>
         <GameListItem
           game={fifoGame}
-          activeQueue={null}
+          activeIntent={null}
           activeTableSeat={null}
           onQueueChange={vi.fn()}
           onTableChange={vi.fn()}
@@ -147,7 +147,7 @@ describe('GameListItem', () => {
     })
 
     renderItem({
-      activeQueue: {
+      activeIntent: {
         queueId: 'queue-1',
         gameName: 'Rock Paper Scissors Lizard Spock',
         status: 'WAITING',
@@ -193,7 +193,7 @@ describe('GameListItem', () => {
       <ul>
         <GameListItem
           game={wordHuntGame}
-          activeQueue={{
+          activeIntent={{
             queueId: 'queue-wh',
             gameName: 'Word Hunt',
             status: 'WAITING',
@@ -237,7 +237,7 @@ describe('GameListItem', () => {
       <ul>
         <GameListItem
           game={compositionGame}
-          activeQueue={null}
+          activeIntent={null}
           activeTableSeat={null}
           onQueueChange={vi.fn()}
           onTableChange={vi.fn()}

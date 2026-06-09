@@ -17,11 +17,13 @@ JoinQuest matchmaking fills a **seat map** before your game sees a roster — so
 **Shipped:** `seatTemplate` required on manifest sync (flat `seats[]` rejected); expansion to
 `game_mode_seats` with `queue_path`; `joinQueue(queueId, queuePath)` and path-aware
 matchmaking (fifo within each path); JoinQuest **Look for group** / **Join as …** UI from
-expanded paths.
+expanded paths; **`affinity_key` derivation** at expand time (Phase B step 1).
 
-**Not yet:** LFG forming map, `affinity_key` derivation, parties, variable `sizeForQueue`,
-multiple concurrent forming matches. Sections below describe the **target** engine unless
-marked otherwise.
+**Shipped (Phase B):** forming match persistence, parties, `PartyNodeInput` tree — see
+[lfg-phase-b-plan.md](./lfg-phase-b-plan.md).
+
+**Not yet (Phase C):** weighted dequeue, `allocations` by affinity, player relocation on the forming map,
+multiple concurrent forming matches. Sections marked **Phase C target** describe future engine behavior.
 
 ---
 
@@ -199,6 +201,10 @@ Only players **on this forming match** count toward fire. Everyone else stays in
 
 ## Party constraints (not “everyone picks a seat”)
 
+> **Phase C target.** Phase B uses **party layout trees** (`PartyNodeInput` / `party_tree`) aligned with
+> `seatTemplate` branches, plus **pinned** table seats for backfill. The `together` / `allocations`
+> JSON shapes below are the planned Phase C API — not the current GraphQL surface.
+
 Parties express **constraints on the assignment problem**. They do **not** need to pick final `seatKey`s unless they use **pins**.
 
 ### Constraint types (v1)
@@ -287,8 +293,9 @@ When pulling from the waiter queue, Lobby uses a **score**, not queue head only:
 | Factor | Why |
 |--------|-----|
 | **Complementarity** | Party fills current gaps (e.g. second 2+1 split) |
-| **Party size** | Larger groups are harder to place later — favor slightly |
-| **Already on forming map** | Prefer finishing partial placements |
+| **Party size** | Larger groups are harder to place later — favor slightly over long-waiting solos when re-solving the map (see [fifo stall example](./lfg-phase-b-plan.md#example-count-3-with-a-b-solo-then-cd-party)) |
+| **Skill / MMR** | When tracking win rates, bias toward even-skill lobbies in the same dequeue pass |
+| **Already on forming map** | Prefer finishing partial placements (Phase B); may yield to size/fit in Phase C when relocation is enabled |
 | **Wait time** | Tie-break for fairness within same tier |
 
 ```text
@@ -498,21 +505,18 @@ Omit `sizeForQueue` to default LFG to 5.
 | `forming_assignment` | `forming_match_id`, `user_id`, `seat_key`, `party_id`, `pinned` |
 | `game_queues` | Waiters; link to `mode_queue_id`, optional `forming_match_id` when placed |
 
-### GraphQL (target)
+### GraphQL (shipped)
 
 ```graphql
-input PartyInput {
-  members: [ID!]!
-  together: Boolean
-  size: Int
-  allocations: [AffinityAllocationInput!]
-  pins: [String!]
-  queuePath: String
+input PartyNodeInput {
+  role: String
+  children: [PartyNodeInput!]
+  members: [PartyMemberInput!]
 }
 
-joinQueue(queueId: ID!, party: PartyInput): JoinResult!
+joinQueue(queueId: ID!, queuePath: String, party: PartyNodeInput): JoinResult!
 leaveQueue(queueId: ID!): Boolean!
-startMatch(modeId: ID!, party: PartyInput!, startSize: Int!): JoinResult!
+startTableBackfill(tableId: ID!, queueId: ID!): JoinResult!
 
 type GameMode {
   derivedCount: Int!
@@ -528,13 +532,13 @@ type GameMode {
 
 ### Implementation phases
 
-| Phase | Deliverable |
-|-------|-------------|
-| A | Template expander + sync + game manifest validation |
-| B | Working seat map + `together` + relocate + fire → provision/JWT |
-| C | `allocations` + gap scoring + weighted dequeue |
-| D | Composition paths + coordinator |
-| E | `sizeForQueue` variable fifo |
+| Phase | Deliverable | Status |
+|-------|-------------|--------|
+| A | Template expander + sync + game manifest validation | **Shipped** |
+| B | Working seat map + parties + split `queuePath` + fire → provision/JWT | **Shipped** — see [lfg-phase-b-plan.md](./lfg-phase-b-plan.md) |
+| C | `allocations` + gap scoring + weighted dequeue | Planned |
+| D | Composition paths + coordinator | Planned |
+| E | `sizeForQueue` variable fifo | Planned |
 
 ### Migration
 

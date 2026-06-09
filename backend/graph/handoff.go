@@ -53,7 +53,13 @@ func modeKeyFromCatalog(mode *store.GameMode) (string, error) {
 	return strings.TrimSpace(mode.ModeKey), nil
 }
 
-func assignmentFromParticipants(sessionID uuid.UUID, mode *store.GameMode, participants []store.SessionParticipant) (gameclient.Assignment, error) {
+func assignmentFromParticipants(
+	ctx context.Context,
+	st *store.Store,
+	sessionID uuid.UUID,
+	mode *store.GameMode,
+	participants []store.SessionParticipant,
+) (gameclient.Assignment, error) {
 	modeKey, err := modeKeyFromCatalog(mode)
 	if err != nil {
 		return gameclient.Assignment{}, err
@@ -64,24 +70,55 @@ func assignmentFromParticipants(sessionID uuid.UUID, mode *store.GameMode, parti
 		Seats:           make([]gameclient.AssignmentSeat, 0, len(participants)),
 	}
 	for _, p := range participants {
-		assignment.Seats = append(assignment.Seats, gameclient.AssignmentSeat{
+		seat := gameclient.AssignmentSeat{
 			SeatKey:     p.SeatKey,
 			LobbyUserID: p.UserID.String(),
-		})
+		}
+		user, err := st.GetUserByID(ctx, p.UserID)
+		if err == nil && user != nil {
+			seat.Player = provisionPlayerFromUser(user)
+		}
+		assignment.Seats = append(assignment.Seats, seat)
 	}
 	return assignment, nil
 }
 
-func lobbyProvisionInfo(game *store.Game) (gameclient.LobbyInfo, error) {
-	token, err := auth.FormatGameServiceToken(game.ID)
-	if err != nil {
-		return gameclient.LobbyInfo{}, err
+func provisionPlayerFromUser(user *store.User) *gameclient.ProvisionPlayer {
+	if user == nil {
+		return nil
 	}
-	return gameclient.LobbyInfo{
-		ReturnURL:    auth.LobbyReturnURL(),
-		GraphqlURL:   auth.LobbyGraphQLURL(),
-		ServiceToken: token,
-	}, nil
+	out := &gameclient.ProvisionPlayer{}
+	if name := strings.TrimSpace(user.DisplayName); name != "" {
+		out.DisplayName = name
+	}
+	if url := userAvatarURL(user); url != nil {
+		if trimmed := strings.TrimSpace(*url); trimmed != "" {
+			out.AvatarURL = trimmed
+		}
+	}
+	if out.DisplayName == "" && out.AvatarURL == "" {
+		return nil
+	}
+	return out
+}
+
+func lobbyProvisionInfo(game *store.Game) (gameclient.LobbyInfo, error) {
+	info := gameclient.LobbyInfo{
+		ReturnURL:  auth.LobbyReturnURL(),
+		GraphqlURL: auth.LobbyGraphQLURL(),
+	}
+	if token, err := auth.FormatGameServiceToken(game.ID); err == nil {
+		info.ServiceToken = token
+		return info, nil
+	}
+	if legacy := auth.GameServiceTokenFromEnv(); legacy != "" {
+		info.ServiceToken = legacy
+		return info, nil
+	}
+	if auth.IsProductionEnv() {
+		return gameclient.LobbyInfo{}, fmt.Errorf("game service token is not configured (set LOBBY_GAME_TOKEN_PEPPER or LOBBY_GAME_SERVICE_TOKEN)")
+	}
+	return info, nil
 }
 
 func (r *Resolver) provisionParticipantsOnGame(ctx context.Context, game *store.Game, sessionID uuid.UUID, participants []store.SessionParticipant) error {
@@ -105,7 +142,7 @@ func (r *Resolver) provisionParticipantsOnGame(ctx context.Context, game *store.
 	if err != nil {
 		return fmt.Errorf("catalog mode for session: %w", err)
 	}
-	assignment, err := assignmentFromParticipants(sessionID, mode, participants)
+	assignment, err := assignmentFromParticipants(ctx, st, sessionID, mode, participants)
 	if err != nil {
 		return err
 	}

@@ -59,6 +59,16 @@ models:
     fields:
       author:
         resolver: true
+  ActiveIntent:
+    fields:
+      formingGaps:
+        resolver: true
+  MyTableSeat:
+    fields:
+      backfillActive:
+        resolver: true
+      formingGaps:
+        resolver: true
   Table:
     fields:
       game:
@@ -76,6 +86,10 @@ models:
       canDiscard:
         resolver: true
       lookForGroupOptions:
+        resolver: true
+      backfillActive:
+        resolver: true
+      formingGaps:
         resolver: true
   TableSeat:
     fields:

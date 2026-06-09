@@ -9,7 +9,7 @@ import { useGameQueue } from './useGameQueue'
 function ModeRow({
   game,
   mode,
-  activeQueue,
+  activeIntent,
   activeTableSeat,
   onQueueChange,
   onTableChange,
@@ -21,15 +21,20 @@ function ModeRow({
   const [tableError, setTableError] = useState('')
 
   const isThisQueue =
-    defaultQueue?.id && activeQueue?.queueId && activeQueue.queueId === defaultQueue.id
+    defaultQueue?.id && activeIntent?.queueId && activeIntent.queueId === defaultQueue.id
   const queue = useGameQueue(defaultQueue?.id, {
-    skipSubscription: Boolean(isThisQueue && activeQueue),
+    skipSubscription: Boolean(isThisQueue && activeIntent),
   })
 
   const seatedHere =
     activeTableSeat?.gameId === game.id && activeTableSeat?.modeId === mode.id
+  const inActiveGame = activeIntent?.status === 'MATCHED'
 
   async function handleJoin(queuePath) {
+    if (inActiveGame) {
+      setTableError('Launch or finish your current game before looking for a group.')
+      return
+    }
     if (activeTableSeat?.tableId) {
       setTableError('Leave your table seat before looking for a group.')
       return
@@ -44,11 +49,15 @@ function ModeRow({
   }
 
   async function handleCreatePrivate() {
+    if (inActiveGame) {
+      setTableError('Launch or finish your current game before creating a private game.')
+      return
+    }
     if (activeTableSeat?.tableId && !seatedHere) {
       setTableError('Leave your current table seat first.')
       return
     }
-    if (activeQueue?.queueId) {
+    if (activeIntent?.queueId) {
       setTableError('Stop looking for a group before creating a private game.')
       return
     }
@@ -67,11 +76,12 @@ function ModeRow({
   }
 
   const blockedByMatch =
-    activeQueue &&
-    defaultQueue?.id &&
-    !isThisQueue &&
-    queue.queueState === 'idle' &&
-    activeQueue.status === 'MATCHED'
+    inActiveGame ||
+    (activeIntent &&
+      defaultQueue?.id &&
+      !isThisQueue &&
+      queue.queueState === 'idle' &&
+      activeIntent.status === 'MATCHED')
 
   return (
     <li className="game-mode-row">
@@ -95,7 +105,7 @@ function ModeRow({
           joinUrl={queue.joinUrl}
           busy={queue.busy}
           selectedQueuePath={
-            queue.selectedQueuePath || (isThisQueue ? activeQueue?.queuePath : '') || ''
+            queue.selectedQueuePath || (isThisQueue ? activeIntent?.queuePath : '') || ''
           }
           onJoin={handleJoin}
           onLeave={handleLeave}
@@ -114,7 +124,7 @@ function ModeRow({
   )
 }
 
-export default function GameListItem({ game, activeQueue, activeTableSeat, onQueueChange, onTableChange }) {
+export default function GameListItem({ game, activeIntent, activeTableSeat, onQueueChange, onTableChange }) {
   const modes = (game.modes ?? []).filter((mode) => mode.status === 'active')
 
   return (
@@ -135,7 +145,7 @@ export default function GameListItem({ game, activeQueue, activeTableSeat, onQue
               key={mode.id ?? mode.modeKey}
               game={game}
               mode={mode}
-              activeQueue={activeQueue}
+              activeIntent={activeIntent}
               activeTableSeat={activeTableSeat}
               onQueueChange={onQueueChange}
               onTableChange={onTableChange}

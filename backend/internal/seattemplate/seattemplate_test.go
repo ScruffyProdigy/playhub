@@ -2,6 +2,7 @@ package seattemplate
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -30,9 +31,6 @@ func TestExpandDuelCountTwo(t *testing.T) {
 	if leaves[0].QueuePath != "" || leaves[1].QueuePath != "" {
 		t.Fatalf("expected default queue path, got %+v", leaves)
 	}
-	if leaves[0].AffinityKey != "" {
-		t.Fatalf("affinity should be empty in Phase A, got %q", leaves[0].AffinityKey)
-	}
 }
 
 func TestExpandThreeByThree(t *testing.T) {
@@ -50,21 +48,17 @@ func TestExpandThreeByThree(t *testing.T) {
 			t.Fatalf("seat[%d] = %q, want %q (all=%v)", i, got[i], want[i], got)
 		}
 	}
+	for _, leaf := range leaves {
+		if strings.HasPrefix(leaf.SeatKey, "Team-1-") && leaf.AffinityKey != "Team:1" {
+			t.Fatalf("seat %q affinity = %q, want Team:1", leaf.SeatKey, leaf.AffinityKey)
+		}
+		if strings.HasPrefix(leaf.SeatKey, "Team-2-") && leaf.AffinityKey != "Team:2" {
+			t.Fatalf("seat %q affinity = %q, want Team:2", leaf.SeatKey, leaf.AffinityKey)
+		}
+	}
 }
 
 func TestExpandEmptyObjectVsCountOne(t *testing.T) {
-	leaves := mustExpand(t, `{"Team":{"count":1,"Support":{}}}`)
-	if leaves[0].SeatKey != "Team-1-Support" {
-		t.Fatalf("{} seat = %q, want Team-1-Support", leaves[0].SeatKey)
-	}
-
-	leaves = mustExpand(t, `{"Team":{"count":1,"Support":{"count":1}}}`)
-	if leaves[0].SeatKey != "Team-1-Support-1" {
-		t.Fatalf("{count:1} seat = %q, want Team-1-Support-1", leaves[0].SeatKey)
-	}
-}
-
-func TestExpandCompositionQueuePaths(t *testing.T) {
 	leaves := mustExpand(t, `{
 		"Team":{"count":2,
 			"DPS":{"count":2},
@@ -129,6 +123,27 @@ func TestExpandWordHuntPartyTemplate(t *testing.T) {
 	}
 	if paths["ClueGiver"] != 3 || paths["Guesser"] != 6 {
 		t.Fatalf("unexpected queue paths: %+v", paths)
+	}
+}
+
+func TestExpandCodenamesAffinity(t *testing.T) {
+	leaves := mustExpand(t, `{"Team":{"count":2,"SpyMaster":{},"Guesser":{"count":3}}}`)
+	if len(leaves) != 8 {
+		t.Fatalf("got %d seats", len(leaves))
+	}
+	for _, leaf := range leaves {
+		switch {
+		case strings.HasPrefix(leaf.SeatKey, "Team-1-"):
+			if leaf.AffinityKey != "Team:1" {
+				t.Fatalf("seat %q affinity = %q, want Team:1", leaf.SeatKey, leaf.AffinityKey)
+			}
+		case strings.HasPrefix(leaf.SeatKey, "Team-2-"):
+			if leaf.AffinityKey != "Team:2" {
+				t.Fatalf("seat %q affinity = %q, want Team:2", leaf.SeatKey, leaf.AffinityKey)
+			}
+		default:
+			t.Fatalf("unexpected seat %q", leaf.SeatKey)
+		}
 	}
 }
 

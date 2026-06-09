@@ -12,7 +12,8 @@ Social **rooms** for friends to gather; **tables** are forming private games ins
 |------|--------|
 | **Step 1 — Rooms** (shipped) | Chat rooms: create/join, short invite code, member list, **QR** + easy link sharing. One room per player. |
 | **Step 2 — Tables** (shipped) | 0..N forming tables per room; **seat-level sitting** (`sitAtTable(tableId, seatKey)`); king controls; queue ↔ table mutual exclusion; per-mode catalog actions; lazy stale discard. |
-| **Step 3+** | Table LFG backfill (Phase B); affinity-aware buckets. |
+| **Step 3 — Table LFG** (shipped) | King **Look for group** backfill; `formingGaps` on TableCard; catalog fills remaining roles. |
+| **Step 4+** | Phase C: affinity-aware weighted dequeue. |
 
 ---
 
@@ -37,9 +38,9 @@ See git history / prior docs for Step 1 detail. Rooms remain the social shell: i
 ```text
 Room (invite code, chat)
   └── Table × N (forming)
-        ├── game + mode (no mode_queue_id until LFG Phase B)
+        ├── game + mode
         ├── seat-level sitting (seatKey)
-        ├── king: Start now; disabled Look for group until Phase B LFG
+        ├── king: Start now; **Look for group** backfill (Phase B)
         └── on Start → session + provision (return to room)
 ```
 
@@ -67,8 +68,8 @@ Per **mode** row under each game:
 ### Table UI (room panel)
 
 - **Tables (N)** section above chat.
-- **TableCard:** game/mode, king badge, team columns when `Team-N` prefixes appear, individual seat chips, king-only **Start now**, disabled **Look for group** options, **Discard** when eligible.
-- **Intent banner:** `myTableSeat` when not in a queue.
+- **TableCard:** game/mode, king badge, team columns when `Team-N` prefixes appear, individual seat chips, king-only **Start now**, **Look for group** backfill (when seated), role **formingGaps**, **Discard** when eligible.
+- **Intent banner:** `myActiveIntent` (catalog wait / matched) or `myTableSeat` (table forming / backfill).
 
 ### Stale tables
 
@@ -159,6 +160,6 @@ Catalog sync rejects `seatTemplate` when two queue paths share the same **`displ
 | Tables per player | 1 seat globally |
 | Queue vs table | Mutually exclusive |
 | Private game | No queue; binds game + mode only |
-| Table LFG | Disabled until Phase B |
+| Table LFG | **Look for group** backfill (Phase B) |
 | Stale empty tables | Lazy sweep + manual Discard |
 | Catalog | Per-mode LFG + Create private game |

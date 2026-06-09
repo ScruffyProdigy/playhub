@@ -54,7 +54,7 @@ func TestStoreUserGameFlow(t *testing.T) {
 		t.Fatal("expected at least one catalog game")
 	}
 
-	result, err := st.JoinModeQueue(ctx, DemoDefaultQueueID, user.ID, "")
+	result, err := st.JoinModeQueue(ctx, DemoDefaultQueueID, user.ID, "", nil)
 	if err != nil {
 		t.Fatalf("JoinModeQueue failed: %v", err)
 	}

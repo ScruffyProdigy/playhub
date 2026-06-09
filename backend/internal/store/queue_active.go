@@ -8,20 +8,45 @@ import (
 	"github.com/google/uuid"
 )
 
-// UserActiveQueue is the user's current waiting or matched queue membership, if any.
-type UserActiveQueue struct {
-	GameID      uuid.UUID
-	GameName    string
-	ModeQueueID uuid.UUID
-	Waiting     bool
-	Matched     bool
-	QueuedCount int
-	QueuePath   *string
-	SessionID   *uuid.UUID
+// UserActiveIntent is the user's catalog play intent: waiting or matched queue membership.
+type UserActiveIntent struct {
+	GameID          uuid.UUID
+	GameName        string
+	ModeQueueID     uuid.UUID
+	ModeID          uuid.UUID
+	ModeName        string
+	SeatKey         string
+	Waiting         bool
+	Matched         bool
+	QueuedCount     int
+	QueuePath       *string
+	SessionID       *uuid.UUID
 }
 
-// GetUserActiveQueue returns the user's active queue (waiting preferred over matched).
-func (s *Store) GetUserActiveQueue(ctx context.Context, userID uuid.UUID) (*UserActiveQueue, error) {
+// GetUserActiveIntent returns the user's catalog play intent. An in-progress game session
+// takes priority over waiting or matched queue rows so the leave-game banner matches
+// join blocking (ensureNotInActiveGame).
+func (s *Store) GetUserActiveIntent(ctx context.Context, userID uuid.UUID) (*UserActiveIntent, error) {
+	participation, err := s.GetUserActiveSessionParticipation(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if participation != nil {
+		out := &UserActiveIntent{
+			GameID:    participation.GameID,
+			GameName:  participation.GameName,
+			ModeID:    participation.ModeID,
+			ModeName:  participation.ModeName,
+			SeatKey:   participation.SeatKey,
+			Matched:   true,
+			SessionID: &participation.SessionID,
+		}
+		if session, sErr := s.GetSessionByID(ctx, participation.SessionID); sErr == nil && session.ModeQueueID != nil {
+			out.ModeQueueID = *session.ModeQueueID
+		}
+		return out, nil
+	}
+
 	if waiting, err := s.getUserWaitingQueueAny(ctx, userID); err != nil {
 		return nil, err
 	} else if waiting != nil {
@@ -37,7 +62,7 @@ func (s *Store) GetUserActiveQueue(ctx context.Context, userID uuid.UUID) (*User
 		if err != nil {
 			return nil, err
 		}
-		return &UserActiveQueue{
+		return &UserActiveIntent{
 			GameID:      waiting.GameID,
 			GameName:    game.Name,
 			ModeQueueID: waiting.ModeQueueID,
@@ -51,20 +76,28 @@ func (s *Store) GetUserActiveQueue(ctx context.Context, userID uuid.UUID) (*User
 	if err != nil {
 		return nil, err
 	}
-	if session == nil {
-		return nil, nil
+	if session != nil {
+		game, err := s.GetGameByID(ctx, session.GameID)
+		if err != nil {
+			return nil, err
+		}
+		out := &UserActiveIntent{
+			GameID:      session.GameID,
+			GameName:    game.Name,
+			ModeQueueID: modeQueueID,
+			Matched:     true,
+			SessionID:   &session.ID,
+		}
+		if session.ModeID != nil {
+			out.ModeID = *session.ModeID
+			if mode, mErr := s.GetGameModeByID(ctx, *session.ModeID); mErr == nil {
+				out.ModeName = mode.DisplayName
+			}
+		}
+		return out, nil
 	}
-	game, err := s.GetGameByID(ctx, session.GameID)
-	if err != nil {
-		return nil, err
-	}
-	return &UserActiveQueue{
-		GameID:      session.GameID,
-		GameName:    game.Name,
-		ModeQueueID: modeQueueID,
-		Matched:     true,
-		SessionID:   &session.ID,
-	}, nil
+
+	return nil, nil
 }
 
 func (s *Store) getUserWaitingQueueAny(ctx context.Context, userID uuid.UUID) (*struct {

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/graph/model"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
@@ -175,8 +176,8 @@ func (r *mutationResolver) StartTable(ctx context.Context, tableID string) (*mod
 	return r.startTableInternal(ctx, tid)
 }
 
-// MyTableSeat is the resolver for the myTableSeat field.
-func (r *queryResolver) MyTableSeat(ctx context.Context) (*model.MyTableSeat, error) {
+// StartTableBackfill is the resolver for the startTableBackfill field.
+func (r *mutationResolver) StartTableBackfill(ctx context.Context, tableID string, queueID string) (*model.JoinResult, error) {
 	st, err := r.requireStore()
 	if err != nil {
 		return nil, err
@@ -185,23 +186,90 @@ func (r *queryResolver) MyTableSeat(ctx context.Context) (*model.MyTableSeat, er
 	if err != nil {
 		return nil, err
 	}
-	view, err := st.GetUserTableSeat(ctx, userID)
+	tid, err := parseUUID(tableID, "table id")
 	if err != nil {
 		return nil, err
 	}
-	if view == nil {
-		return nil, nil
-	}
-	mode, err := st.GetGameModeByID(ctx, view.ModeID)
+	qid, err := parseUUID(queueID, "queue id")
 	if err != nil {
 		return nil, err
 	}
-	modeSeats, err := st.ListGameModeSeats(ctx, view.ModeID)
+	table, err := r.requireTableRoomMember(ctx, tid, userID)
 	if err != nil {
 		return nil, err
 	}
-	display := seatDisplayName(modeSeats, view.SeatKey, mode.SeatTemplate)
-	return toGraphQLMyTableSeat(view, display), nil
+	_ = table
+
+	result, err := st.StartTableBackfill(ctx, tid, userID, qid)
+	if err != nil {
+		return nil, err
+	}
+
+	var launchURLs map[uuid.UUID]string
+	if result.Status == store.QueueStatusMatched && result.SessionID != nil {
+		game, gErr := st.GetGameByID(ctx, result.GameID)
+		if gErr != nil {
+			return nil, gErr
+		}
+		launchURLs, err = r.finalizeMatchedSession(ctx, game, *result.SessionID, result.NotifyUserIDs)
+		if err != nil {
+			return nil, err
+		}
+		if err := r.publishTableSeatStarted(ctx, tid, result.NotifyUserIDs, launchURLs); err != nil {
+			return nil, err
+		}
+		if err := r.publishTableUpdated(ctx, table.RoomID, tid); err != nil {
+			return nil, err
+		}
+	} else if err := r.publishTableUpdated(ctx, table.RoomID, tid); err != nil {
+		return nil, err
+	}
+
+	if err := r.publishQueueResult(ctx, result, launchURLs); err != nil {
+		return nil, err
+	}
+
+	queued := result.Status == store.QueueStatusWaiting
+	joinResult := &model.JoinResult{Queued: queued}
+	if result.QueuedCount > 0 {
+		count := result.QueuedCount
+		joinResult.QueuedCount = &count
+	}
+	if result.SessionID != nil {
+		id := result.SessionID.String()
+		joinResult.SessionID = &id
+		if launch := launchURLs[userID]; launch != "" {
+			joinResult.JoinURL = &launch
+		}
+	}
+	return joinResult, nil
+}
+
+// BackfillActive is the resolver for the backfillActive field.
+func (r *myTableSeatResolver) BackfillActive(ctx context.Context, obj *model.MyTableSeat) (bool, error) {
+	if obj == nil || obj.Status == "started" {
+		return false, nil
+	}
+	_, active, err := r.resolveTableSeatGaps(ctx, obj.TableID)
+	return active, err
+}
+
+// FormingGaps is the resolver for the formingGaps field.
+func (r *myTableSeatResolver) FormingGaps(ctx context.Context, obj *model.MyTableSeat) ([]*model.QueuePathGap, error) {
+	if obj == nil || obj.Status == "started" {
+		return []*model.QueuePathGap{}, nil
+	}
+	gaps, _, err := r.resolveTableSeatGaps(ctx, obj.TableID)
+	return gaps, err
+}
+
+// MyTableSeat is the resolver for the myTableSeat field.
+func (r *queryResolver) MyTableSeat(ctx context.Context) (*model.MyTableSeat, error) {
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.resolveMyTableSeat(ctx, userID)
 }
 
 // Tables is the resolver for the tables field.
@@ -289,6 +357,11 @@ func (r *subscriptionResolver) TableUpdated(ctx context.Context, roomID string) 
 	}()
 
 	return updates, nil
+}
+
+// MyTableSeatUpdated is the resolver for the myTableSeatUpdated field.
+func (r *subscriptionResolver) MyTableSeatUpdated(ctx context.Context) (<-chan *model.MyTableSeat, error) {
+	return r.myTableSeatUpdatedSubscription(ctx)
 }
 
 // Game is the resolver for the game field.
@@ -433,6 +506,26 @@ func (r *tableResolver) LookForGroupOptions(ctx context.Context, obj *model.Tabl
 	return r.buildLookForGroupOptions(ctx, tableID)
 }
 
+// BackfillActive is the resolver for the backfillActive field.
+func (r *tableResolver) BackfillActive(ctx context.Context, obj *model.Table) (bool, error) {
+	tableID, err := tableRoomIDFromObj(obj)
+	if err != nil {
+		return false, err
+	}
+	_, active, err := r.tableFormingGaps(ctx, tableID)
+	return active, err
+}
+
+// FormingGaps is the resolver for the formingGaps field.
+func (r *tableResolver) FormingGaps(ctx context.Context, obj *model.Table) ([]*model.QueuePathGap, error) {
+	tableID, err := tableRoomIDFromObj(obj)
+	if err != nil {
+		return nil, err
+	}
+	gaps, _, err := r.tableFormingGaps(ctx, tableID)
+	return gaps, err
+}
+
 // User is the resolver for the user field.
 func (r *tableSeatResolver) User(ctx context.Context, obj *model.TableSeat) (*model.User, error) {
 	return obj.User, nil
@@ -443,6 +536,9 @@ func (r *tableSeatSlotResolver) User(ctx context.Context, obj *model.TableSeatSl
 	return obj.User, nil
 }
 
+// MyTableSeat returns generated.MyTableSeatResolver implementation.
+func (r *Resolver) MyTableSeat() generated.MyTableSeatResolver { return &myTableSeatResolver{r} }
+
 // Table returns generated.TableResolver implementation.
 func (r *Resolver) Table() generated.TableResolver { return &tableResolver{r} }
 
@@ -452,6 +548,7 @@ func (r *Resolver) TableSeat() generated.TableSeatResolver { return &tableSeatRe
 // TableSeatSlot returns generated.TableSeatSlotResolver implementation.
 func (r *Resolver) TableSeatSlot() generated.TableSeatSlotResolver { return &tableSeatSlotResolver{r} }
 
+type myTableSeatResolver struct{ *Resolver }
 type tableResolver struct{ *Resolver }
 type tableSeatResolver struct{ *Resolver }
 type tableSeatSlotResolver struct{ *Resolver }
