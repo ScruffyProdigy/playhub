@@ -19,6 +19,7 @@ export function useActiveIntent() {
   const [busy, setBusy] = useState(false)
   const queueUnsubRef = useRef(null)
   const seatUnsubRef = useRef(null)
+  const joinGraceUntilRef = useRef(0)
 
   const {
     activeTableSeat,
@@ -64,7 +65,15 @@ export function useActiveIntent() {
         return
       }
       const tableSeat = tableResult.status === 'fulfilled' ? tableResult.value : null
-      setActiveIntent(await enrichMatchedJoinUrl(intentResult.value, tableSeat))
+      const next = await enrichMatchedJoinUrl(intentResult.value, tableSeat)
+      if (next) {
+        setActiveIntent(next)
+        return
+      }
+      if (intentResult.value === null && Date.now() < joinGraceUntilRef.current) {
+        return
+      }
+      setActiveIntent(null)
     } finally {
       setLoading(false)
     }
@@ -186,6 +195,7 @@ export function useActiveIntent() {
     if (!activeIntent?.queueId) {
       return
     }
+    joinGraceUntilRef.current = 0
     setBusy(true)
     try {
       await leaveQueue(activeIntent.queueId)
@@ -217,6 +227,7 @@ export function useActiveIntent() {
     if (!result) {
       return
     }
+    joinGraceUntilRef.current = Date.now() + 3000
     if (result.queued) {
       setActiveIntent({
         queueId,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { joinGroupOptionsForMode } from '../../lib/games'
+import { hasPlayingIntent, hasWaitingIntent } from '../../lib/intent'
 import { CREATE_PRIVATE_GAME } from '../../lib/playerCopy'
 import { createPrivateTable } from '../../lib/tables'
 import { useActiveRoom } from '../rooms/ActiveRoomProvider'
@@ -55,7 +56,6 @@ function ModeRow({
         queuePathDisplayName: pathLabel ?? null,
       })
     }
-    await onQueueChange?.()
   }
 
   async function handleLeave() {
@@ -98,6 +98,16 @@ function ModeRow({
       queue.queueState === 'idle' &&
       activeIntent.status === 'MATCHED')
 
+  const resolvedQueueState = isThisQueue
+    ? hasWaitingIntent(activeIntent)
+      ? 'waiting'
+      : hasPlayingIntent(activeIntent)
+        ? 'matched'
+        : queue.queueState
+    : queue.queueState
+  const resolvedJoinUrl =
+    isThisQueue && activeIntent?.joinUrl ? activeIntent.joinUrl : queue.joinUrl
+
   return (
     <li className="game-mode-row">
       <div className="game-mode-row__copy">
@@ -126,8 +136,8 @@ function ModeRow({
       <div className="game-mode-row__actions">
         <GameQueueActions
           joinOptions={joinOptions}
-          queueState={queue.queueState}
-          joinUrl={queue.joinUrl}
+          queueState={resolvedQueueState}
+          joinUrl={resolvedJoinUrl}
           busy={queue.busy}
           selectedQueuePath={
             queue.selectedQueuePath || (isThisQueue ? activeIntent?.queuePath : '') || ''

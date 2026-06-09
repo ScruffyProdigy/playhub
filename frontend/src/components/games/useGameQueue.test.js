@@ -24,6 +24,17 @@ describe('useGameQueue', () => {
     vi.mocked(queue.subscribeToQueue).mockResolvedValue(() => {})
   })
 
+  it('does not sync from server when skipSubscription is true', async () => {
+    vi.mocked(queue.fetchMyQueueStatus).mockResolvedValue({ queued: false })
+
+    const { result } = renderHook(() => useGameQueue(queueId, { skipSubscription: true }))
+
+    await waitFor(() => {
+      expect(queue.fetchMyQueueStatus).not.toHaveBeenCalled()
+      expect(result.current.queueState).toBe('idle')
+    })
+  })
+
   it('syncs waiting state from server on mount (cross-tab)', async () => {
     vi.mocked(queue.fetchMyQueueStatus).mockResolvedValue({
       queued: true,

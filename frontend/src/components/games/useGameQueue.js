@@ -180,6 +180,12 @@ export function useGameQueue(queueId, { skipSubscription = false } = {}) {
       return undefined
     }
 
+    // When the intent banner owns this queue, avoid a status sync that can race
+    // with the join mutation and reset local state back to idle.
+    if (skipSubscription) {
+      return undefined
+    }
+
     let cancelled = false
     const syncGen = ++syncGenerationRef.current
 

@@ -101,15 +101,36 @@ describe('GameListItem', () => {
     )
   })
 
-  it('refreshes the intent banner after joining', async () => {
-    const onQueueChange = vi.fn()
+  it('notifies intent after joining', async () => {
+    const onQueueJoined = vi.fn()
     vi.mocked(queue.joinQueue).mockResolvedValue({ queued: true, queuedCount: 1 })
 
-    renderItem({ onQueueChange })
+    renderItem({ onQueueJoined })
 
     await userEvent.click(screen.getByRole('button', { name: 'Look for group' }))
 
-    await waitFor(() => expect(onQueueChange).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(onQueueJoined).toHaveBeenCalledWith(
+        'queue-1',
+        { queued: true, queuedCount: 1 },
+        expect.objectContaining({ gameId: 'game-1', gameName: catalogGame.name }),
+      ),
+    )
+  })
+
+  it('shows waiting controls when activeIntent matches this queue', () => {
+    renderItem({
+      activeIntent: {
+        queueId: 'queue-1',
+        gameId: 'game-1',
+        gameName: catalogGame.name,
+        status: 'WAITING',
+        queuedCount: 2,
+      },
+    })
+
+    expect(screen.getByText('Looking…')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Stop looking' })).toBeInTheDocument()
   })
 
   it('shows a plain Look for group button for fifo modes with empty queuePaths', () => {
