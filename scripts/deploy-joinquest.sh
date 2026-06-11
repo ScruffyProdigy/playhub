@@ -61,6 +61,7 @@ kubectl apply -f k8s/secrets/jwks-secret.yaml
 
 echo "Applying base manifests (namespace joinquest)..."
 apply_playhub_as_joinquest k8s/base/postgres.yaml
+apply_playhub_as_joinquest k8s/base/redis.yaml
 apply_playhub_as_joinquest k8s/base/backend.yaml
 apply_playhub_as_joinquest k8s/base/frontend.yaml
 
@@ -79,6 +80,7 @@ kubectl set env deployment/lobby-backend -n "$NAMESPACE" \
   LOBBY_ISSUER_URL="${LOBBY_ISSUER_URL:-$LOBBY_PUBLIC_URL}" \
   SESSION_COOKIE_SECURE=true \
   LOBBY_ADMIN_EMAILS="${LOBBY_ADMIN_EMAILS:-ryan.c.kohler@gmail.com}" \
+  REDIS_URL="redis://lobby-redis:6379/0" \
   --containers=backend
 apply_lobby_smtp_secret
 apply_lobby_auth_peppers_secret
@@ -87,6 +89,9 @@ apply_lobby_openai_secret
 
 echo "Waiting for Postgres..."
 kubectl wait --for=condition=ready --timeout=300s pod -l app=pg -n "$NAMESPACE"
+
+echo "Waiting for Redis..."
+kubectl wait --for=condition=ready --timeout=120s pod -l app=lobby-redis -n "$NAMESPACE"
 
 # GKE nodes may cache :latest; pin to the digest we just pushed when available locally.
 BACKEND_IMAGE="docker.io/scruffyprodigy/playhub-backend:latest"

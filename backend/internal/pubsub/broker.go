@@ -32,5 +32,16 @@ func PublishQueueEvent(ctx context.Context, broker Broker, userID string, event 
 	if err != nil {
 		return err
 	}
-	return broker.Publish(ctx, UserQueueChannel(userID), payload)
+	channel := UserQueueChannel(userID)
+	DebugLog(
+		"publish user=%s channel=%s queue=%s status=%s session=%s hasJoinUrl=%t queuedCount=%d",
+		userID,
+		channel,
+		event.QueueID,
+		event.Status,
+		event.SessionID,
+		event.JoinURL != "",
+		event.QueuedCount,
+	)
+	return broker.Publish(ctx, channel, payload)
 }

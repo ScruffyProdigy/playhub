@@ -30,7 +30,54 @@ Payload JSON (`internal/pubsub/events.go`):
 Match launch URLs use the protocol in [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md):
 `{playUrl}?match=<sessionId>&token=<seat-jwt>`.
 
+**Provision ownership:** only the forming worker (and table `startTable`) call `POST /api/v1/matches`. GraphQL queries/subscriptions read stored launch URL bases — they never trigger provision. On transient game-server errors the worker retries with backoff (100ms → 500ms → 2s → 5s → 15s → 30s) without rolling back the matched session.
+
 Local `./scripts/dev.sh` starts Postgres and Redis via Docker and sets both variables.
+
+## Debugging queue delivery
+
+Trace the full path from match fire → Redis → GraphQL subscription → browser.
+
+### Backend (`LOBBY_PUBSUB_DEBUG=true`)
+
+Logs to backend stdout:
+
+| Log prefix | Meaning |
+|------------|---------|
+| `pubsub: reconcile` | Forming worker evaluated a queue (fired or not) |
+| `pubsub: forming matched` | Match provisioned; about to publish per-user events |
+| `pubsub: publish` | Event written to a user's Redis channel |
+| `pubsub: redis publish/receive` | Redis broker I/O |
+| `pubsub: subscription open/initial/deliver` | GraphQL `queueUpdated` resolver lifecycle |
+
+```bash
+# local
+LOBBY_PUBSUB_DEBUG=true ./scripts/dev.sh
+
+# joinquest
+kubectl set env deployment/lobby-backend -n joinquest LOBBY_PUBSUB_DEBUG=true --containers=backend
+kubectl logs -n joinquest deployment/lobby-backend -f | grep 'pubsub:'
+```
+
+### Frontend (browser console)
+
+Enable any one of:
+
+- `REACT_APP_LOBBY_DEBUG=true` in frontend env (see `k8s/env/joinquest.yaml`)
+- `?lobbyDebug=1` on the URL (handy on iOS)
+- `localStorage.setItem('lobbyDebug', '1')` then reload
+
+Console lines are prefixed `[lobby:…]`:
+
+| Tag | Meaning |
+|-----|---------|
+| `queue:ws:connected` | WebSocket to `/graphql` is up |
+| `queue:subscribe:update` | `queueUpdated` payload received |
+| `intent:queue:ws-update` | Banner hook handling a WS update |
+| `intent:refresh:done` with `reason: poll-waiting` | HTTP poll picked up state (fallback path) |
+| `intent:refresh:done` with `reason: ws-followup` | Refresh after a WS event |
+
+**How to read a two-player test:** you should see backend `publish` + `subscription deliver` within ~50ms of the second join, and frontend `queue:subscribe:update` at roughly the same time. If backend delivers but the browser only logs `poll-waiting`, the WebSocket path is broken. If backend never logs `publish`, the worker or provision step failed.
 
 ## GraphQL
 

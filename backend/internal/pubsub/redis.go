@@ -27,7 +27,11 @@ func NewRedis(url string) (*Redis, error) {
 }
 
 func (r *Redis) Publish(ctx context.Context, channel string, payload []byte) error {
-	return r.client.Publish(ctx, channel, payload).Err()
+	err := r.client.Publish(ctx, channel, payload).Err()
+	if err == nil {
+		DebugLog("redis publish channel=%s bytes=%d", channel, len(payload))
+	}
+	return err
 }
 
 func (r *Redis) Subscribe(ctx context.Context, channel string) (<-chan []byte, func(), error) {
@@ -36,6 +40,7 @@ func (r *Redis) Subscribe(ctx context.Context, channel string) (<-chan []byte, f
 		_ = pubsub.Close()
 		return nil, nil, fmt.Errorf("pubsub: subscribe %s: %w", channel, err)
 	}
+	DebugLog("redis subscribe channel=%s", channel)
 
 	out := make(chan []byte, 16)
 	done := make(chan struct{})
@@ -51,6 +56,7 @@ func (r *Redis) Subscribe(ctx context.Context, channel string) (<-chan []byte, f
 				if !ok {
 					return
 				}
+				DebugLog("redis receive channel=%s bytes=%d", channel, len(msg.Payload))
 				out <- []byte(msg.Payload)
 			}
 		}

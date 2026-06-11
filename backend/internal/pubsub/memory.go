@@ -20,13 +20,17 @@ func (m *Memory) Publish(_ context.Context, channel string, payload []byte) erro
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	listeners := len(m.subs[channel])
+	delivered := 0
 	for ch := range m.subs[channel] {
 		data := append([]byte(nil), payload...)
 		select {
 		case ch <- data:
+			delivered++
 		default:
 		}
 	}
+	DebugLog("memory publish channel=%s listeners=%d delivered=%d bytes=%d", channel, listeners, delivered, len(payload))
 	return nil
 }
 
@@ -38,7 +42,9 @@ func (m *Memory) Subscribe(_ context.Context, channel string) (<-chan []byte, fu
 		m.subs[channel] = make(map[chan []byte]struct{})
 	}
 	m.subs[channel][ch] = struct{}{}
+	listeners := len(m.subs[channel])
 	m.mu.Unlock()
+	DebugLog("memory subscribe channel=%s listeners=%d", channel, listeners)
 
 	unsubscribe := func() {
 		m.mu.Lock()

@@ -40,6 +40,8 @@ spec:
                   key: PRIV_PEM
             - name: SPIRIT_AVATAR_STORAGE_DIR
               value: /var/lib/spirit-avatars
+            - name: REDIS_URL
+              value: redis://lobby-redis:6379/0
           volumeMounts:
             - name: spirit-avatars
               mountPath: /var/lib/spirit-avatars
