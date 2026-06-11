@@ -1258,6 +1258,22 @@
   font: inherit;
 }
 
+.profile-editor__current-avatar {
+  margin-bottom: 1rem;
+}
+
+.profile-editor__current-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profile-editor__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
 .profile-editor__actions {
   display: flex;
   flex-wrap: wrap;

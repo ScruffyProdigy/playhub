@@ -94,6 +94,71 @@ func TestUpdatePlayerProfileAndPlayerLookup(t *testing.T) {
 	}
 }
 
+func TestUpdatePlayerProfileNameOnlyPreservesSpiritAnimal(t *testing.T) {
+	env := newQueueIntegrationEnv(t)
+	cleaner := env.newCleaner(t)
+	ctx := context.Background()
+
+	t.Setenv("LOBBY_PUBLIC_URL", "https://joinquest.test")
+
+	user, err := env.Store.CreateUser(ctx, store.CreateUserParams{
+		Email: "spirit-name-" + uuid.NewString() + "@example.com",
+	})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	cleaner.TrackUser(user.ID)
+
+	spiritURL := "https://joinquest.test/avatars/spirit/fox.png"
+	_, err = env.DB.ExecContext(ctx, `
+		UPDATE users
+		SET avatar_url = $2, avatar_key = NULL, avatar_source = $3
+		WHERE id = $1
+	`, user.ID, spiritURL, store.SourceSpiritAnimal)
+	if err != nil {
+		t.Fatalf("set spirit animal avatar: %v", err)
+	}
+	_, cookie := createTestUserSessionForUser(t, env, user.ID)
+
+	profileQuery := `mutation Profile($displayName: String!) {
+		updatePlayerProfile(displayName: $displayName) {
+			displayName
+			avatarKey
+			avatarUrl
+			avatarSource
+		}
+	}`
+	profileBody := postGraphQL(t, env.Handler, profileQuery, map[string]any{
+		"displayName": "River",
+	}, cookie)
+	var profileResp struct {
+		Data struct {
+			UpdatePlayerProfile struct {
+				DisplayName  *string `json:"displayName"`
+				AvatarKey    *string `json:"avatarKey"`
+				AvatarURL    *string `json:"avatarUrl"`
+				AvatarSource *string `json:"avatarSource"`
+			} `json:"updatePlayerProfile"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(profileBody, &profileResp); err != nil {
+		t.Fatalf("decode profile: %v body=%s", err, profileBody)
+	}
+	profile := profileResp.Data.UpdatePlayerProfile
+	if profile.DisplayName == nil || *profile.DisplayName != "River" {
+		t.Fatalf("displayName: %+v", profile.DisplayName)
+	}
+	if profile.AvatarKey != nil {
+		t.Fatalf("avatarKey should stay nil, got %+v", profile.AvatarKey)
+	}
+	if profile.AvatarURL == nil || *profile.AvatarURL != spiritURL {
+		t.Fatalf("avatarUrl: %+v", profile.AvatarURL)
+	}
+	if profile.AvatarSource == nil || *profile.AvatarSource != "SPIRIT_ANIMAL" {
+		t.Fatalf("avatarSource: %+v", profile.AvatarSource)
+	}
+}
+
 func TestMyRoomIncludesMemberAvatars(t *testing.T) {
 	env := newQueueIntegrationEnv(t)
 	cleaner := env.newCleaner(t)

@@ -176,7 +176,7 @@ type ComplexityRoot struct {
 		StartTable                   func(childComplexity int, tableID string) int
 		StartTableBackfill           func(childComplexity int, tableID string, queueID string) int
 		SubmitSpiritAnimalAnswers    func(childComplexity int, answers []string) int
-		UpdatePlayerProfile          func(childComplexity int, displayName string, avatarKey string) int
+		UpdatePlayerProfile          func(childComplexity int, displayName string, avatarKey *string) int
 	}
 
 	MyTableSeat struct {
@@ -437,7 +437,7 @@ type MutationResolver interface {
 	CompleteSignInWithLink(ctx context.Context, token string) (*model.User, error)
 	CompleteSignInWithCode(ctx context.Context, email string, code string) (*model.User, error)
 	Logout(ctx context.Context) (bool, error)
-	UpdatePlayerProfile(ctx context.Context, displayName string, avatarKey string) (*model.User, error)
+	UpdatePlayerProfile(ctx context.Context, displayName string, avatarKey *string) (*model.User, error)
 	RegisterGame(ctx context.Context, input model.RegisterGameInput) (*model.RegisterGamePayload, error)
 	RefreshGameManifest(ctx context.Context, gameID string) (*model.Game, error)
 	ReportPlayerFinished(ctx context.Context, matchID string, lobbyUserID string, reason model.PlayerFinishReason, placement *int, metadata map[string]any) (bool, error)
@@ -1214,7 +1214,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdatePlayerProfile(childComplexity, args["displayName"].(string), args["avatarKey"].(string)), true
+		return e.complexity.Mutation.UpdatePlayerProfile(childComplexity, args["displayName"].(string), args["avatarKey"].(*string)), true
 
 	case "MyTableSeat.backfillActive":
 		if e.complexity.MyTableSeat.BackfillActive == nil {
@@ -2414,7 +2414,7 @@ extend type Query {
 }
 
 extend type Mutation {
-  updatePlayerProfile(displayName: String!, avatarKey: ID!): User!
+  updatePlayerProfile(displayName: String!, avatarKey: ID): User!
 }
 `, BuiltIn: false},
 	{Name: "../schema/catalog.graphqls", Input: `input RegisterGameInput {
@@ -2499,7 +2499,7 @@ type Query {
   goods(gameId: ID): [DigitalGood!]!   # list goods globally or by game
   myInventory(gameId: ID): [Entitlement!]!
   myQueueStatus(queueId: ID!): JoinResult!
-  # Current waiting or matched queue anywhere in the catalog (at most one).
+  # Current catalog play intent: waiting or matched queue (at most one).
   myActiveIntent: ActiveIntent
   # Game servers resolve lobbyUserId → display name (Bearer serviceToken from provision).
   player(id: ID!): PublicPlayer
@@ -3268,7 +3268,7 @@ func (ec *executionContext) field_Mutation_updatePlayerProfile_args(ctx context.
 		return nil, err
 	}
 	args["displayName"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "avatarKey", ec.unmarshalNID2string)
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "avatarKey", ec.unmarshalOID2ᚖstring)
 	if err != nil {
 		return nil, err
 	}
@@ -5772,7 +5772,7 @@ func (ec *executionContext) _Mutation_updatePlayerProfile(ctx context.Context, f
 		ec.fieldContext_Mutation_updatePlayerProfile,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().UpdatePlayerProfile(ctx, fc.Args["displayName"].(string), fc.Args["avatarKey"].(string))
+			return ec.resolvers.Mutation().UpdatePlayerProfile(ctx, fc.Args["displayName"].(string), fc.Args["avatarKey"].(*string))
 		},
 		nil,
 		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,

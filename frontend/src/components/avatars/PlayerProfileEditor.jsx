@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react'
 import {
   defaultDisplayNameInput,
   fetchStarterAvatars,
+  hasExistingAvatar,
   needsProfileSetup,
+  resolveUserAvatarUrl,
   updatePlayerProfile,
 } from '../../lib/avatars'
 import { useAuth } from '../auth/AuthProvider'
+import PlayerAvatar from './PlayerAvatar'
 
 export default function PlayerProfileEditor({ user, required = false, onSaved, onCancel, onBeginSpiritAnimal }) {
   const { acceptSessionUser } = useAuth()
@@ -33,7 +36,8 @@ export default function PlayerProfileEditor({ user, required = false, onSaved, o
   }, [])
 
   const trimmedName = displayName.trim()
-  const canSave = Boolean(trimmedName && selectedKey && !busy)
+  const keepingCurrentAvatar = hasExistingAvatar(user) && !selectedKey
+  const canSave = Boolean(trimmedName && !busy && (selectedKey || keepingCurrentAvatar))
 
   async function handleSave(event) {
     event.preventDefault()
@@ -43,7 +47,7 @@ export default function PlayerProfileEditor({ user, required = false, onSaved, o
     setBusy(true)
     setError('')
     try {
-      const updated = await updatePlayerProfile(trimmedName, selectedKey)
+      const updated = await updatePlayerProfile(trimmedName, selectedKey || null)
       acceptSessionUser(updated)
       onSaved?.(updated)
     } catch (err) {
@@ -76,7 +80,21 @@ export default function PlayerProfileEditor({ user, required = false, onSaved, o
         onChange={(event) => setDisplayName(event.target.value)}
       />
 
-      <p className="profile-editor__label">Journey icon</p>
+      {keepingCurrentAvatar ? (
+        <div className="profile-editor__current-avatar">
+          <p className="profile-editor__label">Current icon</p>
+          <div className="profile-editor__current-avatar-row">
+            <PlayerAvatar user={user} size="md" />
+            <p className="profile-editor__hint">
+              {user?.avatarSource === 'SPIRIT_ANIMAL'
+                ? 'Your spirit animal stays unless you pick a journey icon below.'
+                : 'Your current icon stays unless you pick a different one below.'}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      <p className="profile-editor__label">{keepingCurrentAvatar ? 'Or choose a journey icon' : 'Journey icon'}</p>
       <ul className="avatar-picker__grid" role="list">
         {options.map((option) => {
           const selected = option.key === selectedKey

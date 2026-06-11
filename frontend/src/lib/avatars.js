@@ -21,7 +21,7 @@ export const STARTER_AVATARS_QUERY = `
 `
 
 const UPDATE_PLAYER_PROFILE = `
-  mutation UpdatePlayerProfile($displayName: String!, $avatarKey: ID!) {
+  mutation UpdatePlayerProfile($displayName: String!, $avatarKey: ID) {
     updatePlayerProfile(displayName: $displayName, avatarKey: $avatarKey) {
       id
       email
@@ -60,9 +60,14 @@ export function isProvisionalDisplayName(name) {
   return Boolean(name?.trim().endsWith(PROVISIONAL_DISPLAY_SUFFIX))
 }
 
+export function hasExistingAvatar(user) {
+  return Boolean(user?.avatarKey?.trim())
+    || Boolean(user?.avatarUrl?.trim())
+    || user?.avatarSource === 'SPIRIT_ANIMAL'
+}
+
 export function needsProfileSetup(user) {
-  const hasAvatar = Boolean(user?.avatarKey) || (user?.avatarSource === 'SPIRIT_ANIMAL' && user?.avatarUrl)
-  return !hasAvatar || isProvisionalDisplayName(user?.displayName)
+  return !hasExistingAvatar(user) || isProvisionalDisplayName(user?.displayName)
 }
 
 export function defaultDisplayNameInput(user) {
@@ -83,7 +88,11 @@ export async function fetchStarterAvatars() {
 }
 
 export async function updatePlayerProfile(displayName, avatarKey) {
-  const data = await graphqlRequest(UPDATE_PLAYER_PROFILE, { displayName, avatarKey })
+  const variables = { displayName }
+  if (avatarKey?.trim()) {
+    variables.avatarKey = avatarKey.trim()
+  }
+  const data = await graphqlRequest(UPDATE_PLAYER_PROFILE, variables)
   return data.updatePlayerProfile
 }
 

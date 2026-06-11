@@ -124,12 +124,23 @@ func resolveStarterAvatar(avatarKey, publicOrigin string) (key, source, url stri
 	return entry.Key, avatars.SourceStarter, avatars.PublicAssetURL(publicOrigin, entry.File), nil
 }
 
-// UpdateUserProfile sets the player's display name and starter avatar together.
+// UpdateUserProfile sets the player's display name and optionally a starter avatar.
+// When avatarKey is empty, existing avatar fields (including spirit animal) are preserved.
 func (s *Store) UpdateUserProfile(ctx context.Context, userID uuid.UUID, displayName, avatarKey, publicOrigin string) (*User, error) {
 	name, err := NormalizeDisplayName(displayName)
 	if err != nil {
 		return nil, err
 	}
+	if strings.TrimSpace(avatarKey) == "" {
+		row := s.db.QueryRowContext(ctx, `
+			UPDATE users
+			SET display_name = $2, updated_at = NOW()
+			WHERE id = $1 AND is_active = true
+			RETURNING `+userColumns+`
+		`, userID, name)
+		return scanUser(row)
+	}
+
 	key, source, url, err := resolveStarterAvatar(avatarKey, publicOrigin)
 	if err != nil {
 		return nil, err

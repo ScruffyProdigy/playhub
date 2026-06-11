@@ -1,6 +1,11 @@
-# Spirit animal avatars (planned)
+# Spirit animal avatars
 
-**Status:** TODO — not implemented. Design spec for profile avatars at tables and elsewhere.
+**Status:** Shipped — starter catalog, spirit-animal flow, profile editor, and game `player(id:)` avatars. This doc retains the original design spec and prompts for reference.
+
+## Profile updates
+
+- **`updatePlayerProfile(displayName: String!, avatarKey: ID)`** — `avatarKey` is optional. When omitted, only the display name changes; spirit-animal (and other existing) avatar fields are preserved.
+- **`needsProfileSetup`** — true when the user has no avatar or still has a provisional display name (e.g. `pat (new)`). Spirit-animal users with a custom name do not need to pick a starter icon to save.
 
 ## Goals
 
@@ -361,22 +366,22 @@ Personality summary and totem concepts stay stable; only pixels change.
 
 ---
 
-## Implementation checklist (when scheduled)
+## Implementation checklist
 
-- [ ] Wire `users.avatar_url` in store + expose on `User` / `me`
-- [ ] Extend `PublicPlayer` with `avatarUrl`, `avatarSource`; game `player(id:)` resolver
-- [ ] Migration: `users.avatar_key`, `users.avatar_source`, `users.avatar_reading_id`
-- [ ] Migration: `avatar_readings` + `avatar_renders` (JSONB columns for LLM artifacts)
-- [ ] Persist step 2–7 JSON + selected totem on flow completion
-- [ ] Static starter catalog (~25 PNG/WebP in `frontend/public/avatars/` or CDN)
-- [ ] Major Arcana index → name map (0–21)
-- [ ] `SpiritAnimalSession` store + GraphQL mutations/queries
-- [ ] OpenAI (or configured) client with strict JSON mode / schema validation
-- [ ] Image generation integration + object storage for `avatar_url`
-- [ ] Frontend wizard: draw → questions → generating → results → pick
-- [ ] `TableCard` / room UI: render avatars from `avatarUrl`
-- [ ] Admin/batch regen script keyed on `art_direction_version`
-- [ ] Tests: tarot draw uniqueness, JSON schema validation, session lifecycle, `player` returns `avatarUrl`
+**Shipped**
+
+- [x] `users.avatar_key`, `avatar_source`, `avatar_url`; migrations `000018`, `000019`, `000020`
+- [x] `avatar_readings` store + GraphQL spirit-animal flow; OpenAI runner with JSON validation
+- [x] Five journey starter avatars in `frontend/public/avatars/`; `starterAvatars` query
+- [x] `updatePlayerProfile` with optional `avatarKey`; `player(id:)` returns `avatarUrl` / `avatarSource`
+- [x] `TableCard`, room chat, intent banner: render avatars from `avatarUrl`
+- [x] Tests: reading lifecycle, profile name-only update preserves spirit animal, integration flows
+
+**Deferred**
+
+- [ ] Expand starter catalog toward ~25 assets
+- [ ] `avatar_renders` table + admin/batch regen keyed on `art_direction_version`
+- [ ] Rate limits / queue for LLM + image cost at scale
 
 ---
 

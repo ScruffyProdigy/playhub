@@ -16,7 +16,7 @@ import (
 )
 
 // UpdatePlayerProfile is the resolver for the updatePlayerProfile field.
-func (r *mutationResolver) UpdatePlayerProfile(ctx context.Context, displayName string, avatarKey string) (*model.User, error) {
+func (r *mutationResolver) UpdatePlayerProfile(ctx context.Context, displayName string, avatarKey *string) (*model.User, error) {
 	st, err := r.requireStore()
 	if err != nil {
 		return nil, err
@@ -25,7 +25,11 @@ func (r *mutationResolver) UpdatePlayerProfile(ctx context.Context, displayName 
 	if err != nil {
 		return nil, err
 	}
-	user, err := st.UpdateUserProfile(ctx, userID, displayName, avatarKey, auth.LobbyPublicURL())
+	key := ""
+	if avatarKey != nil {
+		key = *avatarKey
+	}
+	user, err := st.UpdateUserProfile(ctx, userID, displayName, key, auth.LobbyPublicURL())
 	if err != nil {
 		switch {
 		case errors.Is(err, store.ErrInvalidAvatarKey):
