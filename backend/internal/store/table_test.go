@@ -233,11 +233,12 @@ func TestSitAtTableSequentialPathSeats(t *testing.T) {
 	if _, err := st.SitAtTable(ctx, table.ID, host.ID, clueRed); err != nil {
 		t.Fatalf("host sit red: %v", err)
 	}
-	if _, err := st.SitAtTable(ctx, table.ID, guest.ID, clueGreen); err == nil {
-		t.Fatal("expected error sitting green before blue")
+	if _, err := st.SitAtTable(ctx, table.ID, guest.ID, clueGreen); err != nil {
+		t.Fatalf("guest auto-assigned next clue giver seat: %v", err)
 	}
-	if _, err := st.SitAtTable(ctx, table.ID, guest.ID, clueBlue); err != nil {
-		t.Fatalf("guest sit blue: %v", err)
+	guestSeat, err := st.GetUserTableSeat(ctx, guest.ID)
+	if err != nil || guestSeat == nil || guestSeat.SeatKey != clueBlue {
+		t.Fatalf("guest seat = %+v, want %q", guestSeat, clueBlue)
 	}
 }
 
@@ -279,14 +280,27 @@ func TestSitAtTableSequentialFifoSeats(t *testing.T) {
 		t.Fatalf("seat count = %d, want 2", len(seats))
 	}
 
-	if _, err := st.SitAtTable(ctx, table.ID, host.ID, seats[1].SeatKey); err == nil {
-		t.Fatal("expected error sitting second seat before first")
+	if _, err := st.SitAtTable(ctx, table.ID, host.ID, seats[1].SeatKey); err != nil {
+		t.Fatalf("host sit auto-assigned first seat: %v", err)
 	}
-	if _, err := st.SitAtTable(ctx, table.ID, host.ID, seats[0].SeatKey); err != nil {
-		t.Fatalf("host sit first: %v", err)
+	hostSeat, err := st.GetUserTableSeat(ctx, host.ID)
+	if err != nil || hostSeat == nil || hostSeat.SeatKey != seats[0].SeatKey {
+		t.Fatalf("host seat = %+v, want %q", hostSeat, seats[0].SeatKey)
 	}
-	if _, err := st.SitAtTable(ctx, table.ID, guest.ID, seats[1].SeatKey); err != nil {
-		t.Fatalf("guest sit second: %v", err)
+	if _, err := st.SitAtTable(ctx, table.ID, guest.ID, seats[0].SeatKey); err != nil {
+		t.Fatalf("guest sit auto-assigned second seat: %v", err)
+	}
+	guestSeat, err := st.GetUserTableSeat(ctx, guest.ID)
+	if err != nil || guestSeat == nil || guestSeat.SeatKey != seats[1].SeatKey {
+		t.Fatalf("guest seat = %+v, want %q", guestSeat, seats[1].SeatKey)
+	}
+
+	canStart, err := st.TableCanStart(ctx, table.ID)
+	if err != nil {
+		t.Fatalf("canStart: %v", err)
+	}
+	if !canStart {
+		t.Fatal("expected duel table with 2 seated to be startable")
 	}
 }
 

@@ -333,6 +333,20 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
   }, [roomOpen, markRead, messages])
 
   useEffect(() => {
+    if (!user || !room?.id) {
+      return undefined
+    }
+    const hasFormingTables = (room.tables ?? []).some((table) => !tableShouldLeaveRoomList(table))
+    if (!hasFormingTables) {
+      return undefined
+    }
+    const timer = window.setInterval(() => {
+      void refresh()
+    }, 3000)
+    return () => window.clearInterval(timer)
+  }, [user, room?.id, room?.tables, refresh])
+
+  useEffect(() => {
     unsubscribeRef.current?.()
     unsubscribeRef.current = null
 

@@ -54,8 +54,9 @@ Room (invite code, chat)
 
 ### Sitting and caps
 
-- Join via **`sitAtTable(tableId, seatKey)`** — validates the key exists on the mode, seat is empty, path `max` not exceeded, and total ≤ mode `maxPlayers`.
-- **Start** requires king, total ∈ `[minPlayers, maxPlayers]`, and every template path meets its **minimum** (path `min`, else `playersToStart` for that path).
+- Join via **`sitAtTable(tableId, seatKey)`** — `seatKey` must exist on the mode. For **pooled fifo groups** (shared `queuePath`, or flat duel seats like RPSLS `1`/`2`), the key identifies **which group** to join; the server assigns the **next open seat** in that group in template order. Stale clients that send an already-taken seat still succeed. For **non-pooled** layouts (pick-your-own-seat roles), the exact seat must be empty.
+- Errors: **`store: no open seats in this group`** when that role bucket is full; **`store: table is full`** when `maxPlayers` is reached; **`store: seat is already taken`** only for non-pooled exact-seat picks.
+- **Start** requires **king** (earliest `seated_at`), total ∈ `[minPlayers, maxPlayers]`, and every template path meets its **minimum** (path `min`, else `playersToStart` for that path). Only the king sees **Start now**.
 - **Team layout in UI** uses `seatKey` prefix (e.g. `Team-1` vs `Team-2`). Role caps come from shared queue paths (e.g. Overwatch `DPS` cap 4 across both teams). **`affinityKey` is not used in Step 2.**
 
 ### Catalog UX
@@ -68,8 +69,9 @@ Per **mode** row under each game:
 ### Table UI (room panel)
 
 - **Tables (N)** section above chat.
-- **TableCard:** game/mode, king badge, team columns when `Team-N` prefixes appear, individual seat chips, king-only **Start now**, **Look for group** backfill (when seated), role **formingGaps**, **Discard** when eligible.
+- **TableCard:** game/mode, king badge, team columns when `Team-N` prefixes appear, individual seat chips or a single **Sit** button per pooled group, king-only **Start now**, **Look for group** backfill (when seated), role **formingGaps**, **Discard** when eligible.
 - **Intent banner:** `myActiveIntent` (catalog wait / matched) or `myTableSeat` (table forming / backfill).
+- **Realtime fallback:** while any forming table is open, the room panel polls every 3s so `canStart` and seat occupancy stay fresh when the `tableUpdated` WebSocket is delayed.
 
 ### Stale tables
 
@@ -141,7 +143,7 @@ extend type Subscription {
 }
 ```
 
-Realtime: Redis `lobby:room:{roomId}` publishes `table_updated` events (same channel as chat/membership).
+Realtime: Redis `lobby:room:{roomId}` publishes `table_updated` events (same channel as chat/membership). See [pubsub.md](./pubsub.md) for Redis setup and debug tracing.
 
 ### Template validation
 

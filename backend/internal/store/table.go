@@ -106,6 +106,28 @@ func seatByKey(seats []GameModeSeat, seatKey string) (*GameModeSeat, error) {
 	return nil, fmt.Errorf("store: invalid seat key %q", seatKey)
 }
 
+func isPooledSeatGroup(modeSeats []GameModeSeat, queuePath string) bool {
+	return queuePath != "" || allSeatsShareQueuePath(modeSeats, queuePath)
+}
+
+// resolvePooledSeatKey picks the next open seat in a pooled fifo group. The requested
+// key identifies which group to join; stale clients may send an already-taken seat.
+func resolvePooledSeatKey(modeSeats []GameModeSeat, seated []TableSeat, requestedKey string) (string, error) {
+	target, err := seatByKey(modeSeats, requestedKey)
+	if err != nil {
+		return "", err
+	}
+	path := seatQueuePathValue(*target)
+	if !isPooledSeatGroup(modeSeats, path) {
+		return requestedKey, nil
+	}
+	next := firstOpenSeatKeyInPath(modeSeats, seated, path)
+	if next == "" {
+		return "", fmt.Errorf("store: no open seats in this group")
+	}
+	return next, nil
+}
+
 func allSeatsShareQueuePath(modeSeats []GameModeSeat, queuePath string) bool {
 	if len(modeSeats) <= 1 {
 		return false
@@ -507,7 +529,9 @@ func (s *Store) GetUserStartedTableSession(ctx context.Context, userID uuid.UUID
 	return &view, nil
 }
 
-// SitAtTable seats the user at a specific seat key, leaving queue and other table seats first.
+// SitAtTable seats the user at a seat key, leaving queue and other table seats first.
+// For pooled fifo groups (shared queue path or flat duel seats), the server assigns
+// the next open seat in that group so stale clients do not need the exact seat number.
 func (s *Store) SitAtTable(ctx context.Context, tableID, userID uuid.UUID, seatKey string) (*RoomTable, error) {
 	seatKey = strings.TrimSpace(seatKey)
 	if seatKey == "" {
@@ -553,22 +577,21 @@ func (s *Store) SitAtTable(ctx context.Context, tableID, userID uuid.UUID, seatK
 		return nil, err
 	}
 
-	var occupied bool
-	if err := tx.QueryRowContext(ctx, `
-		SELECT EXISTS(SELECT 1 FROM table_seats WHERE table_id = $1 AND seat_key = $2)
-	`, tableID, seatKey).Scan(&occupied); err != nil {
-		return nil, err
-	}
-	if occupied {
-		return nil, fmt.Errorf("store: seat is already taken")
-	}
-
 	seated, err := s.listTableSeatsTx(ctx, tx, tableID)
 	if err != nil {
 		return nil, err
 	}
 	if len(seated) >= mode.MaxPlayers {
 		return nil, fmt.Errorf("store: table is full")
+	}
+
+	seatKey, err = resolvePooledSeatKey(modeSeats, seated, seatKey)
+	if err != nil {
+		return nil, err
+	}
+	target, err = seatByKey(modeSeats, seatKey)
+	if err != nil {
+		return nil, err
 	}
 
 	path := seatQueuePathValue(*target)
@@ -586,10 +609,16 @@ func (s *Store) SitAtTable(ctx context.Context, tableID, userID uuid.UUID, seatK
 			}
 		}
 	}
-	if path != "" || allSeatsShareQueuePath(modeSeats, "") {
-		next := firstOpenSeatKeyInPath(modeSeats, seated, path)
-		if next != "" && seatKey != next {
-			return nil, fmt.Errorf("store: sit the next open seat in this group first")
+
+	if !isPooledSeatGroup(modeSeats, path) {
+		var occupied bool
+		if err := tx.QueryRowContext(ctx, `
+			SELECT EXISTS(SELECT 1 FROM table_seats WHERE table_id = $1 AND seat_key = $2)
+		`, tableID, seatKey).Scan(&occupied); err != nil {
+			return nil, err
+		}
+		if occupied {
+			return nil, fmt.Errorf("store: seat is already taken")
 		}
 	}
 
@@ -782,6 +811,9 @@ func (s *Store) TableCanStart(ctx context.Context, tableID uuid.UUID) (bool, err
 	table, err := s.GetRoomTableByID(ctx, tableID)
 	if err != nil {
 		return false, err
+	}
+	if table.Status != TableStatusForming {
+		return false, nil
 	}
 	mode, err := s.GetGameModeByID(ctx, table.ModeID)
 	if err != nil {
