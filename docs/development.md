@@ -48,6 +48,8 @@ This guide will help you set up and run JoinQuest locally for development.
    ./scripts/dev.sh
    ```
 
+   `./scripts/dev.sh` starts Postgres and **Redis** (for queue/room pub/sub). Set `REDIS_URL` in `.env` if you run services outside Docker Compose. Optional tracing: `LOBBY_PUBSUB_DEBUG=true` (backend) and `?lobbyDebug=1` or `localStorage.lobbyDebug=1` (frontend) — see [pubsub.md](./pubsub.md).
+
 ## Manual Setup
 
 ### Backend Setup

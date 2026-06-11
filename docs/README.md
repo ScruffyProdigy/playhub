@@ -20,8 +20,8 @@ Documentation for **JoinQuest** — the platform that connects players to third-
 - **[Match lifecycle callbacks](match-lifecycle-callbacks.md)** — Per-player finish + match result (planned)
 - **[Composition & join options](composition-and-join-options.md)** — Role queues vs game-backed eligibility
 - **[Rooms & tables](rooms-and-tables.md)** — Private rooms, forming tables, invite/QR, queue exclusion
-- **[Spirit animal avatars](spirit-animal-avatars.md)** — Planned: starter avatars + tarot-guided “Find my spirit animal” flow (TODO)
-- **[Game-minted launch URLs](game-minted-launch-urls.md)** — **HIGH PRIORITY TODO:** games return launch URLs on provision; Lobby attaches JWT
+- **[Spirit animal avatars](spirit-animal-avatars.md)** — Shipped: starter avatars + tarot-guided “Find my spirit animal” flow; optional `avatarKey` on profile update
+- **[Game-minted launch URLs](game-minted-launch-urls.md)** — Games return launch URL bases on provision; Lobby attaches JWT
 - **[Developer self-service](developer-self-service.md)** — Planned: register games, integration dashboard, MCP, public release review
 - **[Player experience roadmap](player-experience-roadmap.md)** — Planned: queue wait estimates, bottleneck CTAs, richer game cards
 - **[Lobby ↔ Game Handoff](lobby-protocol-handoff.md)** — Provision, JWT, and integration rationale

@@ -32,6 +32,20 @@ Migrations are stored in the `backend/migrations/` directory and follow the nami
 - `000008_mode_queue_matchmaking.up.sql` - Session `mode_id`/`mode_queue_id`, unique waiting row per user per mode queue
 - `000009_catalog_only_games.up.sql` - Seeds catalog mode/queue for RPS demo; deactivates Party Lobby
 - `000010_drop_legacy_game_fields.up.sql` - Drops legacy `games.game_mode`/`min_players`/`max_players` and `game_modes.best_of`
+- `000011_security_hardening.up.sql` - Magic-link token hashing; failed login-code attempt tracking
+- `000012_one_waiting_queue_global.up.sql` - One waiting queue row per user across all games
+- `000013_player_return_and_match_lifecycle.up.sql` - `return_context` on session participants; match lifecycle timestamps
+- `000014_seat_templates.up.sql` - `seat_template` JSONB on modes; affinity/queue metadata on expanded seats
+- `000015_queue_path_join.up.sql` - `queue_path` on waiting `game_queues` rows
+- `000016_rooms.up.sql` - Chat rooms, members, messages (Step 1)
+- `000017_tables.up.sql` - Forming tables and `table_seats` inside rooms (Step 2)
+- `000018_avatars.up.sql` - `avatar_key`, `avatar_source` on users
+- `000019_spirit_animal_readings.up.sql` - `avatar_readings` table for spirit-animal flow
+- `000020_avatar_readings_phase_started.up.sql` - `phase_started_at` on avatar readings
+- `000021_forming_matches.up.sql` - LFG Phase B: parties, forming matches, queue linkage
+- `000022_party_tree.up.sql` - `party_tree` JSONB on parties
+- `000023_lfg_cleanup.up.sql` - Drop deprecated `parties.together`; forming match status cleanup
+- `000024_session_launch_urls.up.sql` - `launch_url_base` on `game_session_participants` for stored game-minted URL bases
 
 ## CLI Usage
 

@@ -16,18 +16,19 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 - **Authentication**: Magic-link sign-in, session cookies, JWT seat tokens
 - **Catalog & matchmaking**: `registerGame`, `seatTemplate` manifest sync, mode queues, `joinQueue(queueId, queuePath)`, handoff to game servers
 - **Database-backed queries**: `games`, `game`, `session`, `goods`, `myInventory`, `player` (game service)
-- **Real-time**: `queueUpdated` subscription via Redis pub/sub; **`roomUpdated` / `roomMessageAdded`** for chat rooms
+- **Real-time**: `queueUpdated`, **`myTableSeatUpdated`**, and **`tableUpdated(roomId)`** subscriptions via Redis pub/sub; **`roomUpdated` / `roomMessageAdded`** for chat rooms — see [pubsub.md](./pubsub.md)
 - **Post-game**: `returnDestination`, `reportPlayerFinished`, `reportMatchResult` — see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md), [player-return-routing.md](./player-return-routing.md)
 - **Rooms (Step 1)**: `createRoom`, `joinRoom`, `leaveRoom`, `sendRoomMessage`, `room`, `myRoom` — see [rooms-and-tables.md](./rooms-and-tables.md)
 - **Tables (Step 2)**: forming tables, seat-level sitting, king controls — see [rooms-and-tables.md](./rooms-and-tables.md)
-- **LFG forming match (Phase B)**: persistent forming map, parties, `myActiveIntent`, `formingGaps`, `startTableBackfill`, `PartyNodeInput` on `joinQueue` — [lfg-phase-b-plan.md](./lfg-phase-b-plan.md)
+- **LFG forming match (Phase B)**: persistent forming map, parties, `myActiveIntent`, `formingGaps`, `startTableBackfill`, `PartyNodeInput` on `joinQueue`; **forming worker** reconciles matches asynchronously after `joinQueue` returns — [lfg-phase-b-plan.md](./lfg-phase-b-plan.md), [pubsub.md](./pubsub.md)
+- **Avatars & profile**: `starterAvatars`, `updatePlayerProfile(displayName, avatarKey?)`, spirit-animal reading mutations — [spirit-animal-avatars.md](./spirit-animal-avatars.md)
 
 ### 🚧 In Development
 - **Player-facing goods**: purchase/trade flows
 - **Rate limiting**
 
 ### 📋 Planned
-- **File uploads**: game assets and user avatars
+- **File uploads**: game asset uploads (avatars use starter assets + generated spirit-animal URLs today)
 - **Phase C LFG**: weighted dequeue, `allocations` by affinity — see [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md)
 
 ## Base URL
@@ -111,7 +112,7 @@ query {
 }
 ```
 
-#### `player` (game service) — planned fields
+#### `player` (game service)
 Resolve a lobby user by id. Requires `Authorization: Bearer <serviceToken>` from provision `lobby.serviceToken`. Used by game servers for display names and avatars in-match.
 
 ```graphql
@@ -251,6 +252,24 @@ mutation {
 }
 ```
 
+### Profile & avatars
+
+#### `updatePlayerProfile` ✅
+Set display name and optionally a starter avatar. **`avatarKey` is optional** — omit it to change only the name while keeping a spirit-animal or existing avatar.
+
+```graphql
+mutation {
+  updatePlayerProfile(displayName: "River", avatarKey: "campfire") {
+    displayName
+    avatarKey
+    avatarUrl
+    avatarSource
+  }
+}
+```
+
+Spirit-animal flow mutations (`beginSpiritAnimalReading`, `submitSpiritAnimalAnswers`, `selectSpiritAnimalTotem`, etc.) are documented in [spirit-animal-avatars.md](./spirit-animal-avatars.md).
+
 ### Queue / group matchmaking
 
 #### `myActiveIntent` ✅
@@ -285,6 +304,7 @@ Start **looking for a group** in a mode queue (`queueId` from `game.modes.queues
 - **Same game, different role**: if already **waiting** in that mode queue, calling `joinQueue` again with another valid `queuePath` **updates** the player's bucket (does not create a second row).
 - Only one **waiting** queue per player globally. Joining another game **leaves** the previous wait list and sets **`message`** explaining the switch.
 - Still **blocked** while **matched** in another queue until the player leaves or the match ends.
+- **Async match:** the mutation usually returns `queued: true` immediately. When the forming worker fires a match, clients receive `joinUrl` via the **`queueUpdated`** subscription (or HTTP poll fallback). Only the player who completes the match may get `sessionId` / `joinUrl` inline on rare synchronous paths.
 
 ```graphql
 mutation {
