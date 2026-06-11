@@ -11,6 +11,8 @@ type Node struct {
 	Role     string   `json:"role,omitempty"`
 	Children []Node   `json:"children,omitempty"`
 	Members  []string `json:"members,omitempty"`
+	// TableID links a table-backfill party to its room table (forming assignment metadata).
+	TableID string `json:"tableId,omitempty"`
 }
 
 // PinnedSeat binds a user to an exact seat key (table seating).

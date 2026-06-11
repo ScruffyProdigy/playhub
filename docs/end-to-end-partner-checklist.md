@@ -8,10 +8,12 @@ Use this to verify the **“sign in → queue → play → return”** story on 
 
 ## Prerequisites
 
-- [ ] PostgreSQL migrated through `000012` (one global waiting queue per user)
+- [ ] PostgreSQL migrated through `000024` (session launch URL persistence)
 - [ ] JoinQuest API + frontend running (`./scripts/dev.sh` or deployed stack)
 - [ ] Reference game registered with valid `play_url` and `api_base_url` (e.g. `demo-game-rps`)
 - [ ] Game exposes `GET /healthz`, `GET /api/v1/game-modes`, accepts `POST /api/v1/matches`
+- [ ] Game returns `launchUrls` for every seated player on provision (or documents catalog fallback); `/api/v1/status` reports `launchUrlsOnProvision: true` when opted in
+- [ ] Game API has `GAME_PLAY_URL` matching catalog `play_url` (browser origin for minted links)
 - [ ] Game verifies Lobby JWT via `/.well-known/jwks.json`
 - [ ] `LOBBY_GAME_TOKEN_PEPPER` set in prod/staging (per-game `serviceToken` on provision)
 
@@ -44,6 +46,7 @@ Use this to verify the **“sign in → queue → play → return”** story on 
 ## Automated coverage in this repo
 
 - `backend/graph/handoff_integration_test.go` — provision payload, seat keys, `returnUrl`, `serviceToken`
+- `backend/graph/handoff_game_urls_test.go` — game-minted URL merge, JWT attach, persistence
 - `backend/graph/queue_integration_test.go` — join, websocket `queueUpdated`, two-player match
 - `backend/internal/store/mode_queue_one_global_test.go` — one waiting queue across games
 

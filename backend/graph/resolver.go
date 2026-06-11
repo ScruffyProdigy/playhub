@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/formingworker"
 	"github.com/scruffyprodigy/playhub/internal/gameclient"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/spiritanimal"
@@ -28,6 +29,7 @@ type Resolver struct {
 	GameClientBaseURL string
 	ManifestFetcher   *gameclient.ManifestFetcher
 	SpiritAnimal      *spiritanimal.Runner
+	FormingWorker     *formingworker.Worker
 	// GameProvisioner pushes match rosters to game APIs; nil uses the default HTTP client.
 	GameProvisioner gameclient.MatchProvisioner
 }

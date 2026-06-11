@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/internal/lfg"
@@ -23,23 +24,17 @@ func (s *Store) tryPlacePartyOnFormingTx(
 	}
 	slots := lfg.SlotsFromAssignments(formingAssignmentsToLFG(assignments))
 
-	var seatByUser map[string]string
-	var ok bool
-
-	if partyInput != nil && len(partyInput.Pinned) > 0 {
-		seatByUser, ok = partytree.PlacePinned(slots, partyInput.Pinned)
-	} else {
-		tree, err := decodePartyTree(party.PartyTree)
-		if err != nil {
-			return false, err
-		}
-		if len(tree.AllMembers()) == 0 {
-			return false, nil
-		}
-		seatByUser, ok = partytree.PlaceTree(slots, tree)
+	tree, err := decodePartyTree(party.PartyTree)
+	if err != nil {
+		return false, err
+	}
+	tree = partytree.NormalizeForPlacement(tree)
+	if len(tree.AllMembers()) == 0 {
+		return false, nil
 	}
 
-	if !ok {
+	seatByUser, ok := partytree.PlaceTree(slots, tree)
+	if !ok || len(seatByUser) == 0 {
 		return false, nil
 	}
 
@@ -48,7 +43,12 @@ func (s *Store) tryPlacePartyOnFormingTx(
 	if partyInput != nil && partyInput.TableID != nil {
 		source = "table"
 		tableID = partyInput.TableID
-	} else if partyInput != nil && len(partyInput.Members) == 1 && len(partyInput.Pinned) == 0 {
+	} else if tid := strings.TrimSpace(tree.TableID); tid != "" {
+		if id, err := uuid.Parse(tid); err == nil {
+			source = "table"
+			tableID = &id
+		}
+	} else if len(tree.AllMembers()) == 1 {
 		source = "solo"
 	}
 

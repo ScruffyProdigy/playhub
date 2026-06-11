@@ -27,6 +27,10 @@ type UserActiveIntent struct {
 // takes priority over waiting or matched queue rows so the leave-game banner matches
 // join blocking (ensureNotInActiveGame).
 func (s *Store) GetUserActiveIntent(ctx context.Context, userID uuid.UUID) (*UserActiveIntent, error) {
+	if err := s.reconcileStaleMatchedQueuesForUser(ctx, userID); err != nil {
+		return nil, err
+	}
+
 	participation, err := s.GetUserActiveSessionParticipation(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -152,6 +156,43 @@ func (s *Store) getUserMatchedModeQueueAny(ctx context.Context, userID uuid.UUID
 		return nil, uuid.Nil, err
 	}
 	return session, modeQueueID, nil
+}
+
+// reconcileStaleMatchedQueuesForUserTx cancels matched queue rows that no longer have
+// an active, unfinished session participation for the same catalog queue.
+func (s *Store) reconcileStaleMatchedQueuesForUserTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) error {
+	_, err := tx.ExecContext(ctx, `
+		UPDATE game_queues gq
+		SET status = 'cancelled'
+		WHERE gq.user_id = $1
+		  AND gq.status = 'matched'
+		  AND gq.mode_queue_id IS NOT NULL
+		  AND NOT EXISTS (
+		    SELECT 1
+		    FROM game_session_participants gsp
+		    INNER JOIN game_sessions gs
+		      ON gs.id = gsp.session_id
+		     AND gs.status = 'active'
+		     AND gs.game_id = gq.game_id
+		     AND gs.mode_queue_id = gq.mode_queue_id
+		    WHERE gsp.user_id = gq.user_id
+		      AND gsp.left_at IS NULL
+		      AND gsp.finished_at IS NULL
+		  )
+	`, userID)
+	return err
+}
+
+func (s *Store) reconcileStaleMatchedQueuesForUser(ctx context.Context, userID uuid.UUID) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := s.reconcileStaleMatchedQueuesForUserTx(ctx, tx, userID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func getUserWaitingQueueSwitchInfoTx(ctx context.Context, tx *sql.Tx, userID, exceptModeQueueID uuid.UUID) (*SwitchedFromQueue, error) {

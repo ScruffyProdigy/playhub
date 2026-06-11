@@ -2,7 +2,7 @@
 
 Locked architecture decisions for **third-party game integration** on JoinQuest.
 
-**Why this matters for game authors:** Players discover your title in our catalog and queue here; we fill seats and hand off to your `play_url`. You publish modes and a seat layout; we own matchmaking. Product story: [`vision.md`](./vision.md). Wire protocol: [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md).
+**Why this matters for game authors:** Players discover your title in our catalog and queue here; we fill seats and hand off to your game. You publish modes and a seat layout (and optionally **launch URL bases** on provision — see [game-minted-launch-urls.md](./game-minted-launch-urls.md)); we own matchmaking. Product story: [`vision.md`](./vision.md). Wire protocol: [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md).
 
 ## Model
 
@@ -73,7 +73,7 @@ already on the map. Games still receive final `seatKey` assignments only. See
 
 ## URLs
 
-- **`play_url` and `api_base_url` live on the game** (shared across modes) until a title needs per-mode URLs.
+- **`play_url` and `api_base_url` live on the game** (shared across modes) until a title needs per-mode URLs. `play_url` validates game-minted launch URL hosts and serves as the catalog fallback when provision omits `launchUrls`.
 - **`api_base_url`**: Game API **origin** only (e.g. `http://localhost:3001`, `https://rpsls-duel.win`) — same value as JWT `aud`. Lobby posts to `{api_base_url}/api/v1/matches`. Do not include the `/api` ingress prefix here.
 
 ## Provision

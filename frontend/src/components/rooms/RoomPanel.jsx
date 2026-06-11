@@ -8,6 +8,7 @@ import { IconClose } from '../icons/ShareIcons'
 import RoomShareToolbar from './RoomShareToolbar'
 import TableCard from './TableCard'
 import { useActiveTableSeat } from '../games/useActiveTableSeat'
+import { useActiveIntent } from '../games/useActiveIntent'
 import PlayerAvatar from '../avatars/PlayerAvatar'
 
 function mergeMessage(messages, incoming) {
@@ -34,6 +35,7 @@ export default function RoomPanel({ compact = false }) {
     refresh,
   } = useActiveRoom()
   const { refresh: refreshTableSeat } = useActiveTableSeat()
+  const { refresh: refreshIntent } = useActiveIntent()
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [tableBusy, setTableBusy] = useState(false)
@@ -109,6 +111,7 @@ export default function RoomPanel({ compact = false }) {
   async function handleLookForGroup(tableId, queueId) {
     await runTableAction(async () => {
       const result = await startTableBackfill(tableId, queueId)
+      await refreshIntent()
       if (result?.joinUrl) {
         window.location.assign(result.joinUrl)
       }

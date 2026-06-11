@@ -1,7 +1,7 @@
 # Developer self-service — game registration & integration
 
 **Status:** Planned  
-**Depends on:** [game-minted launch URLs](./game-minted-launch-urls.md) (remove catalog `playUrl`; game returns launch URLs on provision)  
+**Depends on:** [game-minted launch URLs](./game-minted-launch-urls.md) — **shipped** for reference games; catalog `playUrl` remains for host validation and fallback  
 **Likely before Phase A:** [player experience roadmap](./player-experience-roadmap.md) — queue estimates, bottleneck CTAs, catalog icons/tags (overlaps dev registration metadata)  
 **Related:** [game-catalog-architecture.md](./game-catalog-architecture.md) · [lobby-protocol-handoff.md](./lobby-protocol-handoff.md) · [end-to-end-partner-checklist.md](./end-to-end-partner-checklist.md)
 
@@ -196,7 +196,7 @@ Each row: **status** (pass / fail / not run), **last checked**, **plain-language
 | Happy path | `POST /api/v1/matches` 200, idempotent re-push | “Provision failed: {status} — …” |
 | Auth | Bearer `serviceToken` accepted | “Your server rejected our service token. Compare with dashboard credential.” |
 | Banlist | `403` + `bannedLobbyUserIds` shape | “When banning a test user, return 403 with `bannedLobbyUserIds` array — we got …” |
-| Launch URLs | Response includes per-player URLs (post game-minted URLs) | “Provision succeeded but didn't return launch URLs for all seats.” |
+| Launch URLs | Response includes per-player `launchUrls` (required when opted in; catalog fallback if omitted) | “Provision succeeded but didn't return launch URLs for all seats.” |
 
 #### 3. JWT verification
 
@@ -302,7 +302,7 @@ Everything needed for a developer to register, integrate, and test with friends:
 - **Test table** CTA (`createPrivateTable`)  
 - Docs: this spec + update [vision.md](./vision.md) copy  
 
-**Dependency:** [game-minted launch URLs](./game-minted-launch-urls.md) should land before or as part of Phase A provision checks.
+**Dependency:** [game-minted launch URLs](./game-minted-launch-urls.md) — shipped; Phase A provision checks should require `launchUrls` for new partner games.
 
 **Optional before Phase A:** game icons + catalog tags (polish for public release, not blocking private testing).
 

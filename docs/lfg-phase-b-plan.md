@@ -20,6 +20,8 @@ Phase B replaces the one-shot FIFO snapshot with a **persistent forming match** 
 4. **Gap visibility** — show what roles are still needed on the **intent banner** (catalog wait + table backfill) and on **TableCard** (room).
 5. **Fire** into the existing session → provision → JWT pipeline.
 
+**Async reconcile:** `joinQueue` enqueues the player and returns `queued: true` immediately. A **forming worker** (see [pubsub.md](./pubsub.md)) runs reconcile on a short delay, fires when the map is ready, provisions the game server, and publishes per-user `queueUpdated` events. GraphQL queries and subscriptions read stored launch URL bases — they do not trigger provision.
+
 **Out of scope for B:** frontend party role picker, weighted dequeue (C), `pins`, variable partial composition, `startMatch(party, startSize)`.
 
 **Deferred (API only):** catalog party tree UI — use tables for coordinated friend groups instead.

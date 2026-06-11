@@ -167,15 +167,15 @@ func TestJoinModeQueueCompositionMatchmaking(t *testing.T) {
 		t.Fatalf("expected waiting, got %s", first.Status)
 	}
 
-	second, err := st.JoinModeQueue(ctx, queueID, userTank.ID, "Tank", nil)
-	if err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userTank.ID, "Tank", nil); err != nil {
 		t.Fatalf("join tank: %v", err)
 	}
-	if second.Status != QueueStatusMatched || second.SessionID == nil {
-		t.Fatalf("expected match, got %+v", second)
+	rec := mustReconcileForming(t, st, ctx, queueID)
+	if !rec.Fired || rec.SessionID == nil {
+		t.Fatalf("expected match, got %+v", rec)
 	}
 
-	participants, err := st.ListSessionSeatAssignments(ctx, *second.SessionID)
+	participants, err := st.ListSessionSeatAssignments(ctx, *rec.SessionID)
 	if err != nil {
 		t.Fatalf("ListSessionParticipants: %v", err)
 	}
@@ -250,21 +250,21 @@ func TestJoinModeQueueWordHuntFiresAtPartialCohortSizes(t *testing.T) {
 	}
 
 	paths := []string{"ClueGiver", "ClueGiver", "Guesser", "Guesser", "Guesser", "Guesser"}
-	var last *QueueJoinResult
+	var rec *FormingReconcileResult
 	for i, path := range paths {
-		last, err = st.JoinModeQueue(ctx, queueID, users[i], path, nil)
-		if err != nil {
+		if _, err = st.JoinModeQueue(ctx, queueID, users[i], path, nil); err != nil {
 			t.Fatalf("join %d (%s): %v", i, path, err)
 		}
-		if i < len(paths)-1 && last.Status != QueueStatusWaiting {
-			t.Fatalf("expected waiting after join %d, got %s", i, last.Status)
+		rec = mustReconcileForming(t, st, ctx, queueID)
+		if i < len(paths)-1 && rec.Fired {
+			t.Fatalf("expected waiting after join %d, got fired session %s", i, rec.SessionID)
 		}
 	}
-	if last.Status != QueueStatusMatched || last.SessionID == nil {
-		t.Fatalf("expected match on 6th join, got %+v", last)
+	if !rec.Fired || rec.SessionID == nil {
+		t.Fatalf("expected match on 6th join, got %+v", rec)
 	}
 
-	participants, err := st.ListSessionSeatAssignments(ctx, *last.SessionID)
+	participants, err := st.ListSessionSeatAssignments(ctx, *rec.SessionID)
 	if err != nil {
 		t.Fatalf("ListSessionSeatAssignments: %v", err)
 	}

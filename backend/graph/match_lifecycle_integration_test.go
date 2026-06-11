@@ -30,6 +30,9 @@ func TestReturnDestinationAfterMatchmaking(t *testing.T) {
 	vars := map[string]any{"id": demoDefaultQueueID}
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieA)
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
+	if err := env.resolver.FormingWorker.ReconcileNow(ctx, uuid.MustParse(demoDefaultQueueID)); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
 
 	call := provisioner.lastCall()
 	matchID := call.Assignment.ExternalMatchID
@@ -81,6 +84,9 @@ func TestReportMatchResultCompletesSession(t *testing.T) {
 	vars := map[string]any{"id": demoDefaultQueueID}
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieA)
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
+	if err := env.resolver.FormingWorker.ReconcileNow(ctx, uuid.MustParse(demoDefaultQueueID)); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
 
 	matchID := provisioner.lastCall().Assignment.ExternalMatchID
 	sessionID, err := uuid.Parse(matchID)
@@ -148,23 +154,10 @@ func TestFullGameLoopReturnAndRequeue(t *testing.T) {
 	vars := map[string]any{"id": demoDefaultQueueID}
 
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieA)
-	matchBody := postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
-
-	var matchResp struct {
-		Data struct {
-			JoinQueue struct {
-				SessionID *string `json:"sessionId"`
-				JoinURL   *string `json:"joinUrl"`
-			} `json:"joinQueue"`
-		} `json:"data"`
+	postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
+	if err := env.resolver.FormingWorker.ReconcileNow(ctx, uuid.MustParse(demoDefaultQueueID)); err != nil {
+		t.Fatalf("reconcile: %v", err)
 	}
-	if err := json.Unmarshal(matchBody, &matchResp); err != nil {
-		t.Fatalf("decode match join: %v body=%s", err, matchBody)
-	}
-	if matchResp.Data.JoinQueue.SessionID == nil {
-		t.Fatalf("expected sessionId on match, got %s", matchBody)
-	}
-	firstSessionID := *matchResp.Data.JoinQueue.SessionID
 
 	activeQuery := `query { myActiveIntent { queueId status sessionId joinUrl } }`
 	bodyBefore := postGraphQL(t, env.Handler, activeQuery, nil, cookieA)
@@ -179,11 +172,13 @@ func TestFullGameLoopReturnAndRequeue(t *testing.T) {
 	if err := json.Unmarshal(bodyBefore, &beforeResp); err != nil {
 		t.Fatalf("decode active before: %v", err)
 	}
-	if beforeResp.Data.MyActiveIntent == nil || beforeResp.Data.MyActiveIntent.Status != "MATCHED" {
-		t.Fatalf("expected MATCHED before return, got %s", bodyBefore)
+	if beforeResp.Data.MyActiveIntent == nil || beforeResp.Data.MyActiveIntent.SessionID == nil {
+		t.Fatalf("expected matched session after worker, got %s", bodyBefore)
 	}
-	if beforeResp.Data.MyActiveIntent.SessionID == nil || *beforeResp.Data.MyActiveIntent.SessionID != firstSessionID {
-		t.Fatalf("active session = %v, want %s", beforeResp.Data.MyActiveIntent.SessionID, firstSessionID)
+	firstSessionID := *beforeResp.Data.MyActiveIntent.SessionID
+
+	if beforeResp.Data.MyActiveIntent.Status != "MATCHED" {
+		t.Fatalf("expected MATCHED before return, got %s", bodyBefore)
 	}
 
 	destQuery := `query Return($matchId: ID!) { returnDestination(matchId: $matchId) { path kind } }`
@@ -206,22 +201,30 @@ func TestFullGameLoopReturnAndRequeue(t *testing.T) {
 	}
 
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieA)
-	requeueBody := postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
+	postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
+	if err := env.resolver.FormingWorker.ReconcileNow(ctx, uuid.MustParse(demoDefaultQueueID)); err != nil {
+		t.Fatalf("reconcile requeue: %v", err)
+	}
 
-	var requeueResp struct {
+	requeuedBody := postGraphQL(t, env.Handler, activeQuery, nil, cookieA)
+	var requeuedActive struct {
 		Data struct {
-			JoinQueue struct {
+			MyActiveIntent *struct {
+				Status    string  `json:"status"`
 				SessionID *string `json:"sessionId"`
-			} `json:"joinQueue"`
+			} `json:"myActiveIntent"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(requeueBody, &requeueResp); err != nil {
-		t.Fatalf("decode requeue join: %v body=%s", err, requeueBody)
+	if err := json.Unmarshal(requeuedBody, &requeuedActive); err != nil {
+		t.Fatalf("decode requeue active: %v", err)
 	}
-	if requeueResp.Data.JoinQueue.SessionID == nil {
-		t.Fatalf("expected sessionId on requeue match, got %s", requeueBody)
+	if requeuedActive.Data.MyActiveIntent == nil || requeuedActive.Data.MyActiveIntent.Status != "MATCHED" {
+		t.Fatalf("expected MATCHED after requeue, got %s", requeuedBody)
 	}
-	secondSessionID := *requeueResp.Data.JoinQueue.SessionID
+	if requeuedActive.Data.MyActiveIntent.SessionID == nil {
+		t.Fatalf("expected session after requeue worker, got %s", requeuedBody)
+	}
+	secondSessionID := *requeuedActive.Data.MyActiveIntent.SessionID
 	if secondSessionID == firstSessionID {
 		t.Fatalf("re-queue reused session %s", firstSessionID)
 	}
@@ -236,25 +239,6 @@ func TestFullGameLoopReturnAndRequeue(t *testing.T) {
 	}
 	if firstSession.Status != "completed" {
 		t.Fatalf("first session status = %q, want completed", firstSession.Status)
-	}
-
-	bodyRequeued := postGraphQL(t, env.Handler, activeQuery, nil, cookieA)
-	var requeuedActive struct {
-		Data struct {
-			MyActiveIntent *struct {
-				Status    string  `json:"status"`
-				SessionID *string `json:"sessionId"`
-			} `json:"myActiveIntent"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(bodyRequeued, &requeuedActive); err != nil {
-		t.Fatalf("decode active after requeue: %v", err)
-	}
-	if requeuedActive.Data.MyActiveIntent == nil || requeuedActive.Data.MyActiveIntent.Status != "MATCHED" {
-		t.Fatalf("expected MATCHED after requeue, got %s", bodyRequeued)
-	}
-	if requeuedActive.Data.MyActiveIntent.SessionID == nil || *requeuedActive.Data.MyActiveIntent.SessionID != secondSessionID {
-		t.Fatalf("active session after requeue = %v, want %s", requeuedActive.Data.MyActiveIntent.SessionID, secondSessionID)
 	}
 }
 
@@ -278,6 +262,9 @@ func TestReturnDestinationClearsMatchedQueue(t *testing.T) {
 	vars := map[string]any{"id": demoDefaultQueueID}
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieA)
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
+	if err := env.resolver.FormingWorker.ReconcileNow(ctx, uuid.MustParse(demoDefaultQueueID)); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
 
 	matchID := provisioner.lastCall().Assignment.ExternalMatchID
 

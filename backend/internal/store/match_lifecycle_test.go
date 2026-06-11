@@ -31,6 +31,7 @@ func TestCompleteSessionReleasesMatchedQueueRows(t *testing.T) {
 	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, "", nil); err != nil {
 		t.Fatalf("join B: %v", err)
 	}
+	mustReconcileForming(t, st, ctx, queueID)
 
 	view, err := st.GetUserActiveIntent(ctx, userA.ID)
 	if err != nil {

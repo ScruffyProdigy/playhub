@@ -31,6 +31,7 @@ func TestRequeueAfterReturnUsesNewSessionNotStaleActive(t *testing.T) {
 	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, "", nil); err != nil {
 		t.Fatalf("first join B: %v", err)
 	}
+	mustReconcileForming(t, st, ctx, queueID)
 
 	first, err := st.GetUserActiveIntent(ctx, userA.ID)
 	if err != nil {
@@ -60,14 +61,14 @@ func TestRequeueAfterReturnUsesNewSessionNotStaleActive(t *testing.T) {
 	if _, err := st.JoinModeQueue(ctx, queueID, userA.ID, "", nil); err != nil {
 		t.Fatalf("second join A: %v", err)
 	}
-	second, err := st.JoinModeQueue(ctx, queueID, userB.ID, "", nil)
-	if err != nil {
+	if _, err := st.JoinModeQueue(ctx, queueID, userB.ID, "", nil); err != nil {
 		t.Fatalf("second join B: %v", err)
 	}
-	if second.SessionID == nil {
+	secondRec := mustReconcileForming(t, st, ctx, queueID)
+	if secondRec.SessionID == nil {
 		t.Fatal("expected session on second match")
 	}
-	if *second.SessionID == firstSessionID {
+	if *secondRec.SessionID == firstSessionID {
 		t.Fatalf("re-queue reused stale session %s", firstSessionID)
 	}
 
@@ -75,8 +76,8 @@ func TestRequeueAfterReturnUsesNewSessionNotStaleActive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetUserActiveIntent after re-queue: %v", err)
 	}
-	if active == nil || active.SessionID == nil || *active.SessionID != *second.SessionID {
-		t.Fatalf("active queue session = %v, want %s", active, second.SessionID)
+	if active == nil || active.SessionID == nil || *active.SessionID != *secondRec.SessionID {
+		t.Fatalf("active queue session = %v, want %s", active, secondRec.SessionID)
 	}
 
 	firstSession, err = st.GetSessionByID(ctx, firstSessionID)

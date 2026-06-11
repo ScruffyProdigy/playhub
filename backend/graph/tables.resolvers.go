@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/graph/model"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
@@ -205,42 +204,20 @@ func (r *mutationResolver) StartTableBackfill(ctx context.Context, tableID strin
 		return nil, err
 	}
 
-	var launchURLs map[uuid.UUID]string
-	if result.Status == store.QueueStatusMatched && result.SessionID != nil {
-		game, gErr := st.GetGameByID(ctx, result.GameID)
-		if gErr != nil {
-			return nil, gErr
-		}
-		launchURLs, err = r.finalizeMatchedSession(ctx, game, *result.SessionID, result.NotifyUserIDs)
-		if err != nil {
-			return nil, err
-		}
-		if err := r.publishTableSeatStarted(ctx, tid, result.NotifyUserIDs, launchURLs); err != nil {
-			return nil, err
-		}
-		if err := r.publishTableUpdated(ctx, table.RoomID, tid); err != nil {
-			return nil, err
-		}
-	} else if err := r.publishTableUpdated(ctx, table.RoomID, tid); err != nil {
+	if err := r.publishTableUpdated(ctx, table.RoomID, tid); err != nil {
 		return nil, err
 	}
 
-	if err := r.publishQueueResult(ctx, result, launchURLs); err != nil {
+	if err := r.publishQueueResult(ctx, result, nil); err != nil {
 		return nil, err
 	}
 
-	queued := result.Status == store.QueueStatusWaiting
-	joinResult := &model.JoinResult{Queued: queued}
+	r.scheduleFormingReconcile(result.ModeQueueID)
+
+	joinResult := &model.JoinResult{Queued: true}
 	if result.QueuedCount > 0 {
 		count := result.QueuedCount
 		joinResult.QueuedCount = &count
-	}
-	if result.SessionID != nil {
-		id := result.SessionID.String()
-		joinResult.SessionID = &id
-		if launch := launchURLs[userID]; launch != "" {
-			joinResult.JoinURL = &launch
-		}
 	}
 	return joinResult, nil
 }

@@ -40,30 +40,17 @@ func (r *mutationResolver) joinQueueInternal(ctx context.Context, modeQueueID uu
 		return nil, err
 	}
 
-	var launchURLs map[uuid.UUID]string
-	if result.Status == store.QueueStatusMatched && result.SessionID != nil {
-		game, gErr := st.GetGameByID(ctx, result.GameID)
-		if gErr != nil {
-			return nil, gErr
-		}
-		launchURLs, err = r.finalizeMatchedSession(ctx, game, *result.SessionID, result.NotifyUserIDs)
-		if err != nil {
-			if rbErr := st.RollbackMatchedSession(ctx, *result.SessionID, nil); rbErr != nil {
-				return nil, fmt.Errorf("match setup failed: %w (rollback: %v)", err, rbErr)
-			}
-			return nil, fmt.Errorf("match setup failed: %w", err)
-		}
-	}
-
 	if result.SwitchedFrom != nil {
 		if err := r.publishQueueSwitchFrom(ctx, st, result.SwitchedFrom, userID); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := r.publishQueueResult(ctx, result, launchURLs); err != nil {
+	if err := r.publishQueueResult(ctx, result, nil); err != nil {
 		return nil, err
 	}
 
-	return joinResultAfterJoin(result, userID, launchURLs), nil
+	r.scheduleFormingReconcile(result.ModeQueueID)
+
+	return joinResultFromQueueJoin(result), nil
 }

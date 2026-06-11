@@ -26,7 +26,7 @@ func TestProvisionMatchSendsLobbyBlock(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	client := NewClient()
-	err := client.ProvisionMatch(t.Context(), ProvisionRequest{
+	result, err := client.ProvisionMatch(t.Context(), ProvisionRequest{
 		APIBaseURL:   srv.URL,
 		ServiceToken: "lobby-svc-secret",
 		LobbyID:      "https://joinquest.cc",
@@ -45,6 +45,9 @@ func TestProvisionMatchSendsLobbyBlock(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("ProvisionMatch: %v", err)
+	}
+	if len(result.LaunchURLs) != 0 {
+		t.Fatalf("LaunchURLs = %v, want empty", result.LaunchURLs)
 	}
 	if gotBody["lobbyId"] != "https://joinquest.cc" {
 		t.Fatalf("lobbyId = %v", gotBody["lobbyId"])
@@ -76,7 +79,7 @@ func TestProvisionMatchSendsLobbyBlock(t *testing.T) {
 
 func TestProvisionMatchRequiresLobbyID(t *testing.T) {
 	client := NewClient()
-	err := client.ProvisionMatch(t.Context(), ProvisionRequest{
+	_, err := client.ProvisionMatch(t.Context(), ProvisionRequest{
 		APIBaseURL: "http://127.0.0.1:1",
 		LobbyID:    "  ",
 		Lobby: LobbyInfo{

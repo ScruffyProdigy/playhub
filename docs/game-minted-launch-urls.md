@@ -1,18 +1,8 @@
 # Game-minted launch URLs
 
-**Status:** HIGH PRIORITY TODO — not implemented. Protocol + Lobby change so games tell us where to send players.
+**Status:** Implemented (Lobby backend + reference games `demo-game-rps`, `word-hunt`).
 
-## Problem
-
-Today Lobby builds launch URLs locally after provision:
-
-1. `POST /api/v1/matches` — push roster (game accepts/rejects)
-2. Lobby signs a seat JWT
-3. Lobby concatenates catalog `playUrl` + `?match=<id>&token=<jwt>`
-
-That assumes every game uses the same link shape. Games that want match id in the path, custom slugs, or environment-specific play URLs cannot express that during provision. Refresh paths also re-provision and re-sign just to rebuild a link we already had at match time.
-
-## Target model
+## Model
 
 **The game mints (or specifies) the launch URL; Lobby attaches auth.**
 
@@ -21,10 +11,10 @@ After a successful provision, the game response tells Lobby where to send each p
 ```text
 Provision (S2S)
   Lobby  →  POST /api/v1/matches  { assignment, lobby, … }
-  Game   ←  200 { launchUrls?: { [lobbyUserId]: string }, launchUrlTemplate?: string, … }
+  Game   ←  201 { launchUrls?: { [lobbyUserId]: string }, launchUrlTemplate?: string, …match state… }
 
 Link-out (browser)
-  Lobby merges game URL + JWT query param(s)
+  Lobby merges game URL base + fresh seat JWT (`token` query param)
   Player opens final URL
 ```
 
@@ -32,53 +22,59 @@ Games may return:
 
 | Style | Example game returns | Lobby adds |
 |-------|----------------------|------------|
-| Query match id | `https://play.example.com/?match=abc` | `&token=<jwt>` (and `&seat=` if needed) |
-| Path match id | `https://play.example.com/m/abc` | `?token=<jwt>` |
+| Query match id | `https://play.example.com/?match=abc&seat=1` | `&token=<jwt>` |
+| Path match id | `https://play.example.com/m/abc?seat=clue` | `&token=<jwt>` |
 | Per-player path | `https://play.example.com/join/abc/seat-red` | `?token=<jwt>` |
 | Template | `https://play.example.com/m/{matchId}/s/{seatKey}` | `?token=<jwt>` after substitution |
 
-Lobby must **not** assume `playUrl` from catalog is the only base — catalog `playUrl` becomes fallback for games that do not yet return URLs.
+Catalog `playUrl` is still required: Lobby validates game-minted URL hosts against that origin and falls back to catalog-built links when a game omits launch URLs.
 
 ## Design principles
 
 1. **Game owns link shape** — path vs query for match id, CDN hosts, A/B routes, etc.
-2. **Lobby owns auth** — JWT is always appended by Lobby (query params), same signer as today.
-3. **Provision failure = no match** — if the game does not return a usable URL for a notified player, treat as provision failure (no silent `MATCHED` without a link).
-4. **Idempotent provision** — re-push same `externalMatchId` returns the same launch URLs.
-5. **Backward compatible** — games that omit launch URLs keep today's Lobby-built links until they opt in (capability flag or non-empty response field).
+2. **Lobby owns auth** — JWT is always appended by Lobby (query params), same signer as before.
+3. **Partial game URLs fail the match** — if a game returns `launchUrls` but omits a seated player, finalize rolls back (no silent `MATCHED` without a link).
+4. **Idempotent provision** — re-push same `externalMatchId` returns the same launch URL bases.
+5. **Backward compatible** — games that omit launch URLs keep catalog-built links (`{playUrl}?match=&seat=&token=`).
 
-## Open design questions
+## Resolved design decisions
 
-- [ ] **Per-player vs per-match URL** — one URL + seat claim only, or distinct URL per `lobbyUserId`?
-- [ ] **Response schema** — `launchUrls: Record<lobbyUserId, string>` vs `launchUrlTemplate` with `{matchId}`, `{seatKey}`, `{lobbyUserId}` placeholders?
-- [ ] **Catalog fallback** — when game returns nothing, keep building from `playUrl` (current behavior)?
-- [ ] **Persistence** — store minted URLs on session at finalize time so refresh never re-provisions just to rebuild links?
-- [ ] **URL validation** — allowlist hosts against catalog `playUrl` origin to prevent open redirects?
+| Question | Decision |
+|----------|----------|
+| Per-player vs per-match URL | **Per-player** — `launchUrls: Record<lobbyUserId, string>` |
+| Response schema | `launchUrls` map; optional `launchUrlTemplate` with `{matchId}`, `{externalMatchId}`, `{seatKey}`, `{lobbyUserId}` |
+| Catalog fallback | Yes — when game omits both fields, Lobby builds from catalog `playUrl` |
+| Persistence | Yes — `game_session_participants.launch_url_base` at finalize; refresh re-signs JWT only |
+| URL validation | Game URL host must match catalog `playUrl` origin |
+| Capability discovery | `GET /api/v1/status` → `launchUrlsOnProvision: true` |
 
-## Implementation checklist
+## JWT attachment
 
-### Protocol & docs
-- [ ] Extend provision response schema in [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md) and partner checklist
-- [ ] Document JWT attachment rules (always query param; merge with existing query string)
-- [ ] Add capability discovery (`/api/v1/status` or game-modes) for `launchUrlsOnProvision`
+Lobby uses `gameurl.AttachSeatToken(base, token)` — merges `token` into the query string without breaking path- or query-style games. Game URL bases must **not** include a JWT.
 
-### Backend (Lobby)
-- [ ] `gameclient.ProvisionMatch` — parse launch URL fields from response body
-- [ ] `handoff.go` — `finalizeMatchedSession` prefers game URLs; fallback to local build
-- [ ] URL merge helper — attach `token` (and optional `seat`, `lobby_user`) without breaking path/query games
-- [ ] Stop swallowing launch URL errors on `myActiveIntent` / persist URLs at finalize
-- [ ] Reconcile commit order: provision + URLs before session commit, or rollback session on failure
+## Logging (Lobby)
 
-### Reference game(s)
-- [ ] Update `demo-game-rps` (or first partner game) to return launch URLs on provision
-- [ ] Integration tests: query-style URL, path-style URL, template URL
+Structured `log.Printf` lines for ops/analytics (no PII):
 
-### Frontend
-- [ ] No link-shape assumptions beyond opening the URL Lobby returns
-- [ ] Banner/subscriptions use stored or event URLs only (already moving this direction)
+| Event | Example prefix |
+|-------|------------------|
+| Provision start | `handoff: provision start session=… game=… seats=N` |
+| Provision ok | `handoff: provision ok … latency_ms=… launch_urls=N source=game\|catalog` |
+| Provision fail / banned | `handoff: provision fail …` / `handoff: provision banned …` |
+| Finalize | `handoff: finalize ok session=… notified=N` |
+| Refresh mint | `handoff: launch url mint session=… user=… source=stored\|game\|catalog-fallback` |
+
+Games log JSON: `{"event":"provision.launch_urls",…}` on each provision.
+
+## Reference implementations
+
+| Game | URL style | Config |
+|------|-----------|--------|
+| `demo-game-rps` | Query: `{GAME_PLAY_URL}/?match=&seat=` | `GAME_PLAY_URL` (defaults to `http://localhost:5174` locally) |
+| `word-hunt` | Path: `{GAME_PLAY_URL}/m/{externalMatchId}?seat=` | same; client parses `/m/:id` |
 
 ## Related
 
-- Current handoff: [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md) — link-out row assumes Lobby-built `{playUrl}?match=&token=`
-- [`end-to-end-partner-checklist.md`](./end-to-end-partner-checklist.md) — step 5–6 (match → launch)
-- Intent banner join URL delivery fixes (frontend + subscription) — interim; this spec is the durable fix
+- Wire contract: [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md)
+- Partner verification: [`end-to-end-partner-checklist.md`](./end-to-end-partner-checklist.md)
+- Migration: `backend/migrations/000024_session_launch_urls.up.sql`

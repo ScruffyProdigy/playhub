@@ -13,6 +13,7 @@ import (
 	"github.com/scruffyprodigy/playhub/database"
 	"github.com/scruffyprodigy/playhub/graph"
 	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/formingworker"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/spiritanimal"
 	"github.com/scruffyprodigy/playhub/internal/store"
@@ -50,6 +51,9 @@ func main() {
 	} else {
 		log.Println("pubsub: connected to Redis")
 	}
+	if pubsub.DebugEnabled() {
+		log.Println("pubsub: LOBBY_PUBSUB_DEBUG enabled — queue publish/subscribe tracing active")
+	}
 
 	gameClientBaseURL := strings.TrimSpace(os.Getenv("GAME_CLIENT_BASE_URL"))
 	if gameClientBaseURL == "" {
@@ -59,6 +63,16 @@ func main() {
 	resolver := graph.NewResolver(dataStore, authService, broker, gameClientBaseURL)
 	resolver.SpiritAnimal = spiritanimal.NewRunnerFromEnv(dataStore, auth.LobbyPublicURL())
 	go resolver.SpiritAnimal.ResumeAllStale(context.Background())
+
+	formingTick := 30 * time.Second
+	if v := strings.TrimSpace(os.Getenv("FORMING_RECONCILE_INTERVAL")); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			formingTick = d
+		}
+	}
+	resolver.FormingWorker = formingworker.New(dataStore, resolver.HandleFormingReconciled, 25*time.Millisecond, formingTick)
+	resolver.FormingWorker.SetProvisionHook(resolver.HandleUnprovisionedSession)
+	go resolver.FormingWorker.Start(context.Background())
 
 	mux := http.NewServeMux()
 

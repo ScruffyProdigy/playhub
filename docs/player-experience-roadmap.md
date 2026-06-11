@@ -1,7 +1,7 @@
 # Player experience roadmap (pre–developer self-service)
 
 **Status:** Planned — tackle before [developer self-service](./developer-self-service.md) Phase A where noted  
-**Also before Phase A:** [game-minted launch URLs](./game-minted-launch-urls.md)
+**Also before Phase A:** ~~[game-minted launch URLs](./game-minted-launch-urls.md)~~ ✅ shipped
 
 Improvements so players can **pick games they care about** and **get into matches faster** — solo catalog queues, table backfill, and composition modes. Much of the data model for bottlenecks already exists via **`formingGaps`** (Phase B); this spec covers estimates, UX, and catalog polish.
 
@@ -209,7 +209,7 @@ Developer self-service registration can **collect short description + tags** ear
 
 | Order | Item | Notes |
 |-------|------|-------|
-| 1 | [Game-minted launch URLs](./game-minted-launch-urls.md) | Infra; unblocks dev spec |
+| 1 | ~~[Game-minted launch URLs](./game-minted-launch-urls.md)~~ | ✅ Shipped |
 | 2 | Catalog card UI (icon, short description, tags) | DB + admin seed; no estimator yet |
 | 3 | Bottleneck UI + Join immediately ⚡ | Uses existing `formingGaps` |
 | 4 | Wait estimates (solo + table) | Needs fire telemetry |

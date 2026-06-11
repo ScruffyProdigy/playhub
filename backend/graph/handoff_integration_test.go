@@ -22,11 +22,11 @@ type syncProvisioner struct {
 	calls []provisionCall
 }
 
-func (p *syncProvisioner) ProvisionMatch(_ context.Context, req gameclient.ProvisionRequest) error {
+func (p *syncProvisioner) ProvisionMatch(_ context.Context, req gameclient.ProvisionRequest) (gameclient.ProvisionResult, error) {
 	p.mu.Lock()
 	p.calls = append(p.calls, provisionCall{LobbyID: req.LobbyID, Lobby: req.Lobby, Assignment: req.Assignment})
 	p.mu.Unlock()
-	return nil
+	return gameclient.ProvisionResult{}, nil
 }
 
 func (p *syncProvisioner) lastCall() provisionCall {
@@ -59,6 +59,9 @@ func TestJoinQueueProvisionsMatchOnGameServer(t *testing.T) {
 
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieA)
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
+	if err := env.resolver.FormingWorker.ReconcileNow(ctx, uuid.MustParse(demoDefaultQueueID)); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
 
 	if n := len(provisioner.calls); n != 1 {
 		t.Fatalf("expected exactly 1 provision call, got %d", n)
@@ -114,6 +117,9 @@ func TestJoinQueueProvisionsServiceTokenWhenConfigured(t *testing.T) {
 
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieA)
 	postGraphQL(t, env.Handler, joinQuery, vars, cookieB)
+	if err := env.resolver.FormingWorker.ReconcileNow(ctx, uuid.MustParse(demoDefaultQueueID)); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
 
 	call := provisioner.lastCall()
 	wantToken, err := auth.FormatGameServiceToken(uuid.MustParse(store.DemoPrimaryGameIDStr))

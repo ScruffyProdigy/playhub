@@ -7,6 +7,17 @@ import (
 // BuildFromPinnedSeats constructs a party tree from table seat assignments.
 // seatRoles maps seatKey -> queuePath (leaf role bucket) from game_mode_seats.
 func BuildFromPinnedSeats(seats []PinnedSeat, seatRoles map[string]string) Node {
+	if len(seats) == 1 {
+		seatKey := strings.TrimSpace(seats[0].SeatKey)
+		userID := strings.TrimSpace(seats[0].UserID)
+		if userID != "" && seatKey != "" {
+			queuePath := strings.TrimSpace(seatRoles[seatKey])
+			if branchPrefix(seatKey, queuePath) == "" {
+				return SoloNode(userID, queuePath)
+			}
+		}
+	}
+
 	type branch struct {
 		prefix string
 		roles  map[string][]string // role -> user ids

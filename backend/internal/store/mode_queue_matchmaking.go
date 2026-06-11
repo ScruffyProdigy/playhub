@@ -134,6 +134,9 @@ func (s *Store) JoinModeQueue(ctx context.Context, modeQueueID, userID uuid.UUID
 	if err := ensureNotInActiveGameTx(ctx, tx, userID); err != nil {
 		return nil, err
 	}
+	if err := s.reconcileStaleMatchedQueuesForUserTx(ctx, tx, userID); err != nil {
+		return nil, err
+	}
 
 	joinCtx, err := s.loadModeQueueJoinContext(ctx, tx, modeQueueID)
 	if err != nil {
@@ -162,6 +165,7 @@ func (s *Store) LeaveModeQueue(ctx context.Context, modeQueueID, userID uuid.UUI
 
 	_ = s.leaveModeQueueWaiting(ctx, modeQueueID, userID)
 	_ = s.cancelUserMatchedModeQueue(ctx, modeQueueID, userID)
+	_ = s.reconcileStaleMatchedQueuesForUser(ctx, userID)
 	return s.CountWaitingInModeQueue(ctx, modeQueueID)
 }
 
@@ -172,6 +176,9 @@ func (s *Store) leaveModeQueueWaiting(ctx context.Context, modeQueueID, userID u
 		WHERE mode_queue_id = $1 AND user_id = $2 AND status = 'waiting'
 	`, modeQueueID, userID)
 	if err != nil {
+		return err
+	}
+	if err := s.reconcileStalePartiesForUser(ctx, userID); err != nil {
 		return err
 	}
 	return ensureRowsAffected(result, ErrNotFound)

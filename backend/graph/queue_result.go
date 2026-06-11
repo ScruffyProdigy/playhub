@@ -43,8 +43,8 @@ func joinResultFromQueueJoin(result *store.QueueJoinResult) *model.JoinResult {
 	}
 }
 
-// joinResultAfterJoin is the joinQueue response. Waiting users get queued only; the user
-// who completes a match also receives sessionId/joinUrl (same as myQueueStatus).
+// joinResultAfterJoin is the joinQueue response when matchmaking still runs inline (tests).
+// Production joinQueue uses joinResultFromQueueJoin; matches arrive via the forming worker.
 func joinResultAfterJoin(result *store.QueueJoinResult, userID uuid.UUID, launchURLs map[uuid.UUID]string) *model.JoinResult {
 	if result == nil {
 		return &model.JoinResult{Queued: false}

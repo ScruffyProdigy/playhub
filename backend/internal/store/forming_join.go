@@ -8,13 +8,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/scruffyprodigy/playhub/internal/lfg"
-	"github.com/scruffyprodigy/playhub/internal/lfg/partytree"
 )
 
 type formingFireResult struct {
 	session   *Session
 	notifyIDs []uuid.UUID
+	tableIDs  []uuid.UUID
 }
 
 func (s *Store) joinModeQueueFormingTx(
@@ -25,15 +24,6 @@ func (s *Store) joinModeQueueFormingTx(
 	queuePath string,
 	partyInput *JoinPartyInput,
 ) (*QueueJoinResult, error) {
-	matchSeats, err := matchSeatsFromTemplate(joinCtx.Seats, joinCtx.Mode.SeatTemplate)
-	if err != nil {
-		return nil, err
-	}
-	if len(matchSeats) == 0 {
-		matchSeats = joinCtx.Seats
-	}
-
-	var party *Party
 	var members []JoinPartyMemberInput
 	var enqueue enqueueOutcome
 	skipPlacement := false
@@ -54,18 +44,23 @@ func (s *Store) joinModeQueueFormingTx(
 	}
 
 	if !skipPlacement {
+		for _, member := range members {
+			if err := s.prepareCatalogPartyJoinTx(ctx, tx, member.UserID); err != nil {
+				return nil, err
+			}
+		}
 		if partyInput != nil && len(partyInput.Members) > 0 {
 			tree := partyInput.Tree
 			if len(tree.AllMembers()) == 0 {
 				return nil, fmt.Errorf("store: party tree is required")
 			}
-			party, err = s.CreatePartyFromTreeTx(ctx, tx, modeQueueID, callerID, tree, members)
+			created, err := s.CreatePartyFromTreeTx(ctx, tx, modeQueueID, callerID, tree, members)
 			if err != nil {
 				return nil, err
 			}
 			partyInput.Tree = tree
 			for _, member := range members {
-				out, err := enqueueModeQueueTx(ctx, tx, joinCtx.Game.ID, modeQueueID, member.UserID, member.QueuePath, &party.ID)
+				out, err := enqueueModeQueueTx(ctx, tx, joinCtx.Game.ID, modeQueueID, member.UserID, member.QueuePath, &created.ID)
 				if err != nil {
 					return nil, err
 				}
@@ -74,66 +69,17 @@ func (s *Store) joinModeQueueFormingTx(
 				}
 			}
 		} else {
-			party, err = s.CreateSoloPartyTx(ctx, tx, modeQueueID, callerID, SoloPartyInput{
+			created, err := s.CreateSoloPartyTx(ctx, tx, modeQueueID, callerID, SoloPartyInput{
 				QueuePath: queuePath,
 			})
 			if err != nil {
 				return nil, err
 			}
-			enqueue, err = enqueueModeQueueTx(ctx, tx, joinCtx.Game.ID, modeQueueID, callerID, queuePath, &party.ID)
+			enqueue, err = enqueueModeQueueTx(ctx, tx, joinCtx.Game.ID, modeQueueID, callerID, queuePath, &created.ID)
 			if err != nil {
 				return nil, err
 			}
 		}
-	}
-
-	fm, err := s.GetOrCreateFillingFormingMatchTx(ctx, tx, joinCtx, matchSeats)
-	if err != nil {
-		return nil, err
-	}
-
-	if !skipPlacement && party != nil {
-		input := partyInput
-		if input == nil {
-			input = &JoinPartyInput{Tree: partytree.SoloNode(callerID.String(), queuePath), Members: members}
-		}
-		placed, err := s.tryPlacePartyOnFormingTx(ctx, tx, fm.ID, party, input)
-		if err != nil {
-			return nil, err
-		}
-		if placed {
-			if err := s.markPartyStatusTx(ctx, tx, party.ID, PartyStatusPlaced); err != nil {
-				return nil, err
-			}
-			if err := s.linkPartyQueuesToFormingTx(ctx, tx, party.ID, fm.ID); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	gaps, err := s.FormingPathGapsTx(ctx, tx, fm)
-	if err != nil {
-		return nil, err
-	}
-
-	if lfg.ReadyToFire(gaps) {
-		fired, err := s.fireFormingMatchTx(ctx, tx, joinCtx, fm)
-		if err != nil {
-			return nil, err
-		}
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
-		return &QueueJoinResult{
-			GameID:        joinCtx.Game.ID,
-			ModeQueueID:   modeQueueID,
-			Status:        QueueStatusMatched,
-			SessionID:     &fired.session.ID,
-			QueuedCount:   0,
-			QueuePath:     optionalQueuePathRef(queuePath),
-			NotifyUserIDs: fired.notifyIDs,
-			SwitchedFrom:  enqueue.switchedFrom,
-		}, nil
 	}
 
 	waiting, err := listWaitingModeQueueEntriesTx(ctx, tx, modeQueueID)
@@ -197,7 +143,9 @@ func (s *Store) fireFormingMatchTx(
 	}
 
 	notifyIDs := make([]uuid.UUID, 0, len(assignments))
+	tableIDs := make([]uuid.UUID, 0)
 	seen := make(map[uuid.UUID]struct{})
+	tableSeen := make(map[uuid.UUID]struct{})
 	partySeen := make(map[uuid.UUID]struct{})
 
 	for _, assignment := range assignments {
@@ -228,13 +176,19 @@ func (s *Store) fireFormingMatchTx(
 				}
 			}
 		}
+		if assignment.TableID != nil {
+			if _, ok := tableSeen[*assignment.TableID]; !ok {
+				tableSeen[*assignment.TableID] = struct{}{}
+				tableIDs = append(tableIDs, *assignment.TableID)
+			}
+		}
 	}
 
 	if err := s.MarkFormingMatchFiredTx(ctx, tx, fm.ID, time.Now()); err != nil {
 		return nil, err
 	}
 
-	return &formingFireResult{session: session, notifyIDs: notifyIDs}, nil
+	return &formingFireResult{session: session, notifyIDs: notifyIDs, tableIDs: tableIDs}, nil
 }
 
 func getWaitingQueueEntryForUserTx(ctx context.Context, tx *sql.Tx, modeQueueID, userID uuid.UUID) (*QueueEntry, error) {

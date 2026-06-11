@@ -6,11 +6,10 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/scruffyprodigy/playhub/internal/lfg"
 	"github.com/scruffyprodigy/playhub/internal/lfg/partytree"
 )
 
-// StartTableBackfill seeds a forming match from seated table players and opens the table to catalog fill.
+// StartTableBackfill enqueues seated table players and leaves matchmaking to the forming worker.
 func (s *Store) StartTableBackfill(ctx context.Context, tableID, kingUserID, modeQueueID uuid.UUID) (*QueueJoinResult, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -18,7 +17,7 @@ func (s *Store) StartTableBackfill(ctx context.Context, tableID, kingUserID, mod
 	}
 	defer tx.Rollback()
 
-	table, game, mode, modeSeats, err := s.loadTableContext(ctx, tx, tableID)
+	table, game, _, modeSeats, err := s.loadTableContext(ctx, tx, tableID)
 	if err != nil {
 		return nil, err
 	}
@@ -74,76 +73,17 @@ func (s *Store) StartTableBackfill(ctx context.Context, tableID, kingUserID, mod
 		members[i] = JoinPartyMemberInput{UserID: seat.UserID, QueuePath: path}
 	}
 	tree := partytree.BuildFromPinnedSeats(pinned, seatRoles)
+	tree.TableID = tableID.String()
 
 	party, err := s.CreatePartyFromTreeTx(ctx, tx, modeQueue.ID, kingUserID, tree, members)
 	if err != nil {
 		return nil, err
 	}
 
-	joinCtx, err := s.loadModeQueueJoinContext(ctx, tx, modeQueue.ID)
-	if err != nil {
-		return nil, err
-	}
-	matchSeats, err := matchSeatsFromTemplate(modeSeats, mode.SeatTemplate)
-	if err != nil {
-		return nil, err
-	}
-	if len(matchSeats) == 0 {
-		matchSeats = modeSeats
-	}
-
 	for _, member := range members {
 		if _, err := enqueueModeQueueTx(ctx, tx, game.ID, modeQueue.ID, member.UserID, member.QueuePath, &party.ID); err != nil {
 			return nil, err
 		}
-	}
-
-	fm, err := s.GetOrCreateFillingFormingMatchTx(ctx, tx, joinCtx, matchSeats)
-	if err != nil {
-		return nil, err
-	}
-
-	partyInput := &JoinPartyInput{
-		Tree:    tree,
-		Members: members,
-		Pinned:  pinned,
-		TableID: &tableID,
-	}
-	placed, err := s.tryPlacePartyOnFormingTx(ctx, tx, fm.ID, party, partyInput)
-	if err != nil {
-		return nil, err
-	}
-	if !placed {
-		return nil, fmt.Errorf("store: could not place table party on forming map")
-	}
-	if err := s.markPartyStatusTx(ctx, tx, party.ID, PartyStatusPlaced); err != nil {
-		return nil, err
-	}
-	if err := s.linkPartyQueuesToFormingTx(ctx, tx, party.ID, fm.ID); err != nil {
-		return nil, err
-	}
-
-	gaps, err := s.FormingPathGapsTx(ctx, tx, fm)
-	if err != nil {
-		return nil, err
-	}
-
-	if lfg.ReadyToFire(gaps) {
-		fired, err := s.fireFormingMatchTx(ctx, tx, joinCtx, fm)
-		if err != nil {
-			return nil, err
-		}
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
-		return &QueueJoinResult{
-			GameID:        game.ID,
-			ModeQueueID:   modeQueue.ID,
-			Status:        QueueStatusMatched,
-			SessionID:     &fired.session.ID,
-			QueuedCount:   0,
-			NotifyUserIDs: fired.notifyIDs,
-		}, nil
 	}
 
 	waiting, err := listWaitingModeQueueEntriesTx(ctx, tx, modeQueue.ID)

@@ -120,6 +120,39 @@ func TestPlaceTree_TwoGuessersSameTeam(t *testing.T) {
 	}
 }
 
+func TestPlaceTree_SoloDuelDefaultPath(t *testing.T) {
+	slots := []lfg.SeatSlot{
+		{SeatKey: "1", QueuePath: ""},
+		{SeatKey: "2", QueuePath: ""},
+	}
+	party := SoloNode("user-a", "")
+	seatByUser, ok := PlaceTree(slots, party)
+	if !ok {
+		t.Fatal("expected solo placement on flat duel map")
+	}
+	if seatByUser["user-a"] != "1" {
+		t.Fatalf("seat = %q, want 1", seatByUser["user-a"])
+	}
+
+	slots[0].OccupantID = "user-a"
+	partyB := SoloNode("user-b", "")
+	seatByUser, ok = PlaceTree(slots, partyB)
+	if !ok {
+		t.Fatal("expected second solo placement")
+	}
+	if seatByUser["user-b"] != "2" {
+		t.Fatalf("seat = %q, want 2", seatByUser["user-b"])
+	}
+}
+
+func TestPlaceTree_EmptyChildrenWithoutMembersFails(t *testing.T) {
+	slots := []lfg.SeatSlot{{SeatKey: "1", QueuePath: ""}}
+	_, ok := PlaceTree(slots, Node{})
+	if ok {
+		t.Fatal("expected failure when tree assigns nobody")
+	}
+}
+
 func TestBuildFromPinnedSeats_Codenames(t *testing.T) {
 	roles := map[string]string{
 		"Team-1-SpyMaster": "SpyMaster",

@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/formingworker"
 	"github.com/scruffyprodigy/playhub/internal/gameclient"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/spiritanimal"
@@ -35,6 +36,7 @@ type queueIntegrationEnv struct {
 	Server   *httptest.Server
 	Client   *client.Client
 	Handler  http.Handler
+	DB       *sql.DB
 	Store    *store.Store
 	Signer   *auth.Signer
 	resolver *Resolver
@@ -76,7 +78,10 @@ func newQueueIntegrationEnv(t *testing.T) *queueIntegrationEnv {
 
 	resolver := NewResolver(st, authService, pubsub.NewMemory(), store.DemoGamePlayURL)
 	resolver.SpiritAnimal = spiritanimal.NewRunnerFromEnv(st, "https://joinquest.test")
+	resolver.FormingWorker = formingworker.New(st, resolver.HandleFormingReconciled, 5*time.Millisecond, time.Minute)
+	resolver.FormingWorker.SetProvisionHook(resolver.HandleUnprovisionedSession)
 	env := &queueIntegrationEnv{
+		DB:       db,
 		Store:    st,
 		Signer:   signer,
 		resolver: resolver,
@@ -365,14 +370,12 @@ func TestJoinQueueGraphQLAlwaysReturnsQueued(t *testing.T) {
 	}
 }
 
-func TestJoinQueueGraphQLReturnsMatchForPlayerWhoCompletesQueue(t *testing.T) {
+func TestJoinQueueGraphQLMatchArrivesViaWorker(t *testing.T) {
 	env := newQueueIntegrationEnv(t)
 	cleaner := env.newCleaner(t)
 	ctx := context.Background()
 	clearDemoQueue(t, env.Store)
-
-	provisioner := &syncProvisioner{}
-	env.resolverWithProvisioner(t, provisioner)
+	env.resolverWithProvisioner(t, &syncProvisioner{})
 
 	_, cookieA := createTestUserSession(t, ctx, env, cleaner)
 	_, cookieB := createTestUserSession(t, ctx, env, cleaner)
@@ -408,11 +411,27 @@ func TestJoinQueueGraphQLReturnsMatchForPlayerWhoCompletesQueue(t *testing.T) {
 	if err := env.Client.Post(joinMutation, &matchResp, client.AddCookie(cookieB), vars); err != nil {
 		t.Fatalf("join B: %v", err)
 	}
-	if matchResp.JoinQueue.Queued {
-		t.Fatalf("expected B not queued after match, got %+v", matchResp.JoinQueue)
+	if !matchResp.JoinQueue.Queued || matchResp.JoinQueue.JoinURL != nil {
+		t.Fatalf("expected B queued from mutation, got %+v", matchResp.JoinQueue)
 	}
-	if matchResp.JoinQueue.JoinURL == nil || *matchResp.JoinQueue.JoinURL == "" {
-		t.Fatalf("expected B joinUrl on match, got %+v", matchResp.JoinQueue)
+
+	if err := env.resolver.FormingWorker.ReconcileNow(ctx, uuid.MustParse(demoDefaultQueueID)); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	var statusResp struct {
+		MyQueueStatus struct {
+			Queued    bool    `json:"queued"`
+			JoinURL   *string `json:"joinUrl"`
+			SessionID *string `json:"sessionId"`
+		} `json:"myQueueStatus"`
+	}
+	statusQuery := `query Status($id: ID!) { myQueueStatus(queueId: $id) { queued joinUrl sessionId } }`
+	if err := env.Client.Post(statusQuery, &statusResp, client.AddCookie(cookieB), vars); err != nil {
+		t.Fatalf("myQueueStatus: %v", err)
+	}
+	if statusResp.MyQueueStatus.SessionID == nil || statusResp.MyQueueStatus.JoinURL == nil {
+		t.Fatalf("expected B matched via worker, got %+v", statusResp.MyQueueStatus)
 	}
 }
 

@@ -71,24 +71,24 @@ func NewClient() *Client {
 }
 
 // ProvisionMatch creates or confirms a match on the game server (idempotent on externalMatchId).
-func (c *Client) ProvisionMatch(ctx context.Context, req ProvisionRequest) error {
+func (c *Client) ProvisionMatch(ctx context.Context, req ProvisionRequest) (ProvisionResult, error) {
 	base := strings.TrimRight(strings.TrimSpace(req.APIBaseURL), "/")
 	if base == "" {
-		return errors.New("gameclient: api base URL is required")
+		return ProvisionResult{}, errors.New("gameclient: api base URL is required")
 	}
 	if err := gameurl.ValidateOutboundURL(ctx, base, runtimeenv.IsProductionEnv()); err != nil {
-		return fmt.Errorf("gameclient: %w", err)
+		return ProvisionResult{}, fmt.Errorf("gameclient: %w", err)
 	}
 	provisionURL := base + "/api/v1/matches"
 	lobbyID := strings.TrimSpace(req.LobbyID)
 	if lobbyID == "" {
-		return errors.New("gameclient: lobby id is required")
+		return ProvisionResult{}, errors.New("gameclient: lobby id is required")
 	}
 	if strings.TrimSpace(req.Lobby.ReturnURL) == "" {
-		return errors.New("gameclient: lobby return URL is required")
+		return ProvisionResult{}, errors.New("gameclient: lobby return URL is required")
 	}
 	if strings.TrimSpace(req.Lobby.GraphqlURL) == "" {
-		return errors.New("gameclient: lobby graphql URL is required")
+		return ProvisionResult{}, errors.New("gameclient: lobby graphql URL is required")
 	}
 
 	body, err := json.Marshal(map[string]any{
@@ -97,12 +97,12 @@ func (c *Client) ProvisionMatch(ctx context.Context, req ProvisionRequest) error
 		"assignment": req.Assignment,
 	})
 	if err != nil {
-		return err
+		return ProvisionResult{}, err
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, provisionURL, bytes.NewReader(body))
 	if err != nil {
-		return err
+		return ProvisionResult{}, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	if header := serviceAuthHeader(req.ServiceToken); header != "" {
@@ -111,7 +111,7 @@ func (c *Client) ProvisionMatch(ctx context.Context, req ProvisionRequest) error
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return fmt.Errorf("gameclient: provision match: %w", err)
+		return ProvisionResult{}, fmt.Errorf("gameclient: provision match: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -122,15 +122,35 @@ func (c *Client) ProvisionMatch(ctx context.Context, req ProvisionRequest) error
 			BannedLobbyUserIDs []string `json:"bannedLobbyUserIds"`
 		}
 		_ = json.Unmarshal(payload, &errBody)
-		return &BannedPlayersError{
+		return ProvisionResult{}, &BannedPlayersError{
 			BannedLobbyUserIDs: errBody.BannedLobbyUserIDs,
 			Message:            errBody.Error,
 		}
 	}
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("gameclient: provision match: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(payload)))
+		return ProvisionResult{}, fmt.Errorf("gameclient: provision match: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(payload)))
 	}
-	return nil
+	return parseProvisionResponse(payload), nil
+}
+
+func parseProvisionResponse(payload []byte) ProvisionResult {
+	var body struct {
+		LaunchURLs        map[string]string `json:"launchUrls"`
+		LaunchURLTemplate string            `json:"launchUrlTemplate"`
+	}
+	_ = json.Unmarshal(payload, &body)
+	out := ProvisionResult{
+		LaunchURLs:        make(map[string]string, len(body.LaunchURLs)),
+		LaunchURLTemplate: strings.TrimSpace(body.LaunchURLTemplate),
+	}
+	for id, raw := range body.LaunchURLs {
+		id = strings.TrimSpace(id)
+		raw = strings.TrimSpace(raw)
+		if id != "" && raw != "" {
+			out.LaunchURLs[id] = raw
+		}
+	}
+	return out
 }
 
 func serviceAuthHeader(token string) string {

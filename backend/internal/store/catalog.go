@@ -465,14 +465,25 @@ func deactivateModeQueuesTx(ctx context.Context, tx *sql.Tx, modeID uuid.UUID, m
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var kicked []KickedWaiter
+	var queueIDs []uuid.UUID
 	for rows.Next() {
 		var queueID uuid.UUID
 		if err := rows.Scan(&queueID); err != nil {
+			rows.Close()
 			return nil, err
 		}
+		queueIDs = append(queueIDs, queueID)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	var kicked []KickedWaiter
+	for _, queueID := range queueIDs {
 		k, err := kickModeQueueWaitersTx(ctx, tx, queueID, message)
 		if err != nil {
 			return nil, err

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"testing"
 
 	"github.com/google/uuid"
 )
@@ -44,6 +45,16 @@ func (s *Store) ClearWaitingQueueForGame(ctx context.Context, gameID uuid.UUID) 
 		WHERE game_id = $1 AND status = 'waiting'
 	`, gameID)
 	return err
+}
+
+// mustReconcileForming runs the forming worker step (integration tests).
+func mustReconcileForming(t *testing.T, st *Store, ctx context.Context, modeQueueID uuid.UUID) *FormingReconcileResult {
+	t.Helper()
+	rec, err := st.ReconcileFormingModeQueue(ctx, modeQueueID)
+	if err != nil {
+		t.Fatalf("ReconcileFormingModeQueue: %v", err)
+	}
+	return rec
 }
 
 // ClearWaitingModeQueue removes waiting rows for a mode queue (integration tests).

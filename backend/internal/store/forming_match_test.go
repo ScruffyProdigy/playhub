@@ -92,21 +92,21 @@ func TestJoinModeQueueSplitPartyWordHunt(t *testing.T) {
 	}
 
 	soloPaths := []string{"ClueGiver", "Guesser", "Guesser", "Guesser"}
-	var last *QueueJoinResult
+	var rec *FormingReconcileResult
 	for i, path := range soloPaths {
-		last, err = st.JoinModeQueue(ctx, queueID, solos[i], path, nil)
-		if err != nil {
+		if _, err = st.JoinModeQueue(ctx, queueID, solos[i], path, nil); err != nil {
 			t.Fatalf("solo join %d: %v", i, err)
 		}
-		if i < len(soloPaths)-1 && last.Status != QueueStatusWaiting {
-			t.Fatalf("expected waiting after solo %d, got %s", i, last.Status)
+		rec = mustReconcileForming(t, st, ctx, queueID)
+		if i < len(soloPaths)-1 && rec.Fired {
+			t.Fatalf("expected waiting after solo %d, got fired", i)
 		}
 	}
-	if last.Status != QueueStatusMatched || last.SessionID == nil {
-		t.Fatalf("expected match, got %+v", last)
+	if !rec.Fired || rec.SessionID == nil {
+		t.Fatalf("expected match, got %+v", rec)
 	}
 
-	participants, err := st.ListSessionSeatAssignments(ctx, *last.SessionID)
+	participants, err := st.ListSessionSeatAssignments(ctx, *rec.SessionID)
 	if err != nil {
 		t.Fatalf("ListSessionSeatAssignments: %v", err)
 	}

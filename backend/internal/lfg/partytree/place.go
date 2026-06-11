@@ -39,13 +39,70 @@ func PlaceTree(slots []lfg.SeatSlot, party Node) (map[string]string, bool) {
 	instances := collectBranchInstances(slots)
 	working := append([]lfg.SeatSlot(nil), slots...)
 	seatByUser := map[string]string{}
-	if !placeChildren(working, normalizeRoot(party).Children, "", instances, seatByUser) {
+	if !placeTree(working, normalizeRoot(party), "", instances, seatByUser) {
+		return nil, false
+	}
+	if len(seatByUser) == 0 {
 		return nil, false
 	}
 	return seatByUser, true
 }
 
-func placeChildren(slots []lfg.SeatSlot, children []Node, prefix string, instances map[string][]string, out map[string]string) bool {
+// placeTree places the current node, then recurses into children the same way.
+func placeTree(slots []lfg.SeatSlot, node Node, prefix string, instances map[string][]string, out map[string]string) bool {
+	role := EffectiveRole(node.Role)
+
+	if len(node.Members) > 0 {
+		open := openSlotsForRole(slots, prefix, role)
+		if len(open) < len(node.Members) {
+			return false
+		}
+		for i, userID := range node.Members {
+			idx := open[i]
+			if slots[idx].OccupantID != "" {
+				return false
+			}
+			slots[idx].OccupantID = userID
+			out[userID] = slots[idx].SeatKey
+		}
+	}
+
+	if len(node.Children) == 0 {
+		return len(node.Members) > 0 || role == ""
+	}
+
+	if role != "" && len(instances[role]) > 0 {
+		for _, inst := range instances[role] {
+			backup := cloneSlots(slots)
+			backupOut := copyStringMap(out)
+			instPrefix := joinPrefix(prefix, inst)
+			local := copyStringMap(backupOut)
+			if placeTreeChildren(slots, node.Children, instPrefix, instances, local) {
+				for k, v := range local {
+					out[k] = v
+				}
+				return true
+			}
+			restoreSlots(slots, backup)
+			for k := range out {
+				delete(out, k)
+			}
+			for k, v := range backupOut {
+				out[k] = v
+			}
+		}
+		return false
+	}
+
+	nextPrefix := prefix
+	if role != "" {
+		nextPrefix = extendPrefix(prefix, role)
+	}
+	return placeTreeChildren(slots, node.Children, nextPrefix, instances, out)
+}
+
+// placeTreeChildren dispatches a sibling list: branch permutation or per-child placeTree.
+func placeTreeChildren(slots []lfg.SeatSlot, children []Node, prefix string, instances map[string][]string, out map[string]string) bool {
 	if len(children) == 0 {
 		return true
 	}
@@ -53,7 +110,7 @@ func placeChildren(slots []lfg.SeatSlot, children []Node, prefix string, instanc
 		return placeBranchSiblings(slots, children, prefix, instances, out)
 	}
 	for _, child := range children {
-		if !placeNode(slots, child, prefix, instances, out) {
+		if !placeTree(slots, child, prefix, instances, out) {
 			return false
 		}
 	}
@@ -98,7 +155,7 @@ func permuteBranchSiblings(slots []lfg.SeatSlot, children []Node, prefix string,
 		ok := true
 		for j, child := range children {
 			instPrefix := joinPrefix(prefix, available[i+j])
-			if !placeNode(slots, child, instPrefix, collectBranchInstances(slots), local) {
+			if !placeTree(slots, child, instPrefix, collectBranchInstances(slots), local) {
 				ok = false
 				break
 			}
@@ -112,68 +169,6 @@ func permuteBranchSiblings(slots []lfg.SeatSlot, children []Node, prefix string,
 	}
 	restoreSlots(slots, backup)
 	return false
-}
-
-func placeNode(slots []lfg.SeatSlot, node Node, prefix string, instances map[string][]string, out map[string]string) bool {
-	role := EffectiveRole(node.Role)
-
-	if len(node.Members) > 0 {
-		if role == "" {
-			return false
-		}
-		open := openSlotsForRole(slots, prefix, role)
-		if len(open) < len(node.Members) {
-			return false
-		}
-		for i, userID := range node.Members {
-			idx := open[i]
-			if slots[idx].OccupantID != "" {
-				return false
-			}
-			slots[idx].OccupantID = userID
-			out[userID] = slots[idx].SeatKey
-		}
-	}
-
-	if len(node.Children) == 0 {
-		return len(node.Members) > 0 || role == ""
-	}
-
-	if role != "" && len(instances[role]) > 0 && len(node.Children) > 0 {
-		for _, inst := range instances[role] {
-			backup := cloneSlots(slots)
-			backupOut := copyStringMap(out)
-			instPrefix := joinPrefix(prefix, inst)
-			local := copyStringMap(backupOut)
-			ok := true
-			for _, child := range node.Children {
-				if !placeNode(slots, child, instPrefix, instances, local) {
-					ok = false
-					break
-				}
-			}
-			if ok {
-				for k, v := range local {
-					out[k] = v
-				}
-				return true
-			}
-			restoreSlots(slots, backup)
-			for k := range out {
-				delete(out, k)
-			}
-			for k, v := range backupOut {
-				out[k] = v
-			}
-		}
-		return false
-	}
-
-	nextPrefix := prefix
-	if role != "" {
-		nextPrefix = extendPrefix(prefix, role)
-	}
-	return placeChildren(slots, node.Children, nextPrefix, instances, out)
 }
 
 func cloneSlots(slots []lfg.SeatSlot) []lfg.SeatSlot {
@@ -240,6 +235,10 @@ func openSlotsForRole(slots []lfg.SeatSlot, prefix, role string) []int {
 	var indices []int
 	for i, slot := range slots {
 		if slot.OccupantID != "" {
+			continue
+		}
+		if prefix == "" && role == "" {
+			indices = append(indices, i)
 			continue
 		}
 		if !pathsMatch(slot.QueuePath, role) && !pathsMatch(leafRoleFromSeatKey(slot.SeatKey), role) {
