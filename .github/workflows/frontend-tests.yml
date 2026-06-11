@@ -6,6 +6,9 @@ on:
     paths:
       - 'frontend/**'
       - 'backend/internal/auth/**'
+      - 'backend/internal/formingworker/**'
+      - 'backend/internal/gameurl/**'
+      - 'backend/internal/pubsub/**'
       - 'backend/internal/store/**'
       - 'backend/graph/**'
       - 'backend/migrations/**'
@@ -18,6 +21,9 @@ on:
     paths:
       - 'frontend/**'
       - 'backend/internal/auth/**'
+      - 'backend/internal/formingworker/**'
+      - 'backend/internal/gameurl/**'
+      - 'backend/internal/pubsub/**'
       - 'backend/internal/store/**'
       - 'backend/graph/**'
       - 'backend/migrations/**'
