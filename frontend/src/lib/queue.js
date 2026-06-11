@@ -1,6 +1,7 @@
 import { createClient } from 'graphql-ws'
 import { getGraphQLWsUrl } from './env'
 import { graphqlRequest } from './graphql'
+import { isLobbyDebugEnabled, lobbyDebug } from './lobbyDebug'
 
 const JOIN_QUEUE_MUTATION = `
   mutation JoinQueue($queueId: ID!, $queuePath: String) {
@@ -90,6 +91,22 @@ function getSubscriptionConnectionParams() {
   }
 }
 
+function wsClientLifecycleHandlers() {
+  if (!isLobbyDebugEnabled()) {
+    return {}
+  }
+  return {
+    connecting: () => lobbyDebug('queue:ws:connecting', { url: getGraphQLWsUrl() }),
+    connected: () => lobbyDebug('queue:ws:connected', { url: getGraphQLWsUrl() }),
+    closed: (event) => lobbyDebug('queue:ws:closed', {
+      url: getGraphQLWsUrl(),
+      code: event?.code,
+      reason: event?.reason,
+    }),
+    error: (error) => lobbyDebug('queue:ws:error', { url: getGraphQLWsUrl(), error: String(error) }),
+  }
+}
+
 function getWsClient() {
   if (!wsClient) {
     wsClient = createClient({
@@ -99,6 +116,7 @@ function getWsClient() {
       retryWait: async (retries) => Math.min(500 * retries, 5000),
       shouldRetry: () => true,
       lazy: false,
+      on: wsClientLifecycleHandlers(),
     })
   }
   return wsClient
@@ -153,6 +171,7 @@ export async function subscribeToQueue(queueId, { onUpdate, onError } = {}) {
   await prefetchSubscriptionAuth()
 
   const client = getWsClient()
+  lobbyDebug('queue:subscribe:start', { queueId })
 
   return client.subscribe(
     {
@@ -162,15 +181,32 @@ export async function subscribeToQueue(queueId, { onUpdate, onError } = {}) {
     {
       next: (payload) => {
         if (payload?.errors?.length) {
-          onError?.(formatSubscriptionError(payload.errors))
+          const message = formatSubscriptionError(payload.errors)
+          lobbyDebug('queue:subscribe:graphql-error', { queueId, message })
+          onError?.(message)
           return
         }
         if (payload?.data?.queueUpdated) {
-          onUpdate?.(payload.data.queueUpdated)
+          const update = payload.data.queueUpdated
+          lobbyDebug('queue:subscribe:update', {
+            queueId,
+            status: update.status,
+            hasJoinUrl: Boolean(update.joinUrl),
+            queuedCount: update.queuedCount,
+          })
+          onUpdate?.(update)
+        } else {
+          lobbyDebug('queue:subscribe:empty-payload', { queueId })
         }
       },
-      error: (err) => onError?.(formatSubscriptionError(err)),
-      complete: () => {},
+      error: (err) => {
+        const message = formatSubscriptionError(err)
+        lobbyDebug('queue:subscribe:error', { queueId, message })
+        onError?.(message)
+      },
+      complete: () => {
+        lobbyDebug('queue:subscribe:complete', { queueId })
+      },
     },
   )
 }

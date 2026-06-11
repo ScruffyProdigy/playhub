@@ -499,6 +499,18 @@ func (r *subscriptionResolver) QueueUpdated(ctx context.Context, queueID string)
 		return nil, err
 	}
 
+	initialStatus := "none"
+	if initial != nil {
+		initialStatus = string(initial.Status)
+	}
+	pubsub.DebugLog(
+		"subscription open user=%s queue=%s channel=%s initial=%s",
+		userID,
+		modeQueueID,
+		pubsub.UserQueueChannel(userID.String()),
+		initialStatus,
+	)
+
 	updates := make(chan *model.QueueUpdate, 2)
 	go func() {
 		defer close(updates)
@@ -507,7 +519,15 @@ func (r *subscriptionResolver) QueueUpdated(ctx context.Context, queueID string)
 		if initial != nil {
 			select {
 			case updates <- initial:
+				pubsub.DebugLog(
+					"subscription initial user=%s queue=%s status=%s hasJoinUrl=%t",
+					userID,
+					modeQueueID,
+					initial.Status,
+					initial.JoinURL != nil && *initial.JoinURL != "",
+				)
 			case <-ctx.Done():
+				pubsub.DebugLog("subscription cancelled before initial user=%s queue=%s", userID, modeQueueID)
 				return
 			}
 		}
@@ -515,21 +535,42 @@ func (r *subscriptionResolver) QueueUpdated(ctx context.Context, queueID string)
 		for {
 			select {
 			case <-ctx.Done():
+				pubsub.DebugLog("subscription closed user=%s queue=%s", userID, modeQueueID)
 				return
 			case payload, ok := <-messages:
 				if !ok {
+					pubsub.DebugLog("subscription broker closed user=%s queue=%s", userID, modeQueueID)
 					return
 				}
 				event, err := pubsub.UnmarshalQueueEvent(payload)
-				if err != nil || event.QueueID != modeQueueID.String() {
+				if err != nil {
+					pubsub.DebugLog("subscription drop unmarshal user=%s queue=%s err=%v", userID, modeQueueID, err)
+					continue
+				}
+				if event.QueueID != modeQueueID.String() {
+					pubsub.DebugLog(
+						"subscription drop queue mismatch user=%s want=%s got=%s status=%s",
+						userID,
+						modeQueueID,
+						event.QueueID,
+						event.Status,
+					)
 					continue
 				}
 				update := toGraphQLQueueUpdate(event)
 				if err := r.enrichQueueUpdateGaps(ctx, update); err != nil {
+					pubsub.DebugLog("subscription drop enrich user=%s queue=%s err=%v", userID, modeQueueID, err)
 					continue
 				}
 				select {
 				case updates <- update:
+					pubsub.DebugLog(
+						"subscription deliver user=%s queue=%s status=%s hasJoinUrl=%t",
+						userID,
+						modeQueueID,
+						update.Status,
+						update.JoinURL != nil && *update.JoinURL != "",
+					)
 				case <-ctx.Done():
 					return
 				}

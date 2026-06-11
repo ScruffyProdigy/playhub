@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { fetchMyActiveIntent, leaveActiveGame, resolveIntentLaunchUrl } from '../../lib/intent'
 import { fetchMyQueueStatus, leaveQueue, prefetchSubscriptionAuth, subscribeToQueue } from '../../lib/queue'
 import { subscribeToMyTableSeat, TABLE_UPDATED_EVENT, fetchMyTableSeat } from '../../lib/tables'
+import { lobbyDebug } from '../../lib/lobbyDebug'
 import { useActiveTableSeat } from './useActiveTableSeat'
 
 function mergeMatchedJoinUrl(intent, joinUrl) {
@@ -50,11 +51,13 @@ export function useActiveIntent() {
     return intent
   }, [])
 
-  const refreshIntent = useCallback(async () => {
+  const refreshIntent = useCallback(async (reason = 'unknown') => {
     if (!user) {
       setActiveIntent(null)
       return
     }
+    const startedAt = Date.now()
+    lobbyDebug('intent:refresh:start', { reason, queueId: activeIntent?.queueId ?? null })
     setLoading(true)
     try {
       const [intentResult, tableResult] = await Promise.allSettled([
@@ -62,22 +65,36 @@ export function useActiveIntent() {
         fetchMyTableSeat(),
       ])
       if (intentResult.status === 'rejected') {
+        lobbyDebug('intent:refresh:failed', {
+          reason,
+          error: intentResult.reason?.message || String(intentResult.reason),
+          ms: Date.now() - startedAt,
+        })
         return
       }
       const tableSeat = tableResult.status === 'fulfilled' ? tableResult.value : null
       const next = await enrichMatchedJoinUrl(intentResult.value, tableSeat)
       if (next) {
+        lobbyDebug('intent:refresh:done', {
+          reason,
+          status: next.status,
+          queueId: next.queueId ?? null,
+          hasJoinUrl: Boolean(next.joinUrl),
+          ms: Date.now() - startedAt,
+        })
         setActiveIntent(next)
         return
       }
       if (intentResult.value === null && Date.now() < joinGraceUntilRef.current) {
+        lobbyDebug('intent:refresh:grace', { reason, ms: Date.now() - startedAt })
         return
       }
+      lobbyDebug('intent:refresh:cleared', { reason, ms: Date.now() - startedAt })
       setActiveIntent(null)
     } finally {
       setLoading(false)
     }
-  }, [enrichMatchedJoinUrl, user])
+  }, [enrichMatchedJoinUrl, user, activeIntent?.queueId])
 
   const refresh = useCallback(async () => {
     await Promise.all([refreshIntent(), refreshTable()])
@@ -87,7 +104,7 @@ export function useActiveIntent() {
     if (authLoading) {
       return
     }
-    void refreshIntent()
+    void refreshIntent('auth-load')
   }, [authLoading, refreshIntent])
 
   useEffect(() => {
@@ -108,6 +125,7 @@ export function useActiveIntent() {
     }
 
     let cancelled = false
+    lobbyDebug('intent:queue:subscribe-effect', { queueId, status: activeIntent?.status ?? null })
 
     void (async () => {
       try {
@@ -117,10 +135,40 @@ export function useActiveIntent() {
         }
         const unsubscribe = await subscribeToQueue(queueId, {
           onUpdate: (update) => {
-            if (update?.status === 'MATCHED' && update?.joinUrl) {
-              setActiveIntent((prev) => mergeMatchedJoinUrl(prev, update.joinUrl))
+            lobbyDebug('intent:queue:ws-update', {
+              queueId,
+              status: update?.status,
+              hasJoinUrl: Boolean(update?.joinUrl),
+            })
+            if (update?.status === 'MATCHED') {
+              setActiveIntent((prev) => {
+                if (!prev) {
+                  lobbyDebug('intent:queue:ws-update-skipped', { queueId, reason: 'no-prev-intent' })
+                  return prev
+                }
+                return {
+                  ...prev,
+                  status: 'MATCHED',
+                  joinUrl: update.joinUrl ?? prev.joinUrl ?? null,
+                }
+              })
+            } else if (update?.status === 'WAITING') {
+              setActiveIntent((prev) => {
+                if (!prev) {
+                  lobbyDebug('intent:queue:ws-update-skipped', { queueId, reason: 'no-prev-intent' })
+                  return prev
+                }
+                return {
+                  ...prev,
+                  status: 'WAITING',
+                  queuedCount: update.queuedCount ?? prev.queuedCount,
+                }
+              })
             }
-            void refreshIntent()
+            void refreshIntent('ws-followup')
+          },
+          onError: (message) => {
+            lobbyDebug('intent:queue:ws-error', { queueId, message })
           },
         })
         if (cancelled) {
@@ -128,8 +176,12 @@ export function useActiveIntent() {
           return
         }
         queueUnsubRef.current = unsubscribe
-      } catch {
-        // Banner still works via refresh.
+        lobbyDebug('intent:queue:subscribed', { queueId })
+      } catch (err) {
+        lobbyDebug('intent:queue:subscribe-failed', {
+          queueId,
+          error: err?.message || String(err),
+        })
       }
     })()
 
@@ -139,6 +191,16 @@ export function useActiveIntent() {
       queueUnsubRef.current = null
     }
   }, [user, activeIntent?.queueId, refreshIntent])
+
+  useEffect(() => {
+    if (activeIntent?.status !== 'WAITING') {
+      return undefined
+    }
+    const timer = window.setInterval(() => {
+      void refreshIntent('poll-waiting')
+    }, 2000)
+    return () => window.clearInterval(timer)
+  }, [activeIntent?.status, activeIntent?.queueId, refreshIntent])
 
   useEffect(() => {
     seatUnsubRef.current?.()
@@ -186,7 +248,7 @@ export function useActiveIntent() {
       return undefined
     }
     const timer = window.setInterval(() => {
-      void refreshIntent()
+      void refreshIntent('poll-matched-join-url')
     }, 3000)
     return () => window.clearInterval(timer)
   }, [activeIntent, activeTableSeat, refreshIntent])
@@ -199,7 +261,7 @@ export function useActiveIntent() {
     setBusy(true)
     try {
       await leaveQueue(activeIntent.queueId)
-      await refreshIntent()
+      await refreshIntent('leave-queue')
     } finally {
       setBusy(false)
     }
@@ -228,6 +290,11 @@ export function useActiveIntent() {
       return
     }
     joinGraceUntilRef.current = Date.now() + 3000
+    lobbyDebug('intent:queue-joined', {
+      queueId,
+      queued: Boolean(result.queued),
+      sessionId: result.sessionId ?? null,
+    })
     if (result.queued) {
       setActiveIntent({
         queueId,
