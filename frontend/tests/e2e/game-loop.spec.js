@@ -3,7 +3,7 @@ import { signInWithEmailCode } from './helpers/auth.js'
 import {
   clearDemoMatchmakingState,
   restorePrimaryGameHandoffUrls,
-  setPrimaryGameHandoffUrls,
+  setPrimaryGameAPIBaseUrl,
 } from './helpers/db.js'
 import { startMockGameServer, stopMockGameServer } from './helpers/mockGame.js'
 import {
@@ -22,7 +22,7 @@ test.describe('Game loop', () => {
   test.beforeAll(async () => {
     const mock = await startMockGameServer()
     mockServer = mock.server
-    setPrimaryGameHandoffUrls(mock.baseUrl, mock.baseUrl)
+    setPrimaryGameAPIBaseUrl(mock.baseUrl)
   })
 
   test.afterAll(async () => {

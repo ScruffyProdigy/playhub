@@ -23,6 +23,10 @@ describe('App Environment Integration', () => {
     // The app should render without crashing
     expect(screen.getByText('JoinQuest')).toBeInTheDocument()
     expect(screen.getByText('Find your group. Play together.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /get started for developers/i })).toHaveAttribute(
+      'href',
+      '/developers',
+    )
     
     // Environment should be available
     expect(window.env).toBeDefined()

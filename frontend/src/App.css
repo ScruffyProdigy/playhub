@@ -1134,6 +1134,50 @@
     color: #5558aa;
   }
 
+  .developer-home-cta {
+    border-color: rgba(85, 88, 170, 0.25);
+    background: rgba(85, 88, 170, 0.08);
+  }
+
+  .developer-home-cta__link {
+    border-color: rgba(85, 88, 170, 0.45);
+    background: rgba(85, 88, 170, 0.12);
+    color: #4346a8;
+  }
+
+  .developer-home-cta__link:hover {
+    border-color: rgba(85, 88, 170, 0.65);
+    background: rgba(85, 88, 170, 0.18);
+    color: #2f3280;
+  }
+
+  .developer-check--pass {
+    border-color: rgba(72, 187, 120, 0.35);
+  }
+
+  .developer-check--pass .developer-check__header {
+    color: #2f855a;
+    background: rgba(72, 187, 120, 0.12);
+  }
+
+  .developer-check--fail {
+    border-color: rgba(245, 101, 101, 0.35);
+  }
+
+  .developer-check--fail .developer-check__header {
+    color: #c53030;
+    background: rgba(245, 101, 101, 0.1);
+  }
+
+  .developer-check--skipped {
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .developer-check--skipped .developer-check__header {
+    color: rgba(33, 53, 71, 0.45);
+    background: rgba(0, 0, 0, 0.04);
+  }
+
   .queue-status-line {
     color: #666;
   }
@@ -2108,4 +2152,240 @@
   .table-seat-row__occupant-name {
     display: none;
   }
+}
+
+.developer-shell {
+  max-width: 720px;
+}
+
+.developer-back {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.developer-intro .panel-copy + .panel-copy {
+  margin-top: 0.75rem;
+}
+
+.developer-home-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  border-color: rgba(100, 108, 255, 0.35);
+  background: rgba(100, 108, 255, 0.1);
+}
+
+.developer-home-cta__copy {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.developer-home-cta__link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(100, 108, 255, 0.55);
+  background: rgba(100, 108, 255, 0.22);
+  color: #c4c8ff;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.developer-home-cta__link:hover {
+  border-color: rgba(100, 108, 255, 0.85);
+  background: rgba(100, 108, 255, 0.32);
+  color: #e8eaff;
+}
+
+.developer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.developer-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.developer-form__field label {
+  font-weight: 600;
+}
+
+.developer-form__field input,
+.developer-form__field textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  font: inherit;
+}
+
+.developer-form__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.your-games-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.your-games-list__item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.15);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.your-games-list__item:hover {
+  border-color: rgba(100, 108, 255, 0.45);
+}
+
+.your-games-list__name {
+  font-weight: 600;
+}
+
+.your-games-list__meta {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.developer-actions__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.developer-footnote {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.developer-credential {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.developer-credential__label {
+  font-weight: 600;
+}
+
+.developer-credential__value {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  overflow-x: auto;
+  font-size: 0.85rem;
+}
+
+.developer-credential__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.developer-check-section + .developer-check-section {
+  margin-top: 1.25rem;
+}
+
+.developer-check-section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.developer-check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.developer-check {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.developer-check--pass {
+  border-color: rgba(72, 187, 120, 0.45);
+}
+
+.developer-check--pass .developer-check__header {
+  color: #8fd9a8;
+  background: rgba(72, 187, 120, 0.15);
+}
+
+.developer-check--fail {
+  border-color: rgba(245, 101, 101, 0.5);
+}
+
+.developer-check--fail .developer-check__header {
+  color: #f5a0a0;
+  background: rgba(245, 101, 101, 0.12);
+}
+
+.developer-check--skipped {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.developer-check--skipped .developer-check__header {
+  color: rgba(255, 255, 255, 0.52);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.developer-check__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+  padding: 0.75rem 1rem;
+}
+
+.developer-check__id {
+  font-family: ui-monospace, monospace;
+}
+
+.developer-check__message {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.92rem;
+}
+
+.developer-guide__body {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  opacity: 0.92;
 }

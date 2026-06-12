@@ -8,7 +8,6 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 export const DEMO_PRIMARY_GAME_ID = 'a1000000-0000-4000-8000-000000000001'
 export const DEMO_DEFAULT_QUEUE_ID = 'a3000000-0000-4000-8000-000000000001'
 
-const DEFAULT_PLAY_URL = 'http://localhost:5174'
 const DEFAULT_API_BASE_URL = 'http://localhost:3001'
 
 function psqlAvailable() {
@@ -36,14 +35,12 @@ export function runSql(sql) {
   })
 }
 
-export function setPrimaryGameHandoffUrls(playUrl, apiBaseUrl) {
-  runSql(
-    `UPDATE games SET play_url='${playUrl}', api_base_url='${apiBaseUrl}' WHERE id='${DEMO_PRIMARY_GAME_ID}'`,
-  )
+export function setPrimaryGameAPIBaseUrl(apiBaseUrl) {
+  runSql(`UPDATE games SET api_base_url='${apiBaseUrl}' WHERE id='${DEMO_PRIMARY_GAME_ID}'`)
 }
 
 export function restorePrimaryGameHandoffUrls() {
-  setPrimaryGameHandoffUrls(DEFAULT_PLAY_URL, DEFAULT_API_BASE_URL)
+  setPrimaryGameAPIBaseUrl(DEFAULT_API_BASE_URL)
 }
 
 /** Reset demo queue rows and active sessions between E2E runs. */

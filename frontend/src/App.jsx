@@ -17,6 +17,12 @@ import { parseGameSlug } from './lib/games'
 import { MOBILE_ROOM_QUERY, useMediaQuery } from './lib/useMediaQuery'
 import { usePathname } from './lib/usePathname'
 import { restoreCatalogScrollIfPending } from './lib/catalogNavigation'
+import { parseDeveloperRoute } from './lib/developers'
+import DeveloperDashboard from './components/developers/DeveloperDashboard'
+import DeveloperLandingPage from './components/developers/DeveloperLandingPage'
+import DeveloperWelcomePage from './components/developers/DeveloperWelcomePage'
+import YourGamesStrip from './components/developers/YourGamesStrip'
+import DeveloperHomeCTA from './components/developers/DeveloperHomeCTA'
 import { useEffect } from 'react'
 import './App.css'
 
@@ -47,7 +53,9 @@ function CatalogPage() {
         <p className="tagline">{APP_TAGLINE}</p>
       </header>
 
+      <DeveloperHomeCTA />
       <AuthPanel />
+      <YourGamesStrip />
       {!authLoading && user ? <CreateRoomPanel /> : null}
       <GameLobby
         activeIntent={activeIntent}
@@ -143,6 +151,19 @@ function MainLayout() {
   )
 }
 
+function DeveloperShell() {
+  const pathname = usePathname()
+  const route = parseDeveloperRoute(pathname)
+
+  if (route?.kind === 'welcome') {
+    return <DeveloperWelcomePage gameId={route.gameId} />
+  }
+  if (route?.kind === 'dashboard') {
+    return <DeveloperDashboard gameId={route.gameId} />
+  }
+  return <DeveloperLandingPage />
+}
+
 function MainShell() {
   const pathname = usePathname()
   const inviteCode = parseRoomInviteCode(pathname)
@@ -156,6 +177,7 @@ function MainShell() {
 
 function App() {
   const pathname = usePathname()
+  const developerRoute = parseDeveloperRoute(pathname)
   const isMainRoute =
     pathname === '/' ||
     Boolean(parseRoomInviteCode(pathname)) ||
@@ -167,6 +189,10 @@ function App() {
         <CompleteSignInPage />
       ) : pathname.startsWith('/return') ? (
         <ReturnPage />
+      ) : developerRoute ? (
+        <ActiveRoomProvider>
+          <DeveloperShell />
+        </ActiveRoomProvider>
       ) : isMainRoute ? (
         <MainShell />
       ) : (
