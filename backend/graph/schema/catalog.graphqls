@@ -1,6 +1,5 @@
 input RegisterGameInput {
   slug: String!
-  playUrl: String!
   apiBaseUrl: String!
   name: String
   description: String
@@ -58,7 +57,6 @@ type ModeQueue {
 
 extend type Game {
   slug: String
-  playUrl: String
   apiBaseUrl: String
   manifestSyncedAt: Time
   manifestHash: String

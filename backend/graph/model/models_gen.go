@@ -46,7 +46,6 @@ type Game struct {
 	CreatedAt        time.Time  `json:"createdAt"`
 	ActiveSessions   []*Session `json:"activeSessions"`
 	Slug             *string    `json:"slug,omitempty"`
-	PlayURL          *string    `json:"playUrl,omitempty"`
 	APIBaseURL       *string    `json:"apiBaseUrl,omitempty"`
 	ManifestSyncedAt *time.Time `json:"manifestSyncedAt,omitempty"`
 	ManifestHash     *string    `json:"manifestHash,omitempty"`
@@ -58,13 +57,27 @@ type Game struct {
 	// Optional catalog-only hero (5:2). Falls back to heroUrl when unset.
 	CatalogHeroURL *string `json:"catalogHeroUrl,omitempty"`
 	// Long-form copy for the game detail page (maps to games.description).
-	LongDescription  *string     `json:"longDescription,omitempty"`
-	ShortDescription *string     `json:"shortDescription,omitempty"`
-	HowToPlay        *string     `json:"howToPlay,omitempty"`
-	TutorialURL      *string     `json:"tutorialUrl,omitempty"`
-	Screenshots      []string    `json:"screenshots"`
-	Tags             []string    `json:"tags"`
-	Modes            []*GameMode `json:"modes"`
+	LongDescription   *string                 `json:"longDescription,omitempty"`
+	ShortDescription  *string                 `json:"shortDescription,omitempty"`
+	HowToPlay         *string                 `json:"howToPlay,omitempty"`
+	TutorialURL       *string                 `json:"tutorialUrl,omitempty"`
+	Screenshots       []string                `json:"screenshots"`
+	Tags              []string                `json:"tags"`
+	Modes             []*GameMode             `json:"modes"`
+	Visibility        GameVisibility          `json:"visibility"`
+	ContactEmail      *string                 `json:"contactEmail,omitempty"`
+	WebsiteURL        *string                 `json:"websiteUrl,omitempty"`
+	CommunityURL      *string                 `json:"communityUrl,omitempty"`
+	OwnerUserID       *string                 `json:"ownerUserId,omitempty"`
+	IntegrationChecks []*GameIntegrationCheck `json:"integrationChecks"`
+}
+
+type GameIntegrationCheck struct {
+	CheckID string                 `json:"checkId"`
+	Status  IntegrationCheckStatus `json:"status"`
+	Message *string                `json:"message,omitempty"`
+	Detail  *string                `json:"detail,omitempty"`
+	RanAt   *time.Time             `json:"ranAt,omitempty"`
 }
 
 type GameMode struct {
@@ -116,6 +129,11 @@ type ModeQueue struct {
 }
 
 type Mutation struct {
+}
+
+type MyGameCredentials struct {
+	ServiceToken  string `json:"serviceToken"`
+	WebhookSecret string `json:"webhookSecret"`
 }
 
 type MyTableSeat struct {
@@ -176,7 +194,6 @@ type QueueUpdate struct {
 
 type RegisterGameInput struct {
 	Slug        string  `json:"slug"`
-	PlayURL     string  `json:"playUrl"`
 	APIBaseURL  string  `json:"apiBaseUrl"`
 	Name        *string `json:"name,omitempty"`
 	Description *string `json:"description,omitempty"`
@@ -191,6 +208,24 @@ type RegisterGamePayload struct {
 	WebhookSecret string `json:"webhookSecret"`
 	// Per-game credential for provision + player GraphQL (derived from game id).
 	ServiceToken string `json:"serviceToken"`
+}
+
+type RegisterMyGameInput struct {
+	Slug             string  `json:"slug"`
+	Name             string  `json:"name"`
+	ShortDescription string  `json:"shortDescription"`
+	APIBaseURL       string  `json:"apiBaseUrl"`
+	ContactEmail     string  `json:"contactEmail"`
+	WebsiteURL       *string `json:"websiteUrl,omitempty"`
+	CommunityURL     *string `json:"communityUrl,omitempty"`
+}
+
+type RegisterMyGamePayload struct {
+	Game          *Game   `json:"game"`
+	WebhookSecret string  `json:"webhookSecret"`
+	ServiceToken  string  `json:"serviceToken"`
+	Connected     bool    `json:"connected"`
+	ConnectError  *string `json:"connectError,omitempty"`
 }
 
 type ReturnDestination struct {
@@ -406,6 +441,122 @@ func (e *AvatarSource) UnmarshalJSON(b []byte) error {
 }
 
 func (e AvatarSource) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type GameVisibility string
+
+const (
+	GameVisibilityDraft          GameVisibility = "DRAFT"
+	GameVisibilityPrivateTesting GameVisibility = "PRIVATE_TESTING"
+	GameVisibilityPendingReview  GameVisibility = "PENDING_REVIEW"
+	GameVisibilityPublic         GameVisibility = "PUBLIC"
+)
+
+var AllGameVisibility = []GameVisibility{
+	GameVisibilityDraft,
+	GameVisibilityPrivateTesting,
+	GameVisibilityPendingReview,
+	GameVisibilityPublic,
+}
+
+func (e GameVisibility) IsValid() bool {
+	switch e {
+	case GameVisibilityDraft, GameVisibilityPrivateTesting, GameVisibilityPendingReview, GameVisibilityPublic:
+		return true
+	}
+	return false
+}
+
+func (e GameVisibility) String() string {
+	return string(e)
+}
+
+func (e *GameVisibility) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = GameVisibility(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid GameVisibility", str)
+	}
+	return nil
+}
+
+func (e GameVisibility) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *GameVisibility) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e GameVisibility) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type IntegrationCheckStatus string
+
+const (
+	IntegrationCheckStatusPass    IntegrationCheckStatus = "PASS"
+	IntegrationCheckStatusFail    IntegrationCheckStatus = "FAIL"
+	IntegrationCheckStatusSkipped IntegrationCheckStatus = "SKIPPED"
+)
+
+var AllIntegrationCheckStatus = []IntegrationCheckStatus{
+	IntegrationCheckStatusPass,
+	IntegrationCheckStatusFail,
+	IntegrationCheckStatusSkipped,
+}
+
+func (e IntegrationCheckStatus) IsValid() bool {
+	switch e {
+	case IntegrationCheckStatusPass, IntegrationCheckStatusFail, IntegrationCheckStatusSkipped:
+		return true
+	}
+	return false
+}
+
+func (e IntegrationCheckStatus) String() string {
+	return string(e)
+}
+
+func (e *IntegrationCheckStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = IntegrationCheckStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid IntegrationCheckStatus", str)
+	}
+	return nil
+}
+
+func (e IntegrationCheckStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *IntegrationCheckStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e IntegrationCheckStatus) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

@@ -33,6 +33,9 @@ func (r *mutationResolver) CreatePrivateTable(ctx context.Context, gameID string
 	if err != nil {
 		return nil, err
 	}
+	if err := st.AssertCanCreateTableForGame(ctx, gid, userID); err != nil {
+		return nil, err
+	}
 	table, err := st.CreatePrivateTable(ctx, userID, gid, mid)
 	if err != nil {
 		return nil, err
@@ -60,6 +63,9 @@ func (r *mutationResolver) CreateTable(ctx context.Context, roomID string, gameI
 	}
 	mid, err := parseUUID(modeID, "mode id")
 	if err != nil {
+		return nil, err
+	}
+	if err := st.AssertCanCreateTableForGame(ctx, gid, userID); err != nil {
 		return nil, err
 	}
 	table, err := st.CreateTable(ctx, rid, gid, mid, userID)

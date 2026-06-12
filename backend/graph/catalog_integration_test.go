@@ -131,7 +131,6 @@ func TestCatalogRegisterAndRefreshManifest(t *testing.T) {
 		}
 	}`, &registerResp, append(opts, client.Var("input", map[string]any{
 		"slug":       slug,
-		"playUrl":    "https://play.example.com/" + slug,
 		"apiBaseUrl": gameAPI.URL,
 		"iconUrl":    "/games/default.svg",
 		"heroUrl":    "/games/default-hero.svg",
@@ -203,7 +202,6 @@ func TestRegisterGameRequiresAdmin(t *testing.T) {
 		}
 	}`, &resp, client.Var("input", map[string]any{
 		"slug":       "no-auth",
-		"playUrl":    "https://play.example.com/no-auth",
 		"apiBaseUrl": gameAPI.URL,
 		"iconUrl":    "/games/default.svg",
 		"heroUrl":    "/games/default-hero.svg",
@@ -242,7 +240,6 @@ func TestRegisterGameGraphQLErrorIsJSON(t *testing.T) {
 		}
 	}`, &raw, append(sessionCookieOptions(sessionCookies), client.Var("input", map[string]any{
 		"slug":       "duplicate",
-		"playUrl":    "https://play.example.com/duplicate",
 		"apiBaseUrl": gameAPI.URL,
 		"iconUrl":    "/games/default.svg",
 		"heroUrl":    "/games/default-hero.svg",
@@ -257,7 +254,6 @@ func TestRegisterGameGraphQLErrorIsJSON(t *testing.T) {
 		}
 	}`, &raw, append(sessionCookieOptions(sessionCookies), client.Var("input", map[string]any{
 		"slug":       "duplicate",
-		"playUrl":    "https://play.example.com/duplicate-2",
 		"apiBaseUrl": gameAPI.URL,
 		"iconUrl":    "/games/default.svg",
 		"heroUrl":    "/games/default-hero.svg",

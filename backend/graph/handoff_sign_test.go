@@ -64,8 +64,6 @@ func TestSignLaunchURLEmptyUntilProvisioned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetGameByID: %v", err)
 	}
-	playURL := "https://play.example.com"
-	game.PlayURL = &playURL
 	apiURL := "https://api.example.com"
 	game.APIBaseURL = &apiURL
 
@@ -87,8 +85,6 @@ func TestSignLaunchURLFromStoredBase(t *testing.T) {
 	t.Setenv("LOBBY_ISSUER_URL", "http://localhost:8080")
 	t.Setenv("LOBBY_PUBLIC_URL", "http://localhost:5173")
 	t.Setenv("LOBBY_GAME_TOKEN_PEPPER", "test-pepper")
-
-	resolver := env.resolver
 
 	userA, err := env.Store.CreateUser(ctx, store.CreateUserParams{
 		Email: "launch-a-" + uuid.NewString() + "@example.com",
@@ -124,16 +120,23 @@ func TestSignLaunchURLFromStoredBase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetGameByID: %v", err)
 	}
-	playURL := "https://play.example.com"
-	game.PlayURL = &playURL
 	apiURL := "https://api.example.com"
 	game.APIBaseURL = &apiURL
+	sessionID := *rec.SessionID
 
-	if _, err := resolver.finalizeMatchedSession(ctx, game, *rec.SessionID, rec.NotifyUserIDs); err != nil {
+	provisioner := &gameURLProvisioner{
+		launchURLs: map[string]string{
+			userA.ID.String(): "https://play.example.com/?match=" + sessionID.String() + "&seat=1",
+			userB.ID.String(): "https://play.example.com/?match=" + sessionID.String() + "&seat=2",
+		},
+	}
+	env.resolverWithProvisioner(t, provisioner)
+
+	if _, err := env.resolver.finalizeMatchedSession(ctx, game, sessionID, rec.NotifyUserIDs); err != nil {
 		t.Fatalf("finalizeMatchedSession: %v", err)
 	}
 
-	launch, err := resolver.signLaunchURL(ctx, game, *rec.SessionID, userB.ID)
+	launch, err := env.resolver.signLaunchURL(ctx, game, sessionID, userB.ID)
 	if err != nil {
 		t.Fatalf("signLaunchURL: %v", err)
 	}

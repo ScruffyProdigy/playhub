@@ -81,6 +81,7 @@ func TestSchemaFilesExist(t *testing.T) {
 		"avatars.graphqls",
 		"spirit_animal.graphqls",
 		"parties.graphqls",
+		"developer.graphqls",
 	}
 
 	for _, filename := range expectedFiles {
@@ -118,6 +119,7 @@ func resolverGeneratedFiles(projectRoot string) []string {
 		filepath.Join(projectRoot, "backend/graph/tables.resolvers.go"),
 		filepath.Join(projectRoot, "backend/graph/avatars.resolvers.go"),
 		filepath.Join(projectRoot, "backend/graph/spirit_animal.resolvers.go"),
+		filepath.Join(projectRoot, "backend/graph/developer.resolvers.go"),
 	}
 }
 

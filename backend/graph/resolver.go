@@ -3,7 +3,6 @@ package graph
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/internal/auth"
@@ -26,7 +25,6 @@ type Resolver struct {
 	Store             *store.Store
 	Auth              *auth.Service
 	PubSub            pubsub.Broker
-	GameClientBaseURL string
 	ManifestFetcher   *gameclient.ManifestFetcher
 	SpiritAnimal      *spiritanimal.Runner
 	FormingWorker     *formingworker.Worker
@@ -35,12 +33,11 @@ type Resolver struct {
 }
 
 // NewResolver creates a resolver backed by the store and auth service.
-func NewResolver(st *store.Store, authService *auth.Service, broker pubsub.Broker, gameClientBaseURL string) *Resolver {
+func NewResolver(st *store.Store, authService *auth.Service, broker pubsub.Broker) *Resolver {
 	return &Resolver{
-		Store:             st,
-		Auth:              authService,
-		PubSub:            broker,
-		GameClientBaseURL: strings.TrimRight(strings.TrimSpace(gameClientBaseURL), "/"),
+		Store:   st,
+		Auth:    authService,
+		PubSub:  broker,
 	}
 }
 

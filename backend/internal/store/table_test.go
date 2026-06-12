@@ -366,7 +366,6 @@ func setupWordHuntMode(t *testing.T, st *Store, cleaner *TestCleaner) (*Game, *G
 		Slug:       slug,
 		IconURL:    "/games/default.svg",
 		HeroURL:    "/games/default-hero.svg",
-		PlayURL:    "https://play.example.com/" + slug,
 		APIBaseURL: "https://api.example.com/" + slug,
 	}, manifest)
 	if err != nil {
@@ -406,7 +405,6 @@ func setupDuelMode(t *testing.T, st *Store, cleaner *TestCleaner) (*Game, *GameM
 		Slug:       slug,
 		IconURL:    "/games/default.svg",
 		HeroURL:    "/games/default-hero.svg",
-		PlayURL:    "https://play.example.com/" + slug,
 		APIBaseURL: "https://api.example.com/" + slug,
 	}, manifest)
 	if err != nil {

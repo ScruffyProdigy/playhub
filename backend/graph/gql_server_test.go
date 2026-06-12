@@ -18,7 +18,7 @@ import (
 func TestGraphQLServerWebSocketAllowsLoopbackOrigin(t *testing.T) {
 	signer, bearer := testSignerAndBearer(t)
 
-	gql := NewGraphQLServer(signer, NewResolver(nil, nil, pubsub.NewMemory(), ""))
+	gql := NewGraphQLServer(signer, NewResolver(nil, nil, pubsub.NewMemory()))
 	srv := httptest.NewServer(auth.Middleware(signer, gql))
 	defer srv.Close()
 
@@ -28,7 +28,7 @@ func TestGraphQLServerWebSocketAllowsLoopbackOrigin(t *testing.T) {
 func TestGraphQLServerWebSocketRejectsForeignOrigin(t *testing.T) {
 	signer, bearer := testSignerAndBearer(t)
 
-	gql := NewGraphQLServer(signer, NewResolver(nil, nil, pubsub.NewMemory(), ""))
+	gql := NewGraphQLServer(signer, NewResolver(nil, nil, pubsub.NewMemory()))
 	srv := httptest.NewServer(auth.Middleware(signer, gql))
 	defer srv.Close()
 
@@ -50,7 +50,7 @@ func TestGraphQLServerWebSocketRejectsForeignOrigin(t *testing.T) {
 // later AddTransport with WebSocketOriginAllowed never runs (first match wins).
 func TestNewDefaultServerWebSocketPreventsLoopbackOriginFix(t *testing.T) {
 	signer, _ := testSignerAndBearer(t)
-	resolver := NewResolver(nil, nil, pubsub.NewMemory(), "")
+	resolver := NewResolver(nil, nil, pubsub.NewMemory())
 
 	broken := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
 	broken.AddTransport(transport.Websocket{

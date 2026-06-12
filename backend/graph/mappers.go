@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/scruffyprodigy/playhub/graph/model"
+	"github.com/scruffyprodigy/playhub/internal/integrationchecks"
 	"github.com/scruffyprodigy/playhub/internal/seattemplate"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
@@ -90,12 +91,6 @@ func ToGraphQLGame(game *store.Game) *model.Game {
 	if game.ShortDescription != nil {
 		result.ShortDescription = game.ShortDescription
 	}
-	if game.Slug != nil {
-		result.Slug = game.Slug
-	}
-	if game.PlayURL != nil {
-		result.PlayURL = game.PlayURL
-	}
 	if game.APIBaseURL != nil {
 		result.APIBaseURL = game.APIBaseURL
 	}
@@ -108,7 +103,74 @@ func ToGraphQLGame(game *store.Game) *model.Game {
 	if game.GameVersion != nil {
 		result.GameVersion = game.GameVersion
 	}
+	result.Visibility = toGraphQLGameVisibility(game.Visibility)
+	if game.ContactEmail != nil {
+		result.ContactEmail = game.ContactEmail
+	}
+	if game.WebsiteURL != nil {
+		result.WebsiteURL = game.WebsiteURL
+	}
+	if game.CommunityURL != nil {
+		result.CommunityURL = game.CommunityURL
+	}
+	if game.OwnerUserID != nil {
+		ownerID := game.OwnerUserID.String()
+		result.OwnerUserID = &ownerID
+	}
 	return result
+}
+
+func toGraphQLGameVisibility(visibility string) model.GameVisibility {
+	switch visibility {
+	case store.GameVisibilityPrivateTesting:
+		return model.GameVisibilityPrivateTesting
+	case store.GameVisibilityPendingReview:
+		return model.GameVisibilityPendingReview
+	case store.GameVisibilityPublic:
+		return model.GameVisibilityPublic
+	default:
+		return model.GameVisibilityDraft
+	}
+}
+
+func ToGraphQLIntegrationChecks(checks []store.GameIntegrationCheck) []*model.GameIntegrationCheck {
+	result := make([]*model.GameIntegrationCheck, len(checks))
+	for i := range checks {
+		result[i] = ToGraphQLIntegrationCheck(&checks[i])
+	}
+	return result
+}
+
+func ToGraphQLIntegrationCheck(check *store.GameIntegrationCheck) *model.GameIntegrationCheck {
+	if check == nil {
+		return nil
+	}
+	return &model.GameIntegrationCheck{
+		CheckID: check.CheckID,
+		Status:  toGraphQLIntegrationCheckStatus(check.Status),
+		Message: check.Message,
+		Detail:  rawJSONToStringPtr(check.DetailJSON),
+		RanAt:   &check.RanAt,
+	}
+}
+
+func toGraphQLIntegrationCheckStatus(status string) model.IntegrationCheckStatus {
+	switch status {
+	case integrationchecks.StatusPass:
+		return model.IntegrationCheckStatusPass
+	case integrationchecks.StatusFail:
+		return model.IntegrationCheckStatusFail
+	default:
+		return model.IntegrationCheckStatusSkipped
+	}
+}
+
+func rawJSONToStringPtr(raw json.RawMessage) *string {
+	if len(raw) == 0 {
+		return nil
+	}
+	s := string(raw)
+	return &s
 }
 
 func ToGraphQLGameModes(modes []store.GameMode) []*model.GameMode {

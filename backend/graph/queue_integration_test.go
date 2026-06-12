@@ -76,7 +76,7 @@ func newQueueIntegrationEnv(t *testing.T) *queueIntegrationEnv {
 	}
 	t.Cleanup(func() { _ = st.RestorePrimaryGameHandoffURLs(context.Background()) })
 
-	resolver := NewResolver(st, authService, pubsub.NewMemory(), store.DemoGamePlayURL)
+	resolver := NewResolver(st, authService, pubsub.NewMemory())
 	resolver.SpiritAnimal = spiritanimal.NewRunnerFromEnv(st, "https://joinquest.test")
 	resolver.FormingWorker = formingworker.New(st, resolver.HandleFormingReconciled, 5*time.Millisecond, time.Minute)
 	resolver.FormingWorker.SetProvisionHook(resolver.HandleUnprovisionedSession)

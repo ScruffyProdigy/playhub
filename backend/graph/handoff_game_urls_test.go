@@ -67,8 +67,6 @@ func TestFinalizeMatchedSessionUsesGameMintedURLs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetGameByID: %v", err)
 	}
-	playURL := "http://localhost:5174"
-	game.PlayURL = &playURL
 	apiURL := "http://localhost:3001"
 	game.APIBaseURL = &apiURL
 

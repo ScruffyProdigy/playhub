@@ -55,12 +55,7 @@ func main() {
 		log.Println("pubsub: LOBBY_PUBSUB_DEBUG enabled — queue publish/subscribe tracing active")
 	}
 
-	gameClientBaseURL := strings.TrimSpace(os.Getenv("GAME_CLIENT_BASE_URL"))
-	if gameClientBaseURL == "" {
-		gameClientBaseURL = "http://localhost:5174"
-	}
-
-	resolver := graph.NewResolver(dataStore, authService, broker, gameClientBaseURL)
+	resolver := graph.NewResolver(dataStore, authService, broker)
 	resolver.SpiritAnimal = spiritanimal.NewRunnerFromEnv(dataStore, auth.LobbyPublicURL())
 	go resolver.SpiritAnimal.ResumeAllStale(context.Background())
 

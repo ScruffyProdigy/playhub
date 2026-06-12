@@ -28,16 +28,6 @@ func handoffDebugEnabled() bool {
 	return v == "1" || strings.EqualFold(v, "true")
 }
 
-func gamePlayURL(game *store.Game, fallback string) string {
-	if game != nil && game.PlayURL != nil {
-		if u := strings.TrimSpace(*game.PlayURL); u != "" {
-			return strings.TrimRight(u, "/")
-		}
-	}
-	return strings.TrimRight(strings.TrimSpace(fallback), "/")
-}
-
-// resolvedAPIBaseURL prefers the catalog row, then GAME_API_BASE_URL (local dev fallback).
 func (r *Resolver) resolvedAPIBaseURL(game *store.Game) string {
 	if game != nil && game.APIBaseURL != nil {
 		if u := strings.TrimSpace(*game.APIBaseURL); u != "" {
@@ -194,7 +184,7 @@ func (r *Resolver) provisionParticipantsOnGame(ctx context.Context, game *store.
 		return provisionOutcome{}, err
 	}
 
-	source := "catalog"
+	source := "none"
 	if len(result.LaunchURLs) > 0 {
 		source = "game"
 	} else if result.LaunchURLTemplate != "" {
@@ -225,10 +215,6 @@ func (r *Resolver) finalizeMatchedSession(ctx context.Context, game *store.Game,
 		return nil, err
 	}
 
-	playURL := gamePlayURL(game, r.GameClientBaseURL)
-	if playURL == "" {
-		return nil, fmt.Errorf("game play URL is not configured")
-	}
 	audience := r.resolvedAPIBaseURL(game)
 	if audience == "" {
 		return nil, fmt.Errorf("game API base URL is not configured")
@@ -252,7 +238,7 @@ func (r *Resolver) finalizeMatchedSession(ctx context.Context, game *store.Game,
 			return nil, provErr
 		}
 		var source string
-		bases, source, err = r.launchURLBasesForParticipants(ctx, game, sessionID, playURL, participants, outcome.result)
+		bases, source, err = r.launchURLBasesForParticipants(ctx, sessionID, participants, outcome.result)
 		if err != nil {
 			log.Printf("handoff: launch url bases fail session=%s source=%s err=%v", sessionID, source, err)
 			return nil, err
@@ -273,7 +259,7 @@ func (r *Resolver) finalizeMatchedSession(ctx context.Context, game *store.Game,
 		if !ok || base == "" {
 			return nil, fmt.Errorf("missing launch url base for user %s", p.UserID)
 		}
-		launch, err := signedLaunchURLFromBase(signer, playURL, audience, externalMatchID, base, p.UserID, p.SeatKey, p.DisplayName)
+		launch, err := signedLaunchURLFromBase(signer, audience, externalMatchID, base, p.UserID, p.SeatKey, p.DisplayName)
 		if err != nil {
 			return nil, err
 		}
@@ -291,9 +277,7 @@ func (r *Resolver) finalizeMatchedSession(ctx context.Context, game *store.Game,
 
 func (r *Resolver) launchURLBasesForParticipants(
 	ctx context.Context,
-	game *store.Game,
 	sessionID uuid.UUID,
-	playURL string,
 	participants []store.SessionParticipant,
 	provision gameclient.ProvisionResult,
 ) (map[uuid.UUID]string, string, error) {
@@ -306,7 +290,7 @@ func (r *Resolver) launchURLBasesForParticipants(
 			if !ok || strings.TrimSpace(raw) == "" {
 				return nil, "game", fmt.Errorf("game omitted launch url for user %s", p.UserID)
 			}
-			if err := validateGameLaunchURL(ctx, raw, playURL); err != nil {
+			if err := validateGameLaunchURL(ctx, raw); err != nil {
 				return nil, "game", fmt.Errorf("game launch url for user %s: %w", p.UserID, err)
 			}
 			bases[p.UserID] = raw
@@ -320,7 +304,7 @@ func (r *Resolver) launchURLBasesForParticipants(
 			if err != nil {
 				return nil, "game-template", err
 			}
-			if err := validateGameLaunchURL(ctx, raw, playURL); err != nil {
+			if err := validateGameLaunchURL(ctx, raw); err != nil {
 				return nil, "game-template", fmt.Errorf("template launch url for user %s: %w", p.UserID, err)
 			}
 			bases[p.UserID] = raw
@@ -328,28 +312,15 @@ func (r *Resolver) launchURLBasesForParticipants(
 		return bases, "game-template", nil
 	}
 
-	for _, p := range participants {
-		base, err := catalogLaunchURLBase(playURL, externalMatchID, p.SeatKey, p.UserID)
-		if err != nil {
-			return nil, "catalog", err
-		}
-		bases[p.UserID] = base
-	}
-	return bases, "catalog", nil
+	return nil, "", fmt.Errorf("game must return launchUrls or launchUrlTemplate on provision")
 }
 
-func validateGameLaunchURL(ctx context.Context, raw, playURL string) error {
+func validateGameLaunchURL(ctx context.Context, raw string) error {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return fmt.Errorf("empty launch url")
 	}
-	if err := gameurl.ValidateOutboundURL(ctx, raw, auth.IsProductionEnv()); err != nil {
-		return err
-	}
-	if !gameurl.SameOriginHost(raw, playURL) {
-		return fmt.Errorf("host must match catalog playUrl origin")
-	}
-	return nil
+	return gameurl.ValidateOutboundURL(ctx, raw, auth.IsProductionEnv())
 }
 
 func expandLaunchURLTemplate(tmpl, externalMatchID string, userID uuid.UUID, seatKey string) (string, error) {
@@ -361,24 +332,9 @@ func expandLaunchURLTemplate(tmpl, externalMatchID string, userID uuid.UUID, sea
 	return out, nil
 }
 
-func catalogLaunchURLBase(playURL, externalMatchID, seatKey string, userID uuid.UUID) (string, error) {
-	u, err := url.Parse(playURL)
-	if err != nil {
-		return "", err
-	}
-	q := u.Query()
-	q.Set("match", externalMatchID)
-	if seatKey != "" {
-		q.Set("seat", seatKey)
-	}
-	q.Set("lobby_user", userID.String())
-	u.RawQuery = q.Encode()
-	return u.String(), nil
-}
-
 func signedLaunchURLFromBase(
 	signer *auth.Signer,
-	playURL, audience, externalMatchID, base string,
+	audience, externalMatchID, base string,
 	userID uuid.UUID,
 	seatKey, displayName string,
 ) (string, error) {
@@ -394,31 +350,6 @@ func signedLaunchURLFromBase(
 		log.Printf("handoff: signed launch url user=%s host=%s", userID, urlHost(launch))
 	}
 	return launch, nil
-}
-
-func launchURLForSeat(signer *auth.Signer, playURL, audience, externalMatchID string, userID uuid.UUID, seatKey, displayName string) (string, error) {
-	base, err := catalogLaunchURLBase(playURL, externalMatchID, seatKey, userID)
-	if err != nil {
-		return "", err
-	}
-	return signedLaunchURLFromBase(signer, playURL, audience, externalMatchID, base, userID, seatKey, displayName)
-}
-
-func buildLaunchURL(playURL, externalMatchID, token string) (string, error) {
-	base, err := catalogLaunchURLBase(playURL, externalMatchID, "", uuid.Nil)
-	if err != nil {
-		return "", err
-	}
-	// strip lobby_user when not needed for legacy callers
-	u, err := url.Parse(base)
-	if err != nil {
-		return "", err
-	}
-	q := u.Query()
-	q.Del("lobby_user")
-	q.Del("seat")
-	u.RawQuery = q.Encode()
-	return gameurl.AttachSeatToken(u.String(), token)
 }
 
 func parseBannedLobbyUserIDs(ids []string) []uuid.UUID {
@@ -479,37 +410,10 @@ func (r *Resolver) mintLaunchURLForUserFromBase(
 	if err != nil {
 		return "", err
 	}
-	playURL := gamePlayURL(game, r.GameClientBaseURL)
 	audience := r.resolvedAPIBaseURL(game)
 	for _, p := range participants {
 		if p.UserID == userID {
-			return signedLaunchURLFromBase(authService.Signer(), playURL, audience, sessionID.String(), base, userID, p.SeatKey, p.DisplayName)
-		}
-	}
-	return "", fmt.Errorf("user is not seated in session")
-}
-
-func (r *Resolver) mintLaunchURLForUser(
-	ctx context.Context,
-	game *store.Game,
-	sessionID, userID uuid.UUID,
-	participants []store.SessionParticipant,
-) (string, error) {
-	authService, err := r.requireAuth()
-	if err != nil {
-		return "", err
-	}
-	playURL := gamePlayURL(game, r.GameClientBaseURL)
-	if playURL == "" {
-		return "", fmt.Errorf("game play URL is not configured")
-	}
-	audience := r.resolvedAPIBaseURL(game)
-	if audience == "" {
-		return "", fmt.Errorf("game API base URL is not configured")
-	}
-	for _, p := range participants {
-		if p.UserID == userID {
-			return launchURLForSeat(authService.Signer(), playURL, audience, sessionID.String(), userID, p.SeatKey, p.DisplayName)
+			return signedLaunchURLFromBase(authService.Signer(), audience, sessionID.String(), base, userID, p.SeatKey, p.DisplayName)
 		}
 	}
 	return "", fmt.Errorf("user is not seated in session")

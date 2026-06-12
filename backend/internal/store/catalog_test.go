@@ -35,7 +35,6 @@ func TestRegisterGameRequiresIcon(t *testing.T) {
 	slug := "catalog-" + uuid.NewString()
 	_, err := st.RegisterGame(ctx, RegisterGameParams{
 		Slug:       slug,
-		PlayURL:    "https://play.example.com/" + slug,
 		APIBaseURL: "https://api.example.com/" + slug,
 	}, sampleManifest())
 	if err == nil {
@@ -51,7 +50,6 @@ func TestRegisterGameRequiresHero(t *testing.T) {
 	_, err := st.RegisterGame(ctx, RegisterGameParams{
 		Slug:       slug,
 		IconURL:    "/games/default.svg",
-		PlayURL:    "https://play.example.com/" + slug,
 		APIBaseURL: "https://api.example.com/" + slug,
 	}, sampleManifest())
 	if err == nil {
@@ -72,7 +70,6 @@ func TestRegisterGameAndRefreshManifest(t *testing.T) {
 		Slug:       slug,
 		IconURL:    "/games/default.svg",
 		HeroURL:    "/games/default-hero.svg",
-		PlayURL:    "https://play.example.com/" + slug,
 		APIBaseURL: "https://api.example.com/" + slug,
 	}, manifest)
 	if err != nil {

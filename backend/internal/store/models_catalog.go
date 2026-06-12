@@ -7,6 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	GameVisibilityDraft          = "draft"
+	GameVisibilityPrivateTesting = "private_testing"
+	GameVisibilityPendingReview  = "pending_review"
+	GameVisibilityPublic         = "public"
+)
+
 type Game struct {
 	ID               uuid.UUID
 	Name             string
@@ -20,15 +27,35 @@ type Game struct {
 	Screenshots      []string
 	Tags             []string
 	Slug             *string
-	PlayURL          *string
 	APIBaseURL       *string
 	Status           string
+	Visibility       string
+	OwnerUserID      *uuid.UUID
+	ContactEmail     *string
+	WebsiteURL       *string
+	CommunityURL     *string
 	ManifestHash     *string
 	ManifestETag     *string
 	ManifestSyncedAt *time.Time
 	GameVersion      *string
 	WebhookSecret    *string
 	CreatedAt        time.Time
+}
+
+func (g *Game) IsPublicCatalog() bool {
+	return g != nil && g.Visibility == GameVisibilityPublic
+}
+
+func (g *Game) AllowsRoomTables() bool {
+	if g == nil {
+		return false
+	}
+	switch g.Visibility {
+	case GameVisibilityPrivateTesting, GameVisibilityPendingReview, GameVisibilityPublic:
+		return true
+	default:
+		return false
+	}
 }
 
 type GameMode struct {
@@ -70,10 +97,9 @@ type RegisterGameParams struct {
 	Slug        string
 	Name        string
 	Description *string
-	IconURL     string
-	HeroURL     string
-	PlayURL     string
-	APIBaseURL  string
+	IconURL    string
+	HeroURL    string
+	APIBaseURL string
 }
 
 type KickedWaiter struct {

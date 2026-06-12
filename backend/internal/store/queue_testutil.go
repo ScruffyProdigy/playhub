@@ -20,21 +20,18 @@ const DemoPrimaryGameIDStr = "a1000000-0000-4000-8000-000000000001"
 // DemoPrimaryGameID is the parsed form of DemoPrimaryGameIDStr.
 var DemoPrimaryGameID = uuid.MustParse(DemoPrimaryGameIDStr)
 
-const (
-	DemoGamePlayURL    = "http://localhost:5174"
-	DemoGameAPIBaseURL = "http://localhost:3001"
-)
+const DemoGameAPIBaseURL = "http://localhost:3001"
 
-// RestorePrimaryGameHandoffURLs resets game 001 to local dev handoff URLs after tests.
+// RestorePrimaryGameHandoffURLs resets game 001 to local dev api_base_url after tests.
 func (s *Store) RestorePrimaryGameHandoffURLs(ctx context.Context) error {
-	return s.SetGameHandoffURLsForTest(ctx, DemoPrimaryGameID, DemoGamePlayURL, DemoGameAPIBaseURL)
+	return s.SetGameAPIBaseURLForTest(ctx, DemoPrimaryGameID, DemoGameAPIBaseURL)
 }
 
-// SetGameHandoffURLsForTest updates play/api URLs on a game row (integration tests only).
-func (s *Store) SetGameHandoffURLsForTest(ctx context.Context, gameID uuid.UUID, playURL, apiBaseURL string) error {
+// SetGameAPIBaseURLForTest updates api_base_url on a game row (integration tests only).
+func (s *Store) SetGameAPIBaseURLForTest(ctx context.Context, gameID uuid.UUID, apiBaseURL string) error {
 	_, err := s.db.ExecContext(ctx, `
-		UPDATE games SET play_url = $2, api_base_url = $3 WHERE id = $1
-	`, gameID, playURL, apiBaseURL)
+		UPDATE games SET api_base_url = $2 WHERE id = $1
+	`, gameID, apiBaseURL)
 	return err
 }
 

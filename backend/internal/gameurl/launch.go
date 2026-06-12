@@ -28,13 +28,3 @@ func AttachSeatToken(rawURL, token string) (string, error) {
 	u.RawQuery = q.Encode()
 	return u.String(), nil
 }
-
-// SameOriginHost reports whether two URLs share the same host (case-insensitive).
-func SameOriginHost(a, b string) bool {
-	ua, errA := url.Parse(strings.TrimSpace(a))
-	ub, errB := url.Parse(strings.TrimSpace(b))
-	if errA != nil || errB != nil {
-		return false
-	}
-	return strings.EqualFold(ua.Hostname(), ub.Hostname())
-}

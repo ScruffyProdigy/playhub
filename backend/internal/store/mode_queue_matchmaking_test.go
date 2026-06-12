@@ -132,7 +132,6 @@ func TestJoinModeQueueCompositionMatchmaking(t *testing.T) {
 		Slug:       slug,
 		IconURL:    "/games/default.svg",
 		HeroURL:    "/games/default-hero.svg",
-		PlayURL:    "https://play.example.com/" + slug,
 		APIBaseURL: "https://api.example.com/" + slug,
 	}, manifest)
 	if err != nil {
@@ -222,7 +221,6 @@ func TestJoinModeQueueWordHuntFiresAtPartialCohortSizes(t *testing.T) {
 		Slug:       slug,
 		IconURL:    "/games/default.svg",
 		HeroURL:    "/games/default-hero.svg",
-		PlayURL:    "https://play.example.com/" + slug,
 		APIBaseURL: "https://api.example.com/" + slug,
 	}, manifest)
 	if err != nil {

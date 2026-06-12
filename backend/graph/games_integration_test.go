@@ -42,7 +42,7 @@ func newGamesGraphQLTestClient(t *testing.T) (*client.Client, *store.Store) {
 		t.Fatalf("new auth service: %v", err)
 	}
 
-	resolver := NewResolver(st, authService, pubsub.NewMemory(), "http://localhost:5174")
+	resolver := NewResolver(st, authService, pubsub.NewMemory())
 	gql := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
 	return client.New(gql), st
 }

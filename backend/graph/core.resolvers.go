@@ -253,7 +253,7 @@ func (r *queryResolver) GameBySlug(ctx context.Context, slug string) (*model.Gam
 		}
 		return nil, err
 	}
-	if game.Status != store.ModeStatusActive {
+	if game.Status != store.ModeStatusActive || !game.IsPublicCatalog() {
 		return nil, nil
 	}
 

@@ -1,0 +1,64 @@
+enum GameVisibility {
+  DRAFT
+  PRIVATE_TESTING
+  PENDING_REVIEW
+  PUBLIC
+}
+
+enum IntegrationCheckStatus {
+  PASS
+  FAIL
+  SKIPPED
+}
+
+type GameIntegrationCheck {
+  checkId: String!
+  status: IntegrationCheckStatus!
+  message: String
+  detail: String
+  ranAt: Time
+}
+
+input RegisterMyGameInput {
+  slug: String!
+  name: String!
+  shortDescription: String!
+  apiBaseUrl: String!
+  contactEmail: String!
+  websiteUrl: String
+  communityUrl: String
+}
+
+type RegisterMyGamePayload {
+  game: Game!
+  webhookSecret: String!
+  serviceToken: String!
+  connected: Boolean!
+  connectError: String
+}
+
+extend type Game {
+  visibility: GameVisibility!
+  contactEmail: String
+  websiteUrl: String
+  communityUrl: String
+  ownerUserId: ID
+  integrationChecks: [GameIntegrationCheck!]!
+}
+
+type MyGameCredentials {
+  serviceToken: String!
+  webhookSecret: String!
+}
+
+extend type Query {
+  myGames: [Game!]!
+  myGame(id: ID!): Game
+  myGameCredentials(id: ID!): MyGameCredentials
+  developerIntegrationGuide: String!
+}
+
+extend type Mutation {
+  registerMyGame(input: RegisterMyGameInput!): RegisterMyGamePayload!
+  runMyGameChecks(gameId: ID!): [GameIntegrationCheck!]!
+}

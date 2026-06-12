@@ -115,9 +115,6 @@ func (r *mutationResolver) RegisterGame(ctx context.Context, input model.Registe
 	if err := gameurl.ValidateOutboundURL(ctx, input.APIBaseURL, auth.IsProductionEnv()); err != nil {
 		return nil, fmt.Errorf("apiBaseUrl: %w", err)
 	}
-	if err := gameurl.ValidateOutboundURL(ctx, input.PlayURL, auth.IsProductionEnv()); err != nil {
-		return nil, fmt.Errorf("playUrl: %w", err)
-	}
 
 	var description *string
 	if input.Description != nil {
@@ -146,7 +143,6 @@ func (r *mutationResolver) RegisterGame(ctx context.Context, input model.Registe
 		Description: description,
 		IconURL:     iconURL,
 		HeroURL:     heroURL,
-		PlayURL:     input.PlayURL,
 		APIBaseURL:  input.APIBaseURL,
 	}, manifest)
 	if err != nil {

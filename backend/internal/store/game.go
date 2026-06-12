@@ -13,13 +13,16 @@ import (
 
 func scanGame(row interface{ Scan(dest ...any) error }) (*Game, error) {
 	var g Game
-	var description, iconURL, heroURL, catalogHeroURL, shortDescription, howToPlay, tutorialURL, slug, playURL, apiBaseURL sql.NullString
+	var description, iconURL, heroURL, catalogHeroURL, shortDescription, howToPlay, tutorialURL, slug, apiBaseURL sql.NullString
+	var visibility, contactEmail, websiteURL, communityURL sql.NullString
+	var ownerUserID uuid.NullUUID
 	var manifestHash, manifestETag, gameVersion, webhookSecret sql.NullString
 	var manifestSyncedAt sql.NullTime
 	var tags, screenshots pq.StringArray
 	if err := row.Scan(
-		&g.ID, &g.Name, &description, &iconURL, &heroURL, &catalogHeroURL, &shortDescription, &howToPlay, &tutorialURL, &screenshots, &tags, &slug, &playURL, &apiBaseURL,
+		&g.ID, &g.Name, &description, &iconURL, &heroURL, &catalogHeroURL, &shortDescription, &howToPlay, &tutorialURL, &screenshots, &tags, &slug, &apiBaseURL,
 		&g.Status,
+		&visibility, &ownerUserID, &contactEmail, &websiteURL, &communityURL,
 		&manifestHash, &manifestETag, &manifestSyncedAt, &gameVersion, &webhookSecret,
 		&g.CreatedAt,
 	); err != nil {
@@ -58,11 +61,23 @@ func scanGame(row interface{ Scan(dest ...any) error }) (*Game, error) {
 	if slug.Valid {
 		g.Slug = &slug.String
 	}
-	if playURL.Valid {
-		g.PlayURL = &playURL.String
-	}
 	if apiBaseURL.Valid {
 		g.APIBaseURL = &apiBaseURL.String
+	}
+	if visibility.Valid {
+		g.Visibility = visibility.String
+	}
+	if ownerUserID.Valid {
+		g.OwnerUserID = &ownerUserID.UUID
+	}
+	if contactEmail.Valid {
+		g.ContactEmail = &contactEmail.String
+	}
+	if websiteURL.Valid {
+		g.WebsiteURL = &websiteURL.String
+	}
+	if communityURL.Valid {
+		g.CommunityURL = &communityURL.String
 	}
 	if manifestHash.Valid {
 		g.ManifestHash = &manifestHash.String
@@ -118,7 +133,8 @@ var slugHeroOverrides = map[string]string{
 	"word-hunt":                        "/games/word-hunt-hero.jpg",
 }
 
-const gameColumns = `id, name, description, icon_url, hero_url, catalog_hero_url, short_description, how_to_play, tutorial_url, screenshots, tags, slug, play_url, api_base_url, status,
+const gameColumns = `id, name, description, icon_url, hero_url, catalog_hero_url, short_description, how_to_play, tutorial_url, screenshots, tags, slug, api_base_url, status,
+	visibility, owner_user_id, contact_email, website_url, community_url,
 	manifest_hash, manifest_etag, manifest_synced_at, game_version, webhook_secret, created_at`
 
 func (s *Store) ListGames(ctx context.Context, limit, offset int) ([]Game, error) {
@@ -138,6 +154,7 @@ func (s *Store) ListCatalogGames(ctx context.Context, limit, offset int) ([]Game
 		SELECT `+gameColumns+`
 		FROM games g
 		WHERE g.status = 'active'
+		  AND g.visibility = 'public'
 		  AND EXISTS (
 		    SELECT 1
 		    FROM game_modes gm

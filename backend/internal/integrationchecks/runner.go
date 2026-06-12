@@ -1,0 +1,166 @@
+package integrationchecks
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/scruffyprodigy/playhub/internal/gameclient"
+	"github.com/scruffyprodigy/playhub/internal/store"
+)
+
+const (
+	StatusPass    = "pass"
+	StatusFail    = "fail"
+	StatusSkipped = "skipped"
+)
+
+type Result struct {
+	CheckID string
+	Status  string
+	Message string
+	Detail  json.RawMessage
+}
+
+type Runner struct {
+	ManifestFetcher *gameclient.ManifestFetcher
+}
+
+func NewRunner(fetcher *gameclient.ManifestFetcher) *Runner {
+	if fetcher == nil {
+		fetcher = gameclient.NewManifestFetcher()
+	}
+	return &Runner{ManifestFetcher: fetcher}
+}
+
+// RunManifestChecks exercises reachability, status, and game-modes endpoints.
+func (r *Runner) RunManifestChecks(ctx context.Context, game *store.Game) []Result {
+	if game == nil || game.APIBaseURL == nil {
+		return []Result{{
+			CheckID: "manifest.reach_api",
+			Status:  StatusFail,
+			Message: "No API base URL is configured for this game.",
+		}}
+	}
+
+	apiBase := strings.TrimSpace(*game.APIBaseURL)
+	results := make([]Result, 0, 4)
+
+	priorETag := ""
+	if game.ManifestETag != nil {
+		priorETag = *game.ManifestETag
+	}
+
+	manifest, err := r.ManifestFetcher.Fetch(ctx, apiBase, priorETag)
+	if err != nil {
+		results = append(results, Result{
+			CheckID: "manifest.reach_api",
+			Status:  StatusFail,
+			Message: friendlyReachError(apiBase, err),
+		})
+		results = append(results,
+			skipped("manifest.status", "Fix API reachability first."),
+			skipped("manifest.game_modes", "Fix API reachability first."),
+			skipped("manifest.sync_freshness", "Fix API reachability first."),
+		)
+		return results
+	}
+
+	results = append(results, Result{
+		CheckID: "manifest.reach_api",
+		Status:  StatusPass,
+		Message: "We reached your server and healthz returned ok.",
+	})
+
+	statusDetail, _ := json.Marshal(manifest.Status)
+	results = append(results, Result{
+		CheckID: "manifest.status",
+		Status:  StatusPass,
+		Message: fmt.Sprintf("Status endpoint returned game %q (version %s).", manifest.Status.Game, manifest.Status.Version),
+		Detail:  statusDetail,
+	})
+
+	if len(manifest.Modes) == 0 {
+		results = append(results, Result{
+			CheckID: "manifest.game_modes",
+			Status:  StatusFail,
+			Message: "Your game returned no modes from /api/v1/game-modes.",
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "manifest.game_modes",
+			Status:  StatusPass,
+			Message: fmt.Sprintf("Found %d playable mode(s) with valid seat templates.", len(manifest.Modes)),
+		})
+	}
+
+	if game.ManifestSyncedAt != nil {
+		results = append(results, Result{
+			CheckID: "manifest.sync_freshness",
+			Status:  StatusPass,
+			Message: fmt.Sprintf("Manifest last synced %s.", game.ManifestSyncedAt.UTC().Format(time.RFC3339)),
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "manifest.sync_freshness",
+			Status:  StatusFail,
+			Message: "Your manifest has not been synced to JoinQuest yet — re-run registration connect or refresh.",
+		})
+	}
+
+	return results
+}
+
+// StubChecks returns placeholder rows for provision and JWT sections (Phase B).
+func StubChecks() []Result {
+	return []Result{
+		{
+			CheckID: "provision.happy_path",
+			Status:  StatusSkipped,
+			Message: "Provision checks ship in a later phase — use the integration guide to test manually.",
+		},
+		{
+			CheckID: "provision.auth",
+			Status:  StatusSkipped,
+			Message: "Provision checks ship in a later phase.",
+		},
+		{
+			CheckID: "provision.banlist",
+			Status:  StatusSkipped,
+			Message: "Provision checks ship in a later phase.",
+		},
+		{
+			CheckID: "provision.launch_urls",
+			Status:  StatusSkipped,
+			Message: "Provision checks ship in a later phase.",
+		},
+		{
+			CheckID: "jwt.jwks",
+			Status:  StatusSkipped,
+			Message: "JWT checks ship in a later phase.",
+		},
+		{
+			CheckID: "jwt.claim_happy_path",
+			Status:  StatusSkipped,
+			Message: "JWT checks ship in a later phase.",
+		},
+	}
+}
+
+func friendlyReachError(apiBase string, err error) string {
+	msg := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(msg, "localhost"):
+		return fmt.Sprintf("We couldn't reach %s — localhost URLs only work on your machine, not on JoinQuest servers.", apiBase)
+	case strings.Contains(msg, "connection refused"), strings.Contains(msg, "no such host"), strings.Contains(msg, "timeout"):
+		return fmt.Sprintf("We couldn't reach %s — is it up and publicly reachable over HTTPS?", apiBase)
+	default:
+		return fmt.Sprintf("We couldn't reach %s — %s", apiBase, err.Error())
+	}
+}
+
+func skipped(checkID, message string) Result {
+	return Result{CheckID: checkID, Status: StatusSkipped, Message: message}
+}

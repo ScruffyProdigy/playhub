@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -26,7 +27,16 @@ func (p *syncProvisioner) ProvisionMatch(_ context.Context, req gameclient.Provi
 	p.mu.Lock()
 	p.calls = append(p.calls, provisionCall{LobbyID: req.LobbyID, Lobby: req.Lobby, Assignment: req.Assignment})
 	p.mu.Unlock()
-	return gameclient.ProvisionResult{}, nil
+
+	launchURLs := make(map[string]string, len(req.Assignment.Seats))
+	for _, seat := range req.Assignment.Seats {
+		launchURLs[seat.LobbyUserID] = fmt.Sprintf(
+			"http://localhost:5174/?match=%s&seat=%s",
+			req.Assignment.ExternalMatchID,
+			seat.SeatKey,
+		)
+	}
+	return gameclient.ProvisionResult{LaunchURLs: launchURLs}, nil
 }
 
 func (p *syncProvisioner) lastCall() provisionCall {

@@ -21,12 +21,3 @@ func TestAttachSeatTokenPathStyle(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
-
-func TestSameOriginHost(t *testing.T) {
-	if !SameOriginHost("https://play.example.com/foo", "http://play.example.com/bar") {
-		t.Fatal("expected same host")
-	}
-	if SameOriginHost("https://play.example.com", "https://evil.example.com") {
-		t.Fatal("expected different hosts")
-	}
-}
