@@ -1,6 +1,6 @@
 # Architecture Overview
 
-JoinQuest is the **player-facing platform** and **integration layer** for third-party web games: accounts, catalog, queues, matchmaking, provision handoff, and digital goods. Game authors keep their own `play_url` and game servers; we connect players to them with a stable seat contract.
+JoinQuest is the **player-facing platform** and **integration layer** for third-party web games: accounts, catalog, queues, matchmaking, provision handoff, and digital goods. Game authors keep their own browser origin and game servers; we connect players via game-minted launch URLs and a stable seat contract.
 
 **Why this exists:** [Product vision](./vision.md).
 
@@ -17,7 +17,7 @@ JoinQuest is the **player-facing platform** and **integration layer** for third-
 Browser (JoinQuest UI) ──GraphQL──► Go API ──► PostgreSQL / Redis
                                         │
                                         ├── provision ──► Game API (your origin)
-                                        └── redirect ──► Your play_url + seat JWT
+                                        └── redirect ──► Game launch URL + seat JWT
 ```
 
 ## System Architecture

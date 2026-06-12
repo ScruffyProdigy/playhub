@@ -7,6 +7,7 @@ GraphQL API for **JoinQuest** — the player shell and control plane for registe
 | **JoinQuest frontend** | Sign-in, browse games, `joinQueue`, subscriptions |
 | **Game server** | `player(id)` with provision `serviceToken` (`displayName`, `avatarUrl`); `reportPlayerFinished`, `reportMatchResult` |
 | **Admin** | `registerGame`, manifest sync |
+| **Game developer** | `registerMyGame`, `myGames`, `runMyGameChecks` — see [developer-self-service.md](./developer-self-service.md) |
 
 Platform goals and integration overview: [`vision.md`](./vision.md). Game handoff is not GraphQL — see [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md).
 
@@ -22,6 +23,7 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 - **Tables (Step 2)**: forming tables, seat-level sitting, king controls — see [rooms-and-tables.md](./rooms-and-tables.md)
 - **LFG forming match (Phase B)**: persistent forming map, parties, `myActiveIntent`, `formingGaps`, `startTableBackfill`, `PartyNodeInput` on `joinQueue`; **forming worker** reconciles matches asynchronously after `joinQueue` returns — [lfg-phase-b-plan.md](./lfg-phase-b-plan.md), [pubsub.md](./pubsub.md)
 - **Avatars & profile**: `starterAvatars`, `updatePlayerProfile(displayName, avatarKey?)`, spirit-animal reading mutations — [spirit-animal-avatars.md](./spirit-animal-avatars.md)
+- **Developer self-service (Phase A)**: `registerMyGame`, `myGames`, `myGame`, `myGameCredentials`, `runMyGameChecks`, `developerIntegrationGuide`; public `games` / `gameBySlug` filter to `visibility = public` — [developer-self-service.md](./developer-self-service.md)
 
 ### 🚧 In Development
 - **Player-facing goods**: purchase/trade flows
@@ -271,18 +273,27 @@ query {
 
 ## Mutations
 
+### Developer (owner)
+
+#### `registerMyGame` ✅
+Sign-in required. Saves a draft game, attempts API connect (`healthz` + `game-modes`), and promotes to `private_testing` on success. Returns `serviceToken` and `webhookSecret`.
+
+#### `myGames` / `myGame` / `runMyGameChecks` ✅
+Owner-scoped dashboard queries and on-demand manifest checklist. Provision and JWT checks return `skipped` until Phase B.
+
 ### Catalog (admin)
 
 #### `registerGame` ✅
-Register a game from its seat manifest (`playUrl` + `apiBaseUrl`). Requires admin (`LOBBY_ADMIN_EMAILS`).
+Register a game from its seat manifest (`apiBaseUrl`). Requires admin (`LOBBY_ADMIN_EMAILS`).
 
 ```graphql
 mutation {
   registerGame(input: {
     slug: "my-game"
-    playUrl: "http://localhost:5174"
     apiBaseUrl: "http://localhost:3001"
     name: "My Game"
+    iconUrl: "/games/default.svg"
+    heroUrl: "/games/default-hero.svg"
   }) {
     game { id slug }
     webhookSecret

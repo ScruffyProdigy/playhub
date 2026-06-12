@@ -82,7 +82,6 @@ if command -v docker &> /dev/null; then
     export MAGIC_LINK_BASE_URL="${MAGIC_LINK_BASE_URL:-http://localhost:5173/auth/complete?token=}"
     export CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}"
     export REDIS_URL="${REDIS_URL:-redis://127.0.0.1:6379/0}"
-    export GAME_CLIENT_BASE_URL="${GAME_CLIENT_BASE_URL:-http://localhost:5174}"
     export GAME_API_BASE_URL="${GAME_API_BASE_URL:-http://localhost:3001}"
     export LOBBY_STALE_MATCH_MINUTES="${LOBBY_STALE_MATCH_MINUTES:-5}"
     export LOBBY_ADMIN_EMAILS="${LOBBY_ADMIN_EMAILS:-ryan.c.kohler@gmail.com}"

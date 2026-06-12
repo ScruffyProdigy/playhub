@@ -24,7 +24,8 @@ Migrations are stored in the `backend/migrations/` directory and follow the nami
   - User inventory table for owned items
 - `000002_provisional_display_names.up.sql` - Provisional display names for new users
 - `000003_demo_games.up.sql` - Seeds demo games for local/staging
-- `000004_game_handoff.up.sql` - Game handoff fields (`play_url`, `api_base_url`, etc.)
+- `000034_developer_self_service.up.sql` - Developer ownership, visibility states, contact URLs, integration check results
+- `000035_drop_play_url.up.sql` - Remove catalog `play_url`; launch URLs come from provision only
 - `000005_queue_one_waiting_per_user.up.sql` - One active waiting queue entry per user (per game; superseded by 000012)
 - `000012_one_waiting_queue_global.up.sql` - One waiting queue row per user across all games
 - `000006_magic_link_login_code.up.sql` - Adds `code_hash` on `magic_links` for 6-digit email codes

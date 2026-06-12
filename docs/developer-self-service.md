@@ -1,8 +1,8 @@
 # Developer self-service — game registration & integration
 
-**Status:** Planned  
-**Depends on:** [game-minted launch URLs](./game-minted-launch-urls.md) — **shipped** for reference games; catalog `playUrl` remains for host validation and fallback  
-**Likely before Phase A:** [player experience roadmap](./player-experience-roadmap.md) — queue estimates, bottleneck CTAs, catalog icons/tags (overlaps dev registration metadata)  
+**Status:** Phase A shipped (registration, dashboard, private testing)  
+**Next:** Phase B — provision/JWT checks, public release review, MCP  
+**Related:** [game-minted launch URLs](./game-minted-launch-urls.md) ✅ · [player experience roadmap](./player-experience-roadmap.md) (optional catalog polish)  
 **Related:** [game-catalog-architecture.md](./game-catalog-architecture.md) · [lobby-protocol-handoff.md](./lobby-protocol-handoff.md) · [end-to-end-partner-checklist.md](./end-to-end-partner-checklist.md)
 
 Today, adding a game means backfilling the database or calling admin-only `registerGame`. That works for us, but it blocks the goal of **any web developer** plugging in their game. This spec is the v1 path from homepage curiosity → registered game → working integration → friends testing → public release.
@@ -288,23 +288,22 @@ Dashboard error strings link to anchor IDs in this doc (`#provision-403-banned`)
 
 ## Phasing
 
-### Phase A — Critical path (ship together)
+### Phase A — Critical path ✅ Shipped
 
-Everything needed for a developer to register, integrate, and test with friends:
+Registration, private testing, and the developer dashboard:
 
-- Homepage CTA + `/developers` landing (copy above)  
+- Homepage CTA + `/developers` landing  
 - Sign-in-gated registration form + draft / connect API  
 - `owner_user_id`, visibility states, `myGames` query  
-- Developer dashboard with checklist (manifest, provision, JWT) + friendly errors  
+- Developer dashboard with checklist (manifest live; provision/JWT stubbed until Phase B)  
 - Homepage “Your games” strip for owners  
 - Private testing: room tables, not public catalog  
-- Post-register welcome + link to guide (stub OK initially)  
+- Post-register welcome + integration guide stub  
 - **Test table** CTA (`createPrivateTable`)  
-- Docs: this spec + update [vision.md](./vision.md) copy  
 
-**Dependency:** [game-minted launch URLs](./game-minted-launch-urls.md) — shipped; Phase A provision checks should require `launchUrls` for new partner games.
+**Dependency:** [game-minted launch URLs](./game-minted-launch-urls.md) — shipped; handoff requires provision `launchUrls`.
 
-**Optional before Phase A:** game icons + catalog tags (polish for public release, not blocking private testing).
+**Optional polish:** game icons + catalog tags (see [player experience roadmap](./player-experience-roadmap.md)).
 
 ### Phase B — Go public + agents
 

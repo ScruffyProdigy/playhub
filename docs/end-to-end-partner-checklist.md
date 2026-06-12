@@ -8,12 +8,12 @@ Use this to verify the **“sign in → queue → play → return”** story on 
 
 ## Prerequisites
 
-- [ ] PostgreSQL migrated through `000024` (session launch URL persistence)
+- [ ] PostgreSQL migrated through `000035` (developer self-service + drop catalog `play_url`)
 - [ ] JoinQuest API + frontend running (`./scripts/dev.sh` or deployed stack)
-- [ ] Reference game registered with valid `play_url` and `api_base_url` (e.g. `demo-game-rps`)
+- [ ] Reference game registered with valid `api_base_url` (e.g. `demo-game-rps`)
 - [ ] Game exposes `GET /healthz`, `GET /api/v1/game-modes`, accepts `POST /api/v1/matches`
-- [ ] Game returns `launchUrls` for every seated player on provision (or documents catalog fallback); `/api/v1/status` reports `launchUrlsOnProvision: true` when opted in
-- [ ] Game API has `GAME_PLAY_URL` matching catalog `play_url` (browser origin for minted links)
+- [ ] Game returns `launchUrls` (or `launchUrlTemplate`) for every seated player on provision; `/api/v1/status` reports `launchUrlsOnProvision: true`
+- [ ] Game `GAME_PLAY_URL` (or equivalent) set to the browser origin used in minted launch URLs
 - [ ] Game verifies Lobby JWT via `/.well-known/jwks.json`
 - [ ] `LOBBY_GAME_TOKEN_PEPPER` set in prod/staging (per-game `serviceToken` on provision)
 
@@ -57,5 +57,5 @@ Use this to verify the **“sign in → queue → play → return”** story on 
 - [ ] Public JoinQuest URL serves frontend + `/graphql`
 - [ ] Game `api_base_url` is reachable from Lobby pods (not localhost)
 - [ ] JWKS URL reachable from game pods
-- [ ] `play_url` uses HTTPS in production
+- [ ] Game minted launch URLs use HTTPS in production
 - [ ] Smoke test with two real accounts on mobile + desktop

@@ -15,7 +15,7 @@ For step-by-step request/response bodies, see the **Provision payload** section 
 1. **Discovery** (REST): Lobby reads the game's seat manifest.
 2. **Provision / push** (REST, server-to-server): Lobby creates the match on the
    game *before* any player arrives. The game can reject the roster here.
-3. **Link-out** (browser): Lobby sends each player to a **game-minted URL** with a signed JWT attached (`token` query param). Games that omit launch URLs get a catalog-built link as fallback.
+3. **Link-out** (browser): Lobby sends each player to a **game-minted URL** with a signed JWT attached (`token` query param). Games must return launch URL bases on provision — there is no catalog fallback.
 4. **Claim + play** (browser → WebSocket): the player claims their reserved seat
    with the token, then plays over a WebSocket.
 
@@ -133,8 +133,7 @@ it for the token and the link.
 
 ## Protocol reference (condensed)
 
-Base URLs are per-game and per-environment. Store an `apiBaseUrl` (server-to-server)
-and a `playUrl` (browser) for each game in your catalog.
+Base URLs are per-game and per-environment. Store **`apiBaseUrl`** (server-to-server origin) on each catalog row. Browser launch URLs come from the game’s provision response, not the catalog.
 
 | Step | Call | Notes |
 |------|------|-------|
@@ -142,7 +141,7 @@ and a `playUrl` (browser) for each game in your catalog.
 | Status | `GET {apiBaseUrl}/api/v1/status` → `{game,version,appEnv,standalone,launchUrlsOnProvision?}` | capability gating; `launchUrlsOnProvision: true` when game mints URLs |
 | Modes | `GET {apiBaseUrl}/api/v1/game-modes` | `seatTemplate` per mode (expanded by Lobby) |
 | Provision | `POST {apiBaseUrl}/api/v1/matches` body `{ lobbyId, lobby: { returnUrl, graphqlUrl, serviceToken? }, assignment: { ... } }` | S2S; `Authorization: Bearer` must match `serviceToken` when present; idempotent on `externalMatchId`. **Response:** `{ launchUrls?: { [lobbyUserId]: string }, launchUrlTemplate?: string, … }` — URL bases without JWT |
-| Link | game URL base from provision (or catalog `{playUrl}?match=&seat=` fallback) + Lobby attaches `token=<jwt>` | optional `seat`, `lobby_user` may already be in game URL |
+| Link | game URL base from provision + Lobby attaches `token=<jwt>` | optional `seat`, `lobby_user` may already be in game URL |
 | Claim | `POST {apiBaseUrl}/api/v1/matches/{externalMatchId}/claim` + `Authorization: Bearer <jwt>` | game uses the token's `seatKey` |
 | Play | WebSocket `GET /api/v1/ws` (or REST `POST /matches/:ref/move`) | game-internal transport |
 
@@ -171,11 +170,11 @@ Bake these into Lobby's model now so bigger games and a multi-instance game flee
 don't force a redesign later.
 
 ### Treat each game as a registered backend, not a URL
-**Do:** store `slug`, `playUrl`, `apiBaseUrl`, and a cached copy of the game's
+**Do:** store `slug`, **`apiBaseUrl`**, and a cached copy of the game's
 `/api/v1/game-modes` per catalog entry.
 
-**Why:** push goes to `apiBaseUrl`, players go to `playUrl`, and matchmaking needs
-the manifest. Modeling a game as `{playUrl, apiBaseUrl, modes}` is what lets you
+**Why:** push goes to `apiBaseUrl`, players go to URLs the game returns on provision, and matchmaking needs
+the manifest. Modeling a game as `{apiBaseUrl, modes}` is what lets you
 add a second/third game with zero protocol change — the only new data is another
 row.
 
@@ -236,14 +235,14 @@ capability negotiation later without breaking older games.
 
 ## Lobby implementer checklist
 
-1. Seed a catalog row: `slug`, `name`, `playUrl`, **`apiBaseUrl`**, status.
+1. Seed a catalog row: `slug`, `name`, **`apiBaseUrl`**, status.
 2. Cache the game's `/api/v1/game-modes`; drive matchmaking from it (no hardcoded
    counts).
 3. At match start: `POST /api/v1/matches` with the assignment. Handle `403` by
    re-matchmaking (don't surface it to the user).
 4. Expose `/.well-known/jwks.json`; mint a per-user seat JWT (`sub`, `matchId`,
    `seatKey`, `name`).
-5. On successful provision, read `launchUrls` (or expand `launchUrlTemplate`); attach JWT to each base URL. Fall back to `{playUrl}?match=&seat=` when the game omits launch URLs. Persist URL bases on session participants for refresh.
+5. On successful provision, read `launchUrls` (or expand `launchUrlTemplate`); attach JWT to each base URL. Persist URL bases on session participants for refresh.
 6. Add the **Play** button / intent banner that opens the final link from step 5.
-7. Before production: authenticate the push, confirm the game's WS fan-out is
-   fleet-safe, and set game `GAME_PLAY_URL` to match catalog `playUrl`.
+7. Before production: authenticate the push and confirm the game's WS fan-out is
+   fleet-safe. Reference games set `GAME_PLAY_URL` to their browser origin for minted links.

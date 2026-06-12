@@ -21,18 +21,16 @@ Payload JSON (`internal/pubsub/events.go`):
 | Variable | Purpose |
 |----------|---------|
 | `REDIS_URL` | e.g. `redis://127.0.0.1:6379/0` — omit to use in-memory broker (single process only) |
-| `GAME_CLIENT_BASE_URL` | Fallback browser `play_url` when a game row has no `play_url` |
 | `LOBBY_GAME_TOKEN_PEPPER` | HMAC key for per-game `lobby.serviceToken` (`v1.{gameId}.{sig}`) on provision and `registerGame` |
 | `MAGIC_LINK_PEPPER` | Optional pepper for hashed magic-link tokens at rest (recommended in production) |
 | `LOBBY_GAME_SERVICE_TOKEN` | Dev-only global Bearer fallback when pepper is unset |
 | `LOBBY_ISSUER_URL` | Canonical issuer URL for seat JWT `iss` and provision `lobbyId` (falls back to `LOBBY_PUBLIC_URL`, then `http://localhost:8080`) |
 
-Match launch URLs use the protocol in [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md):
-`{playUrl}?match=<sessionId>&token=<seat-jwt>`.
+Match launch URLs use the protocol in [`lobby-protocol-handoff.md`](./lobby-protocol-handoff.md) and [`game-minted-launch-urls.md`](./game-minted-launch-urls.md): games return URL bases on provision; Lobby attaches the seat JWT (`token` query param).
 
 **Provision ownership:** only the forming worker (and table `startTable`) call `POST /api/v1/matches`. GraphQL queries/subscriptions read stored launch URL bases — they never trigger provision. On transient game-server errors the worker retries with backoff (100ms → 500ms → 2s → 5s → 15s → 30s) without rolling back the matched session.
 
-Local `./scripts/dev.sh` starts Postgres and Redis via Docker and sets both variables.
+Local `./scripts/dev.sh` starts Postgres and Redis via Docker and sets `REDIS_URL`.
 
 ## Debugging queue delivery
 

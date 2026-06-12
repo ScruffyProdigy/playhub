@@ -14,7 +14,7 @@ JoinQuest is a gaming platform for web developers who want to ship a multiplayer
 | Seat manifest (`seatTemplate`) | Seat map assignment + provision push + JWT `seatKey` |
 | Accept or reject rosters | Player traffic and (roadmap) shop / entitlements |
 
-**Integration docs:** [Developer self-service (planned)](docs/developer-self-service.md) · [Lobby ↔ game handoff](docs/lobby-protocol-handoff.md) · [Game catalog](docs/game-catalog-architecture.md) · [Seat templates & LFG](docs/seat-templates-and-matchmaking.md)
+**Integration docs:** [Developer self-service](docs/developer-self-service.md) · [Lobby ↔ game handoff](docs/lobby-protocol-handoff.md) · [Game catalog](docs/game-catalog-architecture.md) · [Seat templates & LFG](docs/seat-templates-and-matchmaking.md)
 
 **Making a game?** Register and integrate on your timeline — public listing is reviewed when you're ready. See [developer self-service](docs/developer-self-service.md).
 
@@ -36,10 +36,11 @@ Browse the catalog, sign in, join mode queues, and launch into registered third-
 - **Database Integration**: PostgreSQL setup with connection management
 - **Database Migrations**: Complete migration system with CLI and programmatic support
 - **Linting & Code Quality**: ESLint configuration with proper test environment setup
+- **Developer self-service (Phase A)**: Register games, dashboard, private testing, integration checklist — see [developer-self-service](docs/developer-self-service.md)
 
 ### 🚧 In Development
 - **Digital trading**: Player-facing purchase and trade flows
-- **Seat-template LFG**: Party-aware matchmaking (see [spec](docs/seat-templates-and-matchmaking.md))
+- **Developer self-service Phase B**: Provision/JWT checks, public release review, MCP
 
 ### 📋 Planned
 - **Payment Processing**: Integration with payment providers

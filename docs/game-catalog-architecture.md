@@ -15,7 +15,7 @@ Game
               └── composition: one bucket per `queuePath` (DPS, Tank, …)
 ```
 
-- **Game** — `slug`, `play_url`, `api_base_url`, sync metadata.
+- **Game** — `slug`, `api_base_url`, sync metadata.
 - **GameMode** — one way to play; identified by `mode_key` sent on provision.
   A two-player mode is a mode with two seats, not a special “duel” type.
 - **Queue** — matchmaking bucket scoped to `queue_id` (fifo default or role-specific).
@@ -117,8 +117,8 @@ Query: `gameBySlug(slug: String!)` on the GraphQL API.
 
 ## URLs
 
-- **`play_url` and `api_base_url` live on the game** (shared across modes) until a title needs per-mode URLs. `play_url` validates game-minted launch URL hosts and serves as the catalog fallback when provision omits `launchUrls`.
 - **`api_base_url`**: Game API **origin** only (e.g. `http://localhost:3001`, `https://rpsls-duel.win`) — same value as JWT `aud`. Lobby posts to `{api_base_url}/api/v1/matches`. Do not include the `/api` ingress prefix here.
+- **Launch URLs**: Returned on provision (`launchUrls` or `launchUrlTemplate`); Lobby attaches the seat JWT. There is no catalog `play_url` column.
 
 ## Provision
 
