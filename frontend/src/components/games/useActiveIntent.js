@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { fetchMyActiveIntent, leaveActiveGame, resolveIntentLaunchUrl } from '../../lib/intent'
-import { fetchMyQueueStatus, leaveQueue, prefetchSubscriptionAuth, subscribeToQueue } from '../../lib/queue'
+import {
+  fetchMyQueueStatus,
+  leaveQueue,
+  onQueueWsConnectionChange,
+  prefetchSubscriptionAuth,
+  subscribeToQueue,
+} from '../../lib/queue'
 import { subscribeToMyTableSeat, TABLE_UPDATED_EVENT, fetchMyTableSeat } from '../../lib/tables'
 import { lobbyDebug } from '../../lib/lobbyDebug'
+import { onTabVisible } from '../../lib/tabVisibility'
 import { useActiveTableSeat } from './useActiveTableSeat'
 
 function mergeMatchedJoinUrl(intent, joinUrl) {
@@ -18,6 +25,7 @@ export function useActiveIntent() {
   const [activeIntent, setActiveIntent] = useState(null)
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [queueWsConnected, setQueueWsConnected] = useState(false)
   const queueUnsubRef = useRef(null)
   const seatUnsubRef = useRef(null)
   const joinGraceUntilRef = useRef(0)
@@ -114,6 +122,16 @@ export function useActiveIntent() {
     window.addEventListener(TABLE_UPDATED_EVENT, handler)
     return () => window.removeEventListener(TABLE_UPDATED_EVENT, handler)
   }, [refresh])
+
+  useEffect(() => {
+    return onTabVisible(() => {
+      void refresh('visibility')
+    })
+  }, [refresh])
+
+  useEffect(() => {
+    return onQueueWsConnectionChange(setQueueWsConnected)
+  }, [])
 
   useEffect(() => {
     queueUnsubRef.current?.()
@@ -326,6 +344,7 @@ export function useActiveIntent() {
     activeTableSeat,
     loading: loading || tableLoading,
     busy: busy || tableBusy,
+    queueWsConnected,
     refresh,
     notifyQueueJoined,
     handleLeave,

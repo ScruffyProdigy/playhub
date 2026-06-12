@@ -34,7 +34,12 @@ const activeMode = {
 
 const catalogGame = {
   id: 'game-1',
-  name: 'Rock Paper Scissors Lizard Spock',
+  slug: 'rock-paper-scissors-lizard-robot',
+  name: 'Rock Paper Scissors Lizard Robot',
+  iconUrl: '/games/rpslr-icon.png',
+  heroUrl: '/games/rpslr-hero.jpg',
+  shortDescription: 'Best-of-five duel with move cooldown.',
+  tags: ['competitive', '1v1'],
   activeSessions: [{ id: 'session-1' }],
   modes: [activeMode],
 }
@@ -64,13 +69,36 @@ describe('GameListItem', () => {
     vi.mocked(queue.fetchMyQueueStatus).mockResolvedValue({ queued: false })
   })
 
-  it('shows the game name and session count', () => {
-    renderItem()
+  it('shows the game name and catalog details', () => {
+    const { container } = renderItem()
 
-    expect(screen.getByRole('heading', { name: 'Rock Paper Scissors Lizard Spock' })).toBeInTheDocument()
-    expect(screen.getByText('1 active session')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Rock Paper Scissors Lizard Robot' })).toBeInTheDocument()
+    expect(screen.getByText('Best-of-five duel with move cooldown.')).toBeInTheDocument()
+    expect(screen.getByText('competitive')).toBeInTheDocument()
+    expect(container.querySelector('.game-list-item__hero')).toHaveAttribute(
+      'src',
+      '/games/rpslr-hero.jpg?v=1',
+    )
+    expect(screen.getByRole('link', { name: 'Rock Paper Scissors Lizard Robot' })).toHaveAttribute(
+      'href',
+      '/games/rock-paper-scissors-lizard-robot',
+    )
     expect(screen.getByRole('button', { name: 'Look for group' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create private game' })).toBeInTheDocument()
+  })
+
+  it('uses catalogHeroUrl on the card when set', () => {
+    const { container } = renderItem({
+      game: {
+        ...catalogGame,
+        catalogHeroUrl: '/games/rpslr-catalog-hero.png',
+      },
+    })
+
+    expect(container.querySelector('.game-list-item__hero')).toHaveAttribute(
+      'src',
+      '/games/rpslr-catalog-hero.png?v=1',
+    )
   })
 
   it('shows launch when the subscription reports a match', async () => {
@@ -170,7 +198,7 @@ describe('GameListItem', () => {
     renderItem({
       activeIntent: {
         queueId: 'queue-1',
-        gameName: 'Rock Paper Scissors Lizard Spock',
+        gameName: 'Rock Paper Scissors Lizard Robot',
         status: 'WAITING',
         queuedCount: 1,
       },
@@ -187,6 +215,8 @@ describe('GameListItem', () => {
     const wordHuntGame = {
       id: 'game-wh',
       name: 'Word Hunt',
+      iconUrl: '/games/word-hunt-icon.png',
+      heroUrl: '/games/word-hunt-hero.jpg',
       activeSessions: [],
       modes: [
         {

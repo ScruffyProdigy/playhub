@@ -57,6 +57,30 @@ const QUEUE_UPDATED_SUBSCRIPTION = `
 let cachedSubscriptionAuth = null
 let subscriptionAuthPromise = null
 let wsClient = null
+let queueWsConnected = false
+const queueWsConnectionListeners = new Set()
+
+function notifyQueueWsConnection(connected) {
+  if (queueWsConnected === connected) {
+    return
+  }
+  queueWsConnected = connected
+  queueWsConnectionListeners.forEach((listener) => {
+    listener(connected)
+  })
+}
+
+/** True when the queue subscription WebSocket is connected. */
+export function isQueueWsConnected() {
+  return queueWsConnected
+}
+
+/** Subscribe to queue WebSocket connect/disconnect (for live-update UX). */
+export function onQueueWsConnectionChange(listener) {
+  queueWsConnectionListeners.add(listener)
+  listener(queueWsConnected)
+  return () => queueWsConnectionListeners.delete(listener)
+}
 
 async function loadSubscriptionAuth() {
   if (cachedSubscriptionAuth) {
@@ -92,18 +116,37 @@ function getSubscriptionConnectionParams() {
 }
 
 function wsClientLifecycleHandlers() {
+  const handlers = {
+    connecting: () => notifyQueueWsConnection(false),
+    connected: () => notifyQueueWsConnection(true),
+    closed: () => notifyQueueWsConnection(false),
+    error: () => notifyQueueWsConnection(false),
+  }
   if (!isLobbyDebugEnabled()) {
-    return {}
+    return handlers
   }
   return {
-    connecting: () => lobbyDebug('queue:ws:connecting', { url: getGraphQLWsUrl() }),
-    connected: () => lobbyDebug('queue:ws:connected', { url: getGraphQLWsUrl() }),
-    closed: (event) => lobbyDebug('queue:ws:closed', {
-      url: getGraphQLWsUrl(),
-      code: event?.code,
-      reason: event?.reason,
-    }),
-    error: (error) => lobbyDebug('queue:ws:error', { url: getGraphQLWsUrl(), error: String(error) }),
+    ...handlers,
+    connecting: () => {
+      notifyQueueWsConnection(false)
+      lobbyDebug('queue:ws:connecting', { url: getGraphQLWsUrl() })
+    },
+    connected: () => {
+      notifyQueueWsConnection(true)
+      lobbyDebug('queue:ws:connected', { url: getGraphQLWsUrl() })
+    },
+    closed: (event) => {
+      notifyQueueWsConnection(false)
+      lobbyDebug('queue:ws:closed', {
+        url: getGraphQLWsUrl(),
+        code: event?.code,
+        reason: event?.reason,
+      })
+    },
+    error: (error) => {
+      notifyQueueWsConnection(false)
+      lobbyDebug('queue:ws:error', { url: getGraphQLWsUrl(), error: String(error) })
+    },
   }
 }
 
@@ -126,6 +169,7 @@ function getWsClient() {
 export function clearSubscriptionAuthCache() {
   cachedSubscriptionAuth = null
   subscriptionAuthPromise = null
+  notifyQueueWsConnection(false)
   if (wsClient) {
     wsClient.dispose()
     wsClient = null

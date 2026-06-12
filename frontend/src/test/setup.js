@@ -49,7 +49,11 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 export const mockDemoGames = [
   {
     id: 'game-1',
-    name: 'Rock Paper Scissors Lizard Spock',
+    name: 'Rock Paper Scissors Lizard Robot',
+    iconUrl: '/games/rpslr-icon.png',
+    heroUrl: '/games/rpslr-hero.jpg',
+    shortDescription: 'Best-of-five duel with move cooldown.',
+    tags: ['competitive', '1v1'],
     createdAt: '2026-01-01T00:00:00Z',
     activeSessions: [{ id: 'session-1' }],
     modes: [

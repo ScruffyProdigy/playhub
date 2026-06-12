@@ -215,7 +215,7 @@ describe('TableCard', () => {
   it('uses a single Sit button for fifo duel seats', () => {
     const table = {
       id: 'table-1',
-      game: { name: 'Rock Paper Scissors Lizard Spock' },
+      game: { name: 'Rock Paper Scissors Lizard Robot' },
       mode: { displayName: '1v1 Duel (best 3 of 5)' },
       seats: [],
       seatSlots: [
@@ -231,6 +231,33 @@ describe('TableCard', () => {
 
     expect(screen.getByRole('heading', { name: 'Players' })).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Sit' })).toHaveLength(1)
+  })
+
+  it('shows catalog icon, blurb, and tags to help unfamiliar players', () => {
+    const table = {
+      id: 'table-1',
+      game: {
+        name: 'Word Hunt',
+        iconUrl: '/games/word-hunt-icon.png',
+        shortDescription: 'Everyone competes on a shared word grid.',
+        tags: ['party', 'competitive', 'words'],
+      },
+      mode: { displayName: 'Party' },
+      seats: [],
+      seatSlots: [],
+      lookForGroupOptions: [],
+    }
+
+    const { container } = render(
+      <TableCard table={table} busy={false} onSit={() => {}} onLeave={() => {}} onStart={() => {}} onDiscard={() => {}} />,
+    )
+
+    expect(container.querySelector('.table-card__icon')).toHaveAttribute(
+      'src',
+      '/games/word-hunt-icon.png?v=1',
+    )
+    expect(screen.getByText('Everyone competes on a shared word grid.')).toBeInTheDocument()
+    expect(screen.getByText('competitive')).toBeInTheDocument()
   })
 
   it('shows forming gaps when the table still needs lobby players', () => {

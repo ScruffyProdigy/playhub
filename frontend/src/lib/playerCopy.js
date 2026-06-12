@@ -68,6 +68,10 @@ export function bannerIntentWaitingHint() {
   return 'We will notify you here when your group is ready.'
 }
 
+export function bannerLiveUpdatesPausedHint() {
+  return 'Live updates paused — refreshing every few seconds.'
+}
+
 export const CREATE_PRIVATE_GAME = 'Create private game'
 export const START_GAME = 'Start now'
 export const DISCARD = 'Discard'

@@ -8,15 +8,17 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 func scanGame(row interface{ Scan(dest ...any) error }) (*Game, error) {
 	var g Game
-	var description, slug, playURL, apiBaseURL sql.NullString
+	var description, iconURL, heroURL, catalogHeroURL, shortDescription, howToPlay, tutorialURL, slug, playURL, apiBaseURL sql.NullString
 	var manifestHash, manifestETag, gameVersion, webhookSecret sql.NullString
 	var manifestSyncedAt sql.NullTime
+	var tags, screenshots pq.StringArray
 	if err := row.Scan(
-		&g.ID, &g.Name, &description, &slug, &playURL, &apiBaseURL,
+		&g.ID, &g.Name, &description, &iconURL, &heroURL, &catalogHeroURL, &shortDescription, &howToPlay, &tutorialURL, &screenshots, &tags, &slug, &playURL, &apiBaseURL,
 		&g.Status,
 		&manifestHash, &manifestETag, &manifestSyncedAt, &gameVersion, &webhookSecret,
 		&g.CreatedAt,
@@ -28,6 +30,30 @@ func scanGame(row interface{ Scan(dest ...any) error }) (*Game, error) {
 	}
 	if description.Valid {
 		g.Description = &description.String
+	}
+	if iconURL.Valid {
+		g.IconURL = iconURL.String
+	}
+	if heroURL.Valid {
+		g.HeroURL = heroURL.String
+	}
+	if catalogHeroURL.Valid {
+		g.CatalogHeroURL = &catalogHeroURL.String
+	}
+	if shortDescription.Valid {
+		g.ShortDescription = &shortDescription.String
+	}
+	if howToPlay.Valid {
+		g.HowToPlay = &howToPlay.String
+	}
+	if tutorialURL.Valid {
+		g.TutorialURL = &tutorialURL.String
+	}
+	if len(screenshots) > 0 {
+		g.Screenshots = []string(screenshots)
+	}
+	if len(tags) > 0 {
+		g.Tags = []string(tags)
 	}
 	if slug.Valid {
 		g.Slug = &slug.String
@@ -56,7 +82,43 @@ func scanGame(row interface{ Scan(dest ...any) error }) (*Game, error) {
 	return &g, nil
 }
 
-const gameColumns = `id, name, description, slug, play_url, api_base_url, status,
+// DefaultGameIconURL returns the catalog icon path for a game slug.
+func DefaultGameIconURL(slug string) string {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return "/games/default.svg"
+	}
+	if icon, ok := slugIconOverrides[slug]; ok {
+		return icon
+	}
+	return "/games/" + slug + ".svg"
+}
+
+var slugIconOverrides = map[string]string{
+	"rock-paper-scissors-lizard-robot": "/games/rpslr-icon.png",
+	"rock-paper-scissors-lizard-spock": "/games/rpslr-icon.png", // legacy slug
+	"word-hunt":                        "/games/word-hunt-icon.png",
+}
+
+// DefaultGameHeroURL returns the catalog hero banner path for a game slug.
+func DefaultGameHeroURL(slug string) string {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return "/games/default-hero.svg"
+	}
+	if hero, ok := slugHeroOverrides[slug]; ok {
+		return hero
+	}
+	return "/games/" + slug + "-hero.svg"
+}
+
+var slugHeroOverrides = map[string]string{
+	"rock-paper-scissors-lizard-robot": "/games/rpslr-hero.jpg",
+	"rock-paper-scissors-lizard-spock": "/games/rpslr-hero.jpg", // legacy slug
+	"word-hunt":                        "/games/word-hunt-hero.jpg",
+}
+
+const gameColumns = `id, name, description, icon_url, hero_url, catalog_hero_url, short_description, how_to_play, tutorial_url, screenshots, tags, slug, play_url, api_base_url, status,
 	manifest_hash, manifest_etag, manifest_synced_at, game_version, webhook_secret, created_at`
 
 func (s *Store) ListGames(ctx context.Context, limit, offset int) ([]Game, error) {
@@ -119,9 +181,9 @@ func (s *Store) InsertTestGame(ctx context.Context, name string) (*Game, error) 
 	}
 
 	row := s.db.QueryRowContext(ctx, `
-		INSERT INTO games (name)
-		VALUES ($1)
+		INSERT INTO games (name, icon_url, hero_url)
+		VALUES ($1, $2, $3)
 		RETURNING `+gameColumns+`
-	`, name)
+	`, name, DefaultGameIconURL(""), DefaultGameHeroURL(""))
 	return scanGame(row)
 }

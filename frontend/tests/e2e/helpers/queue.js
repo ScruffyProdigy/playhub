@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test'
 
-const RPS_GAME_NAME = 'Rock Paper Scissors Lizard Spock'
+const RPS_GAME_NAME = 'Rock Paper Scissors Lizard Robot'
 
 function rpsGameRow(page) {
   return page.locator('li.game-list-item').filter({

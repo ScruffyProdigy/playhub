@@ -6,6 +6,7 @@ import {
   bannerIntentPlayingHint,
   bannerIntentLaunchPendingHint,
   bannerIntentWaitingHint,
+  bannerLiveUpdatesPausedHint,
   bannerTableBackfillHint,
   bannerTableSeatHint,
   bannerTableSeatLine,
@@ -19,7 +20,7 @@ import {
   resolveIntentLaunchUrl,
 } from '../../lib/intent'
 
-export default function IntentBanner({ activeIntent, activeTableSeat, busy, onLeave }) {
+export default function IntentBanner({ activeIntent, activeTableSeat, busy, liveUpdatesConnected = true, onLeave }) {
   if (hasWaitingIntent(activeIntent)) {
     return (
       <aside className="intent-banner" role="region" aria-live="polite" aria-label="Your intent">
@@ -32,7 +33,9 @@ export default function IntentBanner({ activeIntent, activeTableSeat, busy, onLe
               activeIntent.formingGaps,
             )}
           </p>
-          <p className="intent-banner__hint">{bannerIntentWaitingHint()}</p>
+          <p className="intent-banner__hint">
+            {liveUpdatesConnected ? bannerIntentWaitingHint() : bannerLiveUpdatesPausedHint()}
+          </p>
         </div>
         <div className="intent-banner__actions">
           <button type="button" className="game-list-button" onClick={onLeave} disabled={busy}>

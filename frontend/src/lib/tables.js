@@ -14,6 +14,9 @@ export const TABLE_FIELDS = `
   game {
     id
     name
+    iconUrl
+    shortDescription
+    tags
   }
   mode {
     id

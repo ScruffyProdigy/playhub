@@ -49,6 +49,46 @@ func ToGraphQLGame(game *store.Game) *model.Game {
 		ID:        game.ID.String(),
 		Name:      game.Name,
 		CreatedAt: game.CreatedAt,
+		IconURL:   game.IconURL,
+		HeroURL:   game.HeroURL,
+		Tags:      game.Tags,
+	}
+	if result.IconURL == "" {
+		if game.Slug != nil {
+			result.IconURL = store.DefaultGameIconURL(*game.Slug)
+		} else {
+			result.IconURL = store.DefaultGameIconURL("")
+		}
+	}
+	if result.HeroURL == "" {
+		if game.Slug != nil {
+			result.HeroURL = store.DefaultGameHeroURL(*game.Slug)
+		} else {
+			result.HeroURL = store.DefaultGameHeroURL("")
+		}
+	}
+	if result.Tags == nil {
+		result.Tags = []string{}
+	}
+	if game.Screenshots != nil {
+		result.Screenshots = game.Screenshots
+	} else {
+		result.Screenshots = []string{}
+	}
+	if game.Description != nil {
+		result.LongDescription = game.Description
+	}
+	if game.CatalogHeroURL != nil {
+		result.CatalogHeroURL = game.CatalogHeroURL
+	}
+	if game.HowToPlay != nil {
+		result.HowToPlay = game.HowToPlay
+	}
+	if game.TutorialURL != nil {
+		result.TutorialURL = game.TutorialURL
+	}
+	if game.ShortDescription != nil {
+		result.ShortDescription = game.ShortDescription
 	}
 	if game.Slug != nil {
 		result.Slug = game.Slug

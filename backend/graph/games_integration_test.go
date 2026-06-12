@@ -73,7 +73,7 @@ func TestGamesGraphQLListsCatalogGames(t *testing.T) {
 	for _, game := range resp.Games {
 		names[game.Name] = true
 	}
-	if !names["Rock Paper Scissors Lizard Spock"] {
+	if !names["Rock Paper Scissors Lizard Robot"] {
 		t.Fatalf("expected RPS catalog game in results, got %+v", resp.Games)
 	}
 	if names["Party Lobby"] {
@@ -105,8 +105,8 @@ func TestGameGraphQLReturnsDemoGameByID(t *testing.T) {
 		t.Fatalf("game query failed: %v", err)
 	}
 
-	if resp.Game.Name != "Rock Paper Scissors Lizard Spock" {
-		t.Fatalf("expected Rock Paper Scissors Lizard Spock, got %q", resp.Game.Name)
+	if resp.Game.Name != "Rock Paper Scissors Lizard Robot" {
+		t.Fatalf("expected Rock Paper Scissors Lizard Robot, got %q", resp.Game.Name)
 	}
 }
 

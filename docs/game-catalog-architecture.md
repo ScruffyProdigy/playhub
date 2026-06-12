@@ -42,6 +42,50 @@ from catalog. **`startTableBackfill`** + gap visibility on `TableCard`.
 already on the map. Games still receive final `seatKey` assignments only. See
 [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md).
 
+## Catalog card artwork
+
+Each game registered in the catalog must supply **`iconUrl`** and **`heroUrl`** (see `RegisterGameInput`). These are separate assets with different aspect ratios and placements.
+
+| Field | Aspect ratio | Where it appears |
+|-------|----------------|------------------|
+| **`heroUrl`** | **16∶9** on the dedicated game page; **5∶2** on the catalog card when no `catalogHeroUrl` | Detail page hero banner; catalog card fallback |
+| **`catalogHeroUrl`** | **5∶2** (optional) | Catalog card banner when set; otherwise `heroUrl` is used |
+| **`iconUrl`** | **1∶1** (square) | Small thumbnail on room **table cards** (not on the catalog hero) |
+
+### Dedicated game page (`/games/:slug`)
+
+Each catalog game with a `slug` has a shareable detail page. From the catalog, the **hero image** and **game title** link to this page.
+
+- **Hero:** **`heroUrl`** in a **16∶9** slot (`aspect-ratio: 16/9`, `object-fit: cover`). Recommended exports: 960×540, 1280×720, 1920×1080.
+- **Description:** **`longDescription`** (GraphQL; stored in `games.description`) when present, otherwise **`shortDescription`**.
+- **Optional sections:** **`howToPlay`**, **`tutorialUrl`** (external link), **`screenshots`** (image URL array).
+- **Play:** signed-in users get the same mode/queue actions as on the catalog card (no section heading on the detail page).
+- **Navigation:** hero and title link from the catalog; **Back** restores catalog scroll position; **Share** copies or opens the page URL.
+
+Query: `gameBySlug(slug: String!)` on the GraphQL API.
+
+### Hero banner (`heroUrl` / `catalogHeroUrl`)
+
+- **Catalog aspect ratio:** **5∶2** — e.g. 400×160, 1000×400, 1200×480, 1600×640.
+- **Detail page aspect ratio:** **16∶9** — e.g. 960×540, 1280×720.
+- **Layout:** The catalog card reserves a **5∶2** slot (`aspect-ratio: 5/2` in CSS) and renders the image with **`object-fit: cover`**. The detail page uses **16∶9**. Artwork is cropped to fill the slot; important content should stay in a safe center band.
+- **Formats:** JPEG, PNG, WebP, or SVG. Production demo games use **JPEG** heroes (e.g. `/games/word-hunt-hero.jpg`).
+- **Hosting:** Static path under Lobby’s `/games/` prefix or any HTTPS URL. Assets in `frontend/public/games/` are whitelisted in `.gitignore` and served by the frontend nginx (see `frontend/nginx.conf`). Game artwork URLs get a `?v=` cache-bust query param in the frontend (`GAME_ARTWORK_VERSION` in `gameCard.js`).
+- **Reference assets:** Placeholder SVGs use a **400×160** viewBox (`word-hunt-hero.svg`, `default-hero.svg`, etc.); shipped heroes are full-color JPEGs in the same directory.
+
+### Icon (`iconUrl`)
+
+- **Aspect ratio:** **1∶1** (square).
+- **Layout:** Shown at **64×64** on room table cards with **`object-fit: cover`**.
+- **Recommended export:** **256×256** or **512×512** PNG (or SVG).
+
+### Other catalog copy
+
+- **`shortDescription`** — one-line blurb under the hero on the catalog card.
+- **`longDescription`** — full blurb on the dedicated game page (falls back to `shortDescription`).
+- **`howToPlay`**, **`tutorialUrl`**, **`screenshots`** — optional detail-page content.
+- **`tags`** — up to three tag chips shown on the card (see `gameTagChips` in the frontend).
+
 ## Admin registration
 
 - Admin calls `registerGame` (email allowlist via `LOBBY_ADMIN_EMAILS`).

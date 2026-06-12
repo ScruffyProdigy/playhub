@@ -39,6 +39,14 @@ func (s *Store) RegisterGame(ctx context.Context, params RegisterGameParams, man
 	if playURL == "" || apiBaseURL == "" {
 		return nil, fmt.Errorf("store: playUrl and apiBaseUrl are required")
 	}
+	iconURL := strings.TrimSpace(params.IconURL)
+	if iconURL == "" {
+		return nil, fmt.Errorf("store: iconUrl is required")
+	}
+	heroURL := strings.TrimSpace(params.HeroURL)
+	if heroURL == "" {
+		return nil, fmt.Errorf("store: heroUrl is required")
+	}
 
 	name := strings.TrimSpace(params.Name)
 	if name == "" {
@@ -60,10 +68,10 @@ func (s *Store) RegisterGame(ctx context.Context, params RegisterGameParams, man
 	defer tx.Rollback()
 
 	row := tx.QueryRowContext(ctx, `
-		INSERT INTO games (name, description, slug, play_url, api_base_url, category, status, webhook_secret)
-		VALUES ($1, $2, $3, $4, $5, 'catalog', 'active', $6)
+		INSERT INTO games (name, description, icon_url, hero_url, slug, play_url, api_base_url, category, status, webhook_secret)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 'catalog', 'active', $8)
 		RETURNING `+gameColumns+`
-	`, name, params.Description, slug, playURL, apiBaseURL, secret)
+	`, name, params.Description, iconURL, heroURL, slug, playURL, apiBaseURL, secret)
 	game, err := scanGame(row)
 	if err != nil {
 		if isUniqueViolation(err) {

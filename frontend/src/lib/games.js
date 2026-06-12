@@ -1,37 +1,66 @@
 import { graphqlRequest } from './graphql'
 
-const GAMES_QUERY = `
-  query Games {
-    games {
+const GAME_MODE_FIELDS = `
+  modes {
+    id
+    modeKey
+    displayName
+    status
+    queuePaths {
+      queuePath
+      displayName
+      playersToStart
+    }
+    seats {
+      queuePath
+    }
+    queues {
       id
       name
-      createdAt
-      activeSessions {
-        id
-      }
-      modes {
-        id
-        modeKey
-        displayName
-        status
-        queuePaths {
-          queuePath
-          displayName
-          playersToStart
-        }
-        seats {
-          queuePath
-        }
-        queues {
-          id
-          name
-          playersToStart
-          status
-        }
-      }
+      playersToStart
+      status
     }
   }
 `
+
+const GAME_CARD_FIELDS = `
+  id
+  slug
+  name
+  iconUrl
+  heroUrl
+  catalogHeroUrl
+  shortDescription
+  longDescription
+  howToPlay
+  tutorialUrl
+  screenshots
+  tags
+  createdAt
+  ${GAME_MODE_FIELDS}
+`
+
+const GAMES_QUERY = `
+  query Games {
+    games {
+      ${GAME_CARD_FIELDS}
+    }
+  }
+`
+
+const GAME_BY_SLUG_QUERY = `
+  query GameBySlug($slug: String!) {
+    gameBySlug(slug: $slug) {
+      ${GAME_CARD_FIELDS}
+    }
+  }
+`
+
+/** Parse /games/:slug from a pathname. */
+export function parseGameSlug(pathname) {
+  const match = String(pathname || '').match(/^\/games\/([^/]+)\/?$/)
+  return match?.[1] ? decodeURIComponent(match[1]) : null
+}
 
 /** Pick the first active queue for a game (typically the default queue). */
 export function defaultQueueForGame(game) {
@@ -99,4 +128,13 @@ export function joinGroupOptionsForGame(game) {
 export async function fetchGames() {
   const data = await graphqlRequest(GAMES_QUERY)
   return data.games ?? []
+}
+
+export async function fetchGameBySlug(slug) {
+  const trimmed = String(slug || '').trim()
+  if (!trimmed) {
+    return null
+  }
+  const data = await graphqlRequest(GAME_BY_SLUG_QUERY, { slug: trimmed })
+  return data.gameBySlug ?? null
 }

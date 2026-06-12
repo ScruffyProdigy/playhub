@@ -234,6 +234,32 @@ func (r *queryResolver) Game(ctx context.Context, id string) (*model.Game, error
 	return ToGraphQLGame(game), nil
 }
 
+// GameBySlug is the resolver for the gameBySlug field.
+func (r *queryResolver) GameBySlug(ctx context.Context, slug string) (*model.Game, error) {
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return nil, fmt.Errorf("slug is required")
+	}
+
+	game, err := st.GetGameBySlug(ctx, slug)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if game.Status != store.ModeStatusActive {
+		return nil, nil
+	}
+
+	return ToGraphQLGame(game), nil
+}
+
 // Session is the resolver for the session field.
 func (r *queryResolver) Session(ctx context.Context, id string) (*model.Session, error) {
 	st, err := r.requireStore()

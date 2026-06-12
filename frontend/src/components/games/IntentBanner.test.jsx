@@ -26,7 +26,26 @@ describe('IntentBanner', () => {
       />,
     )
     expect(screen.getByText(/Looking for a group in Demo Game/)).toBeInTheDocument()
+    expect(screen.getByText('We will notify you here when your group is ready.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Stop looking' })).toBeInTheDocument()
+  })
+
+  it('shows paused live updates hint while waiting without websocket', () => {
+    render(
+      <IntentBanner
+        activeIntent={{
+          queueId: 'q1',
+          gameName: 'Demo Game',
+          status: 'WAITING',
+          queuedCount: 3,
+        }}
+        activeTableSeat={null}
+        busy={false}
+        liveUpdatesConnected={false}
+        onLeave={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('Live updates paused — refreshing every few seconds.')).toBeInTheDocument()
   })
 
   it('shows which cohort the player joined in composition games', () => {

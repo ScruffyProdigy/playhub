@@ -3,6 +3,7 @@ import ReturnPage from './components/auth/ReturnPage'
 import AuthPanel from './components/auth/AuthPanel'
 import IntentBanner from './components/games/IntentBanner'
 import GameLobby from './components/games/GameLobby'
+import GameDetailPage from './components/games/GameDetailPage'
 import CreateRoomPanel from './components/rooms/CreateRoomPanel'
 import { ActiveRoomProvider, useActiveRoom } from './components/rooms/ActiveRoomProvider'
 import AppDock from './components/rooms/AppDock'
@@ -12,14 +13,22 @@ import { AuthProvider, useAuth } from './components/auth/AuthProvider'
 import { useActiveIntent } from './components/games/useActiveIntent'
 import { APP_NAME, APP_TAGLINE } from './lib/brand'
 import { parseRoomInviteCode } from './lib/rooms'
+import { parseGameSlug } from './lib/games'
 import { MOBILE_ROOM_QUERY, useMediaQuery } from './lib/useMediaQuery'
 import { usePathname } from './lib/usePathname'
+import { restoreCatalogScrollIfPending } from './lib/catalogNavigation'
 import { useEffect } from 'react'
 import './App.css'
 
 function CatalogPage() {
   const { user, loading: authLoading } = useAuth()
-  const { activeIntent, activeTableSeat, busy, refresh, notifyQueueJoined, handleLeave } = useActiveIntent()
+  const { activeIntent, activeTableSeat, busy, queueWsConnected, refresh, notifyQueueJoined, handleLeave } =
+    useActiveIntent()
+  const liveUpdatesConnected = !activeIntent?.queueId || activeIntent.status !== 'WAITING' || queueWsConnected
+
+  useEffect(() => {
+    restoreCatalogScrollIfPending()
+  }, [])
 
   return (
     <main className="app-shell app-shell--catalog">
@@ -28,6 +37,7 @@ function CatalogPage() {
           activeIntent={activeIntent}
           activeTableSeat={activeTableSeat}
           busy={busy}
+          liveUpdatesConnected={liveUpdatesConnected}
           onLeave={handleLeave}
         />
       ) : null}
@@ -50,11 +60,41 @@ function CatalogPage() {
   )
 }
 
+function GameDetailShell({ slug }) {
+  const { user, loading: authLoading } = useAuth()
+  const { activeIntent, activeTableSeat, busy, queueWsConnected, refresh, notifyQueueJoined, handleLeave } =
+    useActiveIntent()
+  const liveUpdatesConnected = !activeIntent?.queueId || activeIntent.status !== 'WAITING' || queueWsConnected
+
+  return (
+    <>
+      {!authLoading && user ? (
+        <IntentBanner
+          activeIntent={activeIntent}
+          activeTableSeat={activeTableSeat}
+          busy={busy}
+          liveUpdatesConnected={liveUpdatesConnected}
+          onLeave={handleLeave}
+        />
+      ) : null}
+      <GameDetailPage
+        slug={slug}
+        activeIntent={activeIntent}
+        activeTableSeat={activeTableSeat}
+        onQueueChange={refresh}
+        onQueueJoined={notifyQueueJoined}
+        onTableChange={refresh}
+      />
+    </>
+  )
+}
+
 function MainLayout() {
   const pathname = usePathname()
   const inviteCode = parseRoomInviteCode(pathname)
+  const gameSlug = parseGameSlug(pathname)
   const { user } = useAuth()
-  const { room, roomOpen, dismissRoom, openRoom, unreadCount, hasRoomMembership, markRead } = useActiveRoom()
+  const { room, roomOpen, dismissRoom, openRoom, unreadCount, hasRoomMembership } = useActiveRoom()
   const isMobile = useMediaQuery(MOBILE_ROOM_QUERY)
   const inRoomContext = Boolean(room || inviteCode || hasRoomMembership)
   // Desktop keeps the room panel visible whenever the user belongs to a room; mobile toggles via dock/sheet.
@@ -63,25 +103,20 @@ function MainLayout() {
   const showDock = Boolean(user && isMobile && inRoomContext)
 
   useEffect(() => {
-    if (showDesktopRoom) {
-      markRead()
-    }
-  }, [showDesktopRoom, markRead, room?.id])
-
-  useEffect(() => {
     const root = document.getElementById('root')
     root?.classList.toggle('app-root--split', showDesktopRoom)
     root?.classList.toggle('app-root--dock', showDock)
+    root?.classList.toggle('app-root--game-detail', Boolean(gameSlug))
     return () => {
-      root?.classList.remove('app-root--split', 'app-root--dock')
+      root?.classList.remove('app-root--split', 'app-root--dock', 'app-root--game-detail')
     }
-  }, [showDesktopRoom, showDock])
+  }, [showDesktopRoom, showDock, gameSlug])
 
   return (
     <>
       <div className={`app-layout ${showDesktopRoom ? 'app-layout--split' : ''}`}>
         <div className="app-layout__catalog">
-          <CatalogPage />
+          {gameSlug ? <GameDetailShell slug={gameSlug} /> : <CatalogPage />}
         </div>
         {showDesktopRoom ? (
           <aside className="app-layout__room panel-card" aria-label="Room chat">
@@ -121,7 +156,10 @@ function MainShell() {
 
 function App() {
   const pathname = usePathname()
-  const isMainRoute = pathname === '/' || parseRoomInviteCode(pathname)
+  const isMainRoute =
+    pathname === '/' ||
+    Boolean(parseRoomInviteCode(pathname)) ||
+    Boolean(parseGameSlug(pathname))
 
   return (
     <AuthProvider>

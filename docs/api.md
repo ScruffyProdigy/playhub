@@ -14,7 +14,7 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 
 ### ✅ Implemented
 - **Authentication**: Magic-link sign-in, session cookies, JWT seat tokens
-- **Catalog & matchmaking**: `registerGame`, `seatTemplate` manifest sync, mode queues, `joinQueue(queueId, queuePath)`, handoff to game servers
+- **Catalog & matchmaking**: `registerGame`, `seatTemplate` manifest sync, mode queues, `joinQueue(queueId, queuePath)`, handoff to game servers; shareable **`gameBySlug`** detail pages — see [game-catalog-architecture.md](./game-catalog-architecture.md)
 - **Database-backed queries**: `games`, `game`, `session`, `goods`, `myInventory`, `player` (game service)
 - **Real-time**: `queueUpdated`, **`myTableSeatUpdated`**, and **`tableUpdated(roomId)`** subscriptions via Redis pub/sub; **`roomUpdated` / `roomMessageAdded`** for chat rooms — see [pubsub.md](./pubsub.md)
 - **Post-game**: `returnDestination`, `reportPlayerFinished`, `reportMatchResult` — see [match-lifecycle-callbacks.md](./match-lifecycle-callbacks.md), [player-return-routing.md](./player-return-routing.md)
@@ -142,6 +142,44 @@ query {
   }
 }
 ```
+
+#### `gameBySlug` ✅
+Get an active catalog game by URL slug (shareable detail page at `/games/:slug`). Returns `null` when the slug is unknown or the game is inactive. No authentication required.
+
+```graphql
+query GameBySlug($slug: String!) {
+  gameBySlug(slug: $slug) {
+    id
+    slug
+    name
+    heroUrl
+    catalogHeroUrl
+    shortDescription
+    longDescription
+    howToPlay
+    tutorialUrl
+    screenshots
+    tags
+    modes {
+      id
+      modeKey
+      displayName
+      status
+      queuePaths {
+        queuePath
+        displayName
+      }
+      queues {
+        id
+        name
+        status
+      }
+    }
+  }
+}
+```
+
+**Example:** `slug: "word-hunt"` → `https://joinquest.cc/games/word-hunt`
 
 #### `game` ✅
 Get a game by ID.

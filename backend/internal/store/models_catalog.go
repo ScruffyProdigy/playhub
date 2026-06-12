@@ -11,6 +11,14 @@ type Game struct {
 	ID               uuid.UUID
 	Name             string
 	Description      *string
+	IconURL          string
+	HeroURL          string
+	CatalogHeroURL   *string
+	ShortDescription *string
+	HowToPlay        *string
+	TutorialURL      *string
+	Screenshots      []string
+	Tags             []string
 	Slug             *string
 	PlayURL          *string
 	APIBaseURL       *string
@@ -62,6 +70,8 @@ type RegisterGameParams struct {
 	Slug        string
 	Name        string
 	Description *string
+	IconURL     string
+	HeroURL     string
 	PlayURL     string
 	APIBaseURL  string
 }

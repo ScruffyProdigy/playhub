@@ -35,6 +35,8 @@ func TestJoinModeQueueSplitPartyWordHunt(t *testing.T) {
 	}
 	result, err := st.RegisterGame(ctx, RegisterGameParams{
 		Slug:       slug,
+		IconURL:    "/games/default.svg",
+		HeroURL:    "/games/default-hero.svg",
 		PlayURL:    "https://play.example.com/" + slug,
 		APIBaseURL: "https://api.example.com/" + slug,
 	}, manifest)

@@ -31,7 +31,7 @@ describe('App Component', () => {
     expect(await screen.findByRole('heading', { name: 'Available games' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Room' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create room' })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Rock Paper Scissors Lizard Spock' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Rock Paper Scissors Lizard Robot' })).toBeInTheDocument()
   })
 
   it('renders the sign-in link completion page on /auth/complete', async () => {

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Game">
+  <defs>
+    <linearGradient id="game-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4a4a5a"/>
+      <stop offset="100%" stop-color="#646cff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#game-bg)"/>
+  <rect x="16" y="20" width="32" height="22" rx="6" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+  <circle cx="24" cy="31" r="3" fill="#fff"/>
+  <circle cx="32" cy="31" r="3" fill="#fff"/>
+  <circle cx="40" cy="31" r="3" fill="#fff"/>
+  <path d="M22 44h20" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+</svg>

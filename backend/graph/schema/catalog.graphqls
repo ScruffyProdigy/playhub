@@ -4,6 +4,10 @@ input RegisterGameInput {
   apiBaseUrl: String!
   name: String
   description: String
+  """Square catalog icon (1:1). Used on room table cards; required."""
+  iconUrl: String!
+  """Wide catalog hero banner (5:2 aspect ratio). Top of catalog game card; required."""
+  heroUrl: String!
 }
 
 type RegisterGamePayload {
@@ -59,6 +63,19 @@ extend type Game {
   manifestSyncedAt: Time
   manifestHash: String
   gameVersion: String
+  """Square catalog icon (1:1). Used on room table cards."""
+  iconUrl: String!
+  """Wide catalog hero banner (5:2). Top of catalog game card."""
+  heroUrl: String!
+  """Optional catalog-only hero (5:2). Falls back to heroUrl when unset."""
+  catalogHeroUrl: String
+  """Long-form copy for the game detail page (maps to games.description)."""
+  longDescription: String
+  shortDescription: String
+  howToPlay: String
+  tutorialUrl: String
+  screenshots: [String!]!
+  tags: [String!]!
   modes: [GameMode!]!
 }
 

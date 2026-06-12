@@ -28,7 +28,7 @@ describe('App Integration Tests', () => {
       await waitFor(() => {
         expect(screen.getByText('player@example.com')).toBeInTheDocument()
         expect(screen.getByRole('heading', { name: 'Available games' })).toBeInTheDocument()
-        expect(screen.getByRole('heading', { name: 'Rock Paper Scissors Lizard Spock' })).toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: 'Rock Paper Scissors Lizard Robot' })).toBeInTheDocument()
       })
     })
   })

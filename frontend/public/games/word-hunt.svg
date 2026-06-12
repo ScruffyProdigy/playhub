@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Word Hunt">
+  <defs>
+    <linearGradient id="wh-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#252530"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#wh-bg)"/>
+  <!-- Codenames-style word grid: red / blue / green tiles on a dark board -->
+  <g transform="translate(11 13)">
+    <rect x="0" y="0" width="10" height="10" rx="2" fill="#e74c3c"/>
+    <rect x="11" y="0" width="10" height="10" rx="2" fill="#3a4054"/>
+    <rect x="22" y="0" width="10" height="10" rx="2" fill="#3498db"/>
+    <rect x="33" y="0" width="10" height="10" rx="2" fill="#ecf0f1" opacity="0.35"/>
+
+    <rect x="0" y="11" width="10" height="10" rx="2" fill="#3a4054"/>
+    <rect x="11" y="11" width="10" height="10" rx="2" fill="#1abc9c"/>
+    <rect x="22" y="11" width="10" height="10" rx="2" fill="#3a4054"/>
+    <rect x="33" y="11" width="10" height="10" rx="2" fill="#e74c3c"/>
+
+    <rect x="0" y="22" width="10" height="10" rx="2" fill="#3498db"/>
+    <rect x="11" y="22" width="10" height="10" rx="2" fill="#ecf0f1" opacity="0.35"/>
+    <rect x="22" y="22" width="10" height="10" rx="2" fill="#1abc9c"/>
+    <rect x="33" y="22" width="10" height="10" rx="2" fill="#3a4054"/>
+
+    <rect x="0" y="33" width="10" height="10" rx="2" fill="#ecf0f1" opacity="0.35"/>
+    <rect x="11" y="33" width="10" height="10" rx="2" fill="#e74c3c"/>
+    <rect x="22" y="33" width="10" height="10" rx="2" fill="#3a4054"/>
+    <rect x="33" y="33" width="10" height="10" rx="2" fill="#3498db"/>
+  </g>
+  <!-- Active clue pip (matches in-game progress dots) -->
+  <circle cx="50" cy="50" r="7" fill="#1abc9c" stroke="#fff" stroke-width="1.5" opacity="0.95"/>
+</svg>

@@ -1,0 +1,2 @@
+ALTER TABLE games
+    DROP COLUMN IF EXISTS hero_url;

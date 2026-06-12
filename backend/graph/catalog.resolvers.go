@@ -131,10 +131,21 @@ func (r *mutationResolver) RegisterGame(ctx context.Context, input model.Registe
 		name = strings.TrimSpace(*input.Name)
 	}
 
+	iconURL := strings.TrimSpace(input.IconURL)
+	if iconURL == "" {
+		return nil, fmt.Errorf("iconUrl is required")
+	}
+	heroURL := strings.TrimSpace(input.HeroURL)
+	if heroURL == "" {
+		return nil, fmt.Errorf("heroUrl is required")
+	}
+
 	result, err := st.RegisterGame(ctx, store.RegisterGameParams{
 		Slug:        input.Slug,
 		Name:        name,
 		Description: description,
+		IconURL:     iconURL,
+		HeroURL:     heroURL,
 		PlayURL:     input.PlayURL,
 		APIBaseURL:  input.APIBaseURL,
 	}, manifest)

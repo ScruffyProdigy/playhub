@@ -41,16 +41,29 @@ type Entitlement struct {
 }
 
 type Game struct {
-	ID               string      `json:"id"`
-	Name             string      `json:"name"`
-	CreatedAt        time.Time   `json:"createdAt"`
-	ActiveSessions   []*Session  `json:"activeSessions"`
-	Slug             *string     `json:"slug,omitempty"`
-	PlayURL          *string     `json:"playUrl,omitempty"`
-	APIBaseURL       *string     `json:"apiBaseUrl,omitempty"`
-	ManifestSyncedAt *time.Time  `json:"manifestSyncedAt,omitempty"`
-	ManifestHash     *string     `json:"manifestHash,omitempty"`
-	GameVersion      *string     `json:"gameVersion,omitempty"`
+	ID               string     `json:"id"`
+	Name             string     `json:"name"`
+	CreatedAt        time.Time  `json:"createdAt"`
+	ActiveSessions   []*Session `json:"activeSessions"`
+	Slug             *string    `json:"slug,omitempty"`
+	PlayURL          *string    `json:"playUrl,omitempty"`
+	APIBaseURL       *string    `json:"apiBaseUrl,omitempty"`
+	ManifestSyncedAt *time.Time `json:"manifestSyncedAt,omitempty"`
+	ManifestHash     *string    `json:"manifestHash,omitempty"`
+	GameVersion      *string    `json:"gameVersion,omitempty"`
+	// Square catalog icon (1:1). Used on room table cards.
+	IconURL string `json:"iconUrl"`
+	// Wide catalog hero banner (5:2). Top of catalog game card.
+	HeroURL string `json:"heroUrl"`
+	// Optional catalog-only hero (5:2). Falls back to heroUrl when unset.
+	CatalogHeroURL *string `json:"catalogHeroUrl,omitempty"`
+	// Long-form copy for the game detail page (maps to games.description).
+	LongDescription  *string     `json:"longDescription,omitempty"`
+	ShortDescription *string     `json:"shortDescription,omitempty"`
+	HowToPlay        *string     `json:"howToPlay,omitempty"`
+	TutorialURL      *string     `json:"tutorialUrl,omitempty"`
+	Screenshots      []string    `json:"screenshots"`
+	Tags             []string    `json:"tags"`
 	Modes            []*GameMode `json:"modes"`
 }
 
@@ -167,6 +180,10 @@ type RegisterGameInput struct {
 	APIBaseURL  string  `json:"apiBaseUrl"`
 	Name        *string `json:"name,omitempty"`
 	Description *string `json:"description,omitempty"`
+	// Square catalog icon (1:1). Used on room table cards; required.
+	IconURL string `json:"iconUrl"`
+	// Wide catalog hero banner (5:2 aspect ratio). Top of catalog game card; required.
+	HeroURL string `json:"heroUrl"`
 }
 
 type RegisterGamePayload struct {

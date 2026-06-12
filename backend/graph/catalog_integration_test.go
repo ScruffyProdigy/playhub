@@ -133,6 +133,8 @@ func TestCatalogRegisterAndRefreshManifest(t *testing.T) {
 		"slug":       slug,
 		"playUrl":    "https://play.example.com/" + slug,
 		"apiBaseUrl": gameAPI.URL,
+		"iconUrl":    "/games/default.svg",
+		"heroUrl":    "/games/default-hero.svg",
 	}))...)
 	if err != nil {
 		t.Fatalf("registerGame failed: %v", err)
@@ -203,6 +205,8 @@ func TestRegisterGameRequiresAdmin(t *testing.T) {
 		"slug":       "no-auth",
 		"playUrl":    "https://play.example.com/no-auth",
 		"apiBaseUrl": gameAPI.URL,
+		"iconUrl":    "/games/default.svg",
+		"heroUrl":    "/games/default-hero.svg",
 	}))
 	if err == nil {
 		t.Fatal("expected registerGame to require admin authentication")
@@ -240,6 +244,8 @@ func TestRegisterGameGraphQLErrorIsJSON(t *testing.T) {
 		"slug":       "duplicate",
 		"playUrl":    "https://play.example.com/duplicate",
 		"apiBaseUrl": gameAPI.URL,
+		"iconUrl":    "/games/default.svg",
+		"heroUrl":    "/games/default-hero.svg",
 	}))...)
 	if err != nil {
 		t.Fatalf("first registerGame failed: %v", err)
@@ -253,6 +259,8 @@ func TestRegisterGameGraphQLErrorIsJSON(t *testing.T) {
 		"slug":       "duplicate",
 		"playUrl":    "https://play.example.com/duplicate-2",
 		"apiBaseUrl": gameAPI.URL,
+		"iconUrl":    "/games/default.svg",
+		"heroUrl":    "/games/default-hero.svg",
 	}))...)
 	if err == nil {
 		t.Fatal("expected duplicate slug registerGame to fail")

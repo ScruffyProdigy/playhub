@@ -10,6 +10,7 @@ import {
 } from '../../lib/rooms'
 import { prefetchSubscriptionAuth } from '../../lib/queue'
 import { readRoomInviteHint, readRoomMemberHint, writeRoomDockHint } from '../../lib/roomDockHint'
+import { onTabVisible } from '../../lib/tabVisibility'
 import { fetchMyTableSeat, mergeTableRecord, TABLE_UPDATED_EVENT, tableShouldLeaveRoomList } from '../../lib/tables'
 
 const ActiveRoomContext = createContext(null)
@@ -75,10 +76,14 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
   }, [messages])
 
   const applyRoom = useCallback((nextRoom, nextMessages = []) => {
-    setRoom(nextRoom)
+    setRoom((prev) => {
+      if (prev?.id !== nextRoom?.id) {
+        const latest = nextMessages[nextMessages.length - 1]
+        setLastReadMessageId(latest?.id ?? null)
+      }
+      return nextRoom
+    })
     setMessages(nextMessages)
-    const latest = nextMessages[nextMessages.length - 1]
-    setLastReadMessageId(latest?.id ?? null)
     setError('')
     writeRoomDockHint({ member: true, inviteCode: nextRoom?.inviteCode })
     setMemberHint(true)
@@ -241,7 +246,6 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
     setError('')
 
     if (room?.inviteCode) {
-      markRead()
       navigateTo(`/room/${room.inviteCode}`)
       return
     }
@@ -253,14 +257,13 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
         setError('Could not load your room. Try again in a moment.')
         return
       }
-      markRead()
       navigateTo(`/room/${target.inviteCode}`)
     } catch (err) {
       setError(err.message || 'Could not load your room.')
     } finally {
       setLoading(false)
     }
-  }, [room, loadRoomSnapshot, markRead])
+  }, [room, loadRoomSnapshot])
 
   const dismissRoom = useCallback(() => {
     setRoomOpen(false)
@@ -327,10 +330,13 @@ export function ActiveRoomProvider({ children, pendingInviteCode = null }) {
   }, [authLoading, user, room?.inviteCode, tableSeatInviteCode, pendingInviteCode, refresh])
 
   useEffect(() => {
-    if (roomOpen) {
-      markRead()
+    if (authLoading || !user) {
+      return undefined
     }
-  }, [roomOpen, markRead, messages])
+    return onTabVisible(() => {
+      void refresh()
+    })
+  }, [authLoading, user, refresh])
 
   useEffect(() => {
     if (!user || !room?.id) {

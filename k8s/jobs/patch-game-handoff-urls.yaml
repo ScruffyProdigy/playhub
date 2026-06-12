@@ -30,8 +30,8 @@ spec:
               WHERE id = 'a1000000-0000-4000-8000-000000000001';
 
               UPDATE games
-              SET name = 'Rock Paper Scissors Lizard Spock',
-                  slug = 'rock-paper-scissors-lizard-spock',
+              SET name = 'Rock Paper Scissors Lizard Robot',
+                  slug = 'rock-paper-scissors-lizard-robot',
                   description = 'Best-of duel with move cooldown. Single-bucket queue demo.',
                   play_url = 'https://rpsls-duel.win',
                   api_base_url = 'https://rpsls-duel.win',

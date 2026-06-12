@@ -31,9 +31,10 @@ describe('GameLobby', () => {
     vi.mocked(games.fetchGames).mockResolvedValue([
       {
         id: 'game-1',
-        name: 'Rock Paper Scissors Lizard Spock',
+        name: 'Rock Paper Scissors Lizard Robot',
+        iconUrl: '/games/rpslr-icon.png',
+        heroUrl: '/games/rpslr-hero.jpg',
         createdAt: '2026-01-01T00:00:00Z',
-        activeSessions: [{ id: 'session-1' }],
         modes: [
           {
             id: 'mode-1',
@@ -63,8 +64,7 @@ describe('GameLobby', () => {
     renderGameLobby()
 
     expect(await screen.findByRole('heading', { name: 'Available games' })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Rock Paper Scissors Lizard Spock' })).toBeInTheDocument()
-    expect(screen.getByText('1 active session')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Rock Paper Scissors Lizard Robot' })).toBeInTheDocument()
     expect(games.fetchGames).toHaveBeenCalledTimes(1)
   })
 

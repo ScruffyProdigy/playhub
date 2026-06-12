@@ -28,6 +28,37 @@ func sampleManifest() *gameclient.Manifest {
 	}
 }
 
+func TestRegisterGameRequiresIcon(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+
+	slug := "catalog-" + uuid.NewString()
+	_, err := st.RegisterGame(ctx, RegisterGameParams{
+		Slug:       slug,
+		PlayURL:    "https://play.example.com/" + slug,
+		APIBaseURL: "https://api.example.com/" + slug,
+	}, sampleManifest())
+	if err == nil {
+		t.Fatal("expected RegisterGame to require iconUrl")
+	}
+}
+
+func TestRegisterGameRequiresHero(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+
+	slug := "catalog-" + uuid.NewString()
+	_, err := st.RegisterGame(ctx, RegisterGameParams{
+		Slug:       slug,
+		IconURL:    "/games/default.svg",
+		PlayURL:    "https://play.example.com/" + slug,
+		APIBaseURL: "https://api.example.com/" + slug,
+	}, sampleManifest())
+	if err == nil {
+		t.Fatal("expected RegisterGame to require heroUrl")
+	}
+}
+
 func TestRegisterGameAndRefreshManifest(t *testing.T) {
 	st := openTestStore(t)
 	cleaner := st.NewTestCleaner(t)
@@ -39,6 +70,8 @@ func TestRegisterGameAndRefreshManifest(t *testing.T) {
 
 	result, err := st.RegisterGame(ctx, RegisterGameParams{
 		Slug:       slug,
+		IconURL:    "/games/default.svg",
+		HeroURL:    "/games/default-hero.svg",
 		PlayURL:    "https://play.example.com/" + slug,
 		APIBaseURL: "https://api.example.com/" + slug,
 	}, manifest)

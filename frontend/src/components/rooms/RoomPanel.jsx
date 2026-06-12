@@ -33,17 +33,60 @@ export default function RoomPanel({ compact = false }) {
     handleLeave,
     mergeTableUpdate,
     refresh,
+    unreadCount,
+    markRead,
   } = useActiveRoom()
   const { refresh: refreshTableSeat } = useActiveTableSeat()
   const { refresh: refreshIntent } = useActiveIntent()
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [tableBusy, setTableBusy] = useState(false)
-  const chatEndRef = useRef(null)
+  const chatLogRef = useRef(null)
+  const chatAtBottomRef = useRef(true)
+  const [chatAtBottom, setChatAtBottom] = useState(true)
+
+  const syncChatScrollState = useCallback(() => {
+    const log = chatLogRef.current
+    if (!log) {
+      return
+    }
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight <= 24
+    chatAtBottomRef.current = atBottom
+    setChatAtBottom(atBottom)
+    if (atBottom) {
+      markRead()
+    }
+  }, [markRead])
+
+  const scrollChatToBottom = useCallback((behavior = 'smooth') => {
+    const log = chatLogRef.current
+    if (!log) {
+      return
+    }
+    log.scrollTo({ top: log.scrollHeight, behavior })
+    chatAtBottomRef.current = true
+    setChatAtBottom(true)
+    markRead()
+  }, [markRead])
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    chatAtBottomRef.current = true
+    setChatAtBottom(true)
+  }, [room?.id])
+
+  useEffect(() => {
+    if (!messages.length) {
+      return
+    }
+    const log = chatLogRef.current
+    if (!log) {
+      return
+    }
+    if (chatAtBottomRef.current) {
+      log.scrollTo({ top: log.scrollHeight, behavior: 'smooth' })
+      markRead()
+    }
+  }, [messages, markRead])
 
   async function handleSend(event) {
     event.preventDefault()
@@ -57,6 +100,7 @@ export default function RoomPanel({ compact = false }) {
       const msg = await sendRoomMessage(room.id, body)
       setMessages((prev) => mergeMessage(prev, msg))
       setDraft('')
+      requestAnimationFrame(() => scrollChatToBottom())
     } catch (err) {
       setError(err.message || 'Could not send message.')
     } finally {
@@ -231,39 +275,56 @@ export default function RoomPanel({ compact = false }) {
         ) : null}
 
         <section className="room-panel__section room-panel__chat room-chat">
-          <h3 className="room-panel__section-title">Chat</h3>
-          <div className="room-chat__log" aria-live="polite">
-            {messages.length === 0 ? (
-              <p className="panel-copy">Say hello — messages appear here for everyone in the room.</p>
-            ) : (
-              messages.map((msg) => (
-                <article key={msg.id} className="room-chat__message">
-                  <p className="room-chat__author">{displayName(msg.author)}</p>
-                  <p className="room-chat__body">{msg.body}</p>
-                </article>
-              ))
-            )}
-            <div ref={chatEndRef} />
+          <div className="room-chat__header">
+            <h3 className="room-panel__section-title">Chat</h3>
+            {unreadCount > 0 && !chatAtBottom ? (
+              <button
+                type="button"
+                className="room-chat__unread"
+                onClick={() => scrollChatToBottom()}
+                aria-label={`${unreadCount} unread messages — jump to latest`}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount} new
+              </button>
+            ) : null}
+          </div>
+          <div className="room-chat__panel">
+            <div
+              ref={chatLogRef}
+              className="room-chat__log"
+              aria-live="polite"
+              onScroll={syncChatScrollState}
+            >
+              {messages.length === 0 ? (
+                <p className="panel-copy">Say hello — messages appear here for everyone in the room.</p>
+              ) : (
+                messages.map((msg) => (
+                  <article key={msg.id} className="room-chat__message">
+                    <p className="room-chat__author">{displayName(msg.author)}</p>
+                    <p className="room-chat__body">{msg.body}</p>
+                  </article>
+                ))
+              )}
+            </div>
+            <form className="room-chat__composer auth-form" onSubmit={handleSend}>
+              <label htmlFor="room-message">Message</label>
+              <input
+                id="room-message"
+                type="text"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                maxLength={2000}
+                disabled={busy}
+                autoComplete="off"
+                placeholder="Message"
+              />
+              <button type="submit" className="game-list-button" disabled={busy || !draft.trim()}>
+                Send
+              </button>
+            </form>
           </div>
         </section>
       </div>
-
-      <form className="room-panel__composer room-chat__composer auth-form" onSubmit={handleSend}>
-        <label htmlFor="room-message">Message</label>
-        <input
-          id="room-message"
-          type="text"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          maxLength={2000}
-          disabled={busy}
-          autoComplete="off"
-          placeholder="Message"
-        />
-        <button type="submit" className="game-list-button" disabled={busy || !draft.trim()}>
-          Send
-        </button>
-      </form>
 
       <div className="room-panel__leave">
         <button

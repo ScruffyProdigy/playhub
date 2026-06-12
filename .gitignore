@@ -90,8 +90,12 @@ jspm_packages/
 # Gatsby files
 .cache/
 public
+!frontend/public/
+frontend/public/*
 !frontend/public/avatars/
 !frontend/public/avatars/**
+!frontend/public/games/
+!frontend/public/games/**
 data/spirit-avatars/
 
 # Storybook build outputs

@@ -7,6 +7,8 @@ type Query {
   healthz: String!
   games(limit: Int = 20, offset: Int = 0): [Game!]!
   game(id: ID!): Game
+  """Catalog game by URL slug (e.g. word-hunt). Shareable game detail page."""
+  gameBySlug(slug: String!): Game
   session(id: ID!): Session
   goods(gameId: ID): [DigitalGood!]!   # list goods globally or by game
   myInventory(gameId: ID): [Entitlement!]!

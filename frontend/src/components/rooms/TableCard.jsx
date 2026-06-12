@@ -1,4 +1,5 @@
 import { useAuth } from '../auth/AuthProvider'
+import { gameIconUrl, gameTagChips } from '../../lib/gameCard'
 import {
   DISCARD,
   formatFormingGapsFromLobbyLine,
@@ -30,20 +31,10 @@ function SeatRow({ slot, seatLabel, mySeat, userId, currentUser, kingUserId, bus
   const occupantLabel = isMine ? 'You' : displayName(slot.user)
   const isTableKing = Boolean(kingUserId && occupantUser?.id === kingUserId)
 
-  return (
-    <li
-      className={`table-seat-row${
-        isMine ? ' table-seat-row--mine' : taken ? ' table-seat-row--taken' : ' table-seat-row--open'
-      }${seatLabel ? '' : ' table-seat-row--no-label'}`}
-    >
-      {seatLabel ? <span className="table-seat-row__label">{seatLabel}</span> : null}
-      {showOccupant ? (
-        <span className="table-seat-row__occupant" title={occupantLabel}>
-          <PlayerAvatar user={occupantUser} size="sm" ring={isTableKing ? 'king' : undefined} />
-          <span className="table-seat-row__occupant-name">{occupantLabel}</span>
-        </span>
-      ) : null}
-      {!taken ? (
+  if (!taken) {
+    return (
+      <li className="table-seat-row table-seat-row--open">
+        {seatLabel ? <span className="table-seat-row__label">{seatLabel}</span> : null}
         <button
           type="button"
           className="table-seat-row__sit"
@@ -52,6 +43,22 @@ function SeatRow({ slot, seatLabel, mySeat, userId, currentUser, kingUserId, bus
         >
           Sit
         </button>
+      </li>
+    )
+  }
+
+  return (
+    <li
+      className={`table-seat-row table-seat-row--occupied${
+        isMine ? ' table-seat-row--mine' : ' table-seat-row--taken'
+      }`}
+    >
+      {seatLabel ? <span className="table-seat-row__label">{seatLabel}</span> : null}
+      {showOccupant ? (
+        <div className="table-seat-row__occupant" title={occupantLabel}>
+          <PlayerAvatar user={occupantUser} size="md" ring={isTableKing ? 'king' : undefined} />
+          <span className="table-seat-row__occupant-name">{occupantLabel}</span>
+        </div>
       ) : null}
     </li>
   )
@@ -84,7 +91,7 @@ function SeatSection({ title, slots, mode, mySeat, userId, currentUser, kingUser
                 const seatBadge = seatLabelInSection(slot, title)
                 const titleText = seatBadge ? `${seatBadge} · ${occupantLabel}` : occupantLabel
                 return (
-                  <span
+                  <div
                     key={slot.seatKey}
                     className={`table-card__pooled-seat${isMine ? ' table-card__pooled-seat--mine' : ''}${
                       isTableKing ? ' table-card__pooled-seat--king' : ''
@@ -92,9 +99,9 @@ function SeatSection({ title, slots, mode, mySeat, userId, currentUser, kingUser
                     title={titleText}
                   >
                     {seatBadge ? <span className="table-card__pooled-seat-label">{seatBadge}</span> : null}
-                    <PlayerAvatar user={occupantUser} size="sm" ring={isTableKing ? 'king' : undefined} />
+                    <PlayerAvatar user={occupantUser} size="md" ring={isTableKing ? 'king' : undefined} />
                     <span className="table-card__pooled-seat-name">{occupantLabel}</span>
-                  </span>
+                  </div>
                 )
               })
             ) : (
@@ -104,7 +111,7 @@ function SeatSection({ title, slots, mode, mySeat, userId, currentUser, kingUser
           {!mineInGroup && openSeatKey ? (
             <button
               type="button"
-              className="table-seat-row__sit"
+              className="table-seat-row__sit table-seat-row__sit--pooled"
               disabled={busy}
               onClick={() => onSit(openSeatKey)}
             >
@@ -151,6 +158,17 @@ export default function TableCard({ table, busy, onSit, onLeave, onStart, onLook
   const layout = groupSeatSlotsForDisplay(enriched.seatSlots ?? [])
   const seatedCount = enriched.seats?.length ?? 0
   const gapsLine = formatFormingGapsFromLobbyLine(enriched.formingGaps)
+  const game = enriched.game
+  const catalogTags = gameTagChips(game?.tags)
+  const catalogBlurb = game?.shortDescription?.trim() || ''
+  let catalogIcon = null
+  if (game?.iconUrl?.trim()) {
+    try {
+      catalogIcon = gameIconUrl(game)
+    } catch {
+      catalogIcon = null
+    }
+  }
 
   const seatRowProps = {
     mode: enriched.mode,
@@ -165,10 +183,23 @@ export default function TableCard({ table, busy, onSit, onLeave, onStart, onLook
   return (
     <article className="table-card">
       <header className="table-card__header">
-        <div>
+        {catalogIcon ? (
+          <img className="table-card__icon" src={catalogIcon} alt="" width={64} height={64} loading="lazy" />
+        ) : null}
+        <div className="table-card__header-copy">
           <h3 className="table-card__title">
-            {enriched.game?.name} · {enriched.mode?.displayName}
+            {game?.name} · {enriched.mode?.displayName}
           </h3>
+          {catalogBlurb ? <p className="table-card__blurb">{catalogBlurb}</p> : null}
+          {catalogTags.length > 0 ? (
+            <ul className="table-card__tags" aria-label="Game tags">
+              {catalogTags.map((tag) => (
+                <li key={tag} className="table-card__tag">
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <p className="table-card__meta">
             {seatedCount} seated
             {enriched.king ? ` · ${KING_LABEL}: ${displayName(enriched.king)}` : ''}
