@@ -400,19 +400,41 @@ export const INSTALL_DEV_SCRIPT_GITHUB =
   'https://github.com/scruffyprodigy/playhub/blob/main/scripts/install-joinquest-dev.sh'
 
 export function buildInstallDevCommand({ apiKey, client = 'cursor' }) {
-  const key = apiKey || 'lq_dev_PASTE_YOUR_KEY'
   const flag =
-    client === 'claude' ? '--claude' : client === 'all' ? '--all' : '--cursor'
-  return `JOINQUEST_API_KEY=${key} curl -fsSL ${INSTALL_DEV_SCRIPT_URL} | sh -s -- ${flag}`
+    client === 'claude'
+      ? '--claude'
+      : client === 'all'
+        ? '--all'
+        : client === 'skill-only'
+          ? '--skill-only'
+          : '--cursor'
+  if (client === 'skill-only') {
+    return `curl -fsSL ${INSTALL_DEV_SCRIPT_URL} | sh -s -- ${flag}`
+  }
+  const key = apiKey || 'lq_dev_PASTE_YOUR_KEY'
+  return `export JOINQUEST_API_KEY=${key}
+curl -fsSL ${INSTALL_DEV_SCRIPT_URL} | sh -s -- ${flag}`
 }
 
 export function buildInstallDevInspectCommand({ apiKey, client = 'cursor' }) {
-  const key = apiKey || 'lq_dev_PASTE_YOUR_KEY'
   const flag =
-    client === 'claude' ? '--claude' : client === 'all' ? '--all' : '--cursor'
+    client === 'claude'
+      ? '--claude'
+      : client === 'all'
+        ? '--all'
+        : client === 'skill-only'
+          ? '--skill-only'
+          : '--cursor'
+  if (client === 'skill-only') {
+    return `curl -fsSL ${INSTALL_DEV_SCRIPT_URL} -o install-joinquest-dev.sh
+less install-joinquest-dev.sh
+bash install-joinquest-dev.sh ${flag}`
+  }
+  const key = apiKey || 'lq_dev_PASTE_YOUR_KEY'
   return `curl -fsSL ${INSTALL_DEV_SCRIPT_URL} -o install-joinquest-dev.sh
 less install-joinquest-dev.sh
-JOINQUEST_API_KEY=${key} bash install-joinquest-dev.sh ${flag}`
+export JOINQUEST_API_KEY=${key}
+bash install-joinquest-dev.sh ${flag}`
 }
 
 export function buildClaudeMcpAddCommand({ apiKey }) {

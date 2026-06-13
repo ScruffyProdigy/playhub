@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import DeveloperMcpWizard from './DeveloperMcpWizard'
 import {
   buildClaudeMcpAddCommand,
+  buildInstallDevCommand,
   buildMcpServerConfig,
   createDeveloperApiKey,
   fetchMyDeveloperApiKeys,
@@ -30,7 +31,9 @@ vi.mock('../../lib/developers', () => ({
   ),
   buildInstallDevCommand: vi.fn(
     ({ apiKey, client }) =>
-      `JOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'} curl -fsSL .../install-joinquest-dev.sh | sh -s -- --${client}`,
+      client === 'skill-only'
+        ? 'curl -fsSL .../install-joinquest-dev.sh | sh -s -- --skill-only'
+        : `export JOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'}\ncurl -fsSL .../install-joinquest-dev.sh | sh -s -- --${client}`,
   ),
   buildInstallDevInspectCommand: vi.fn(
     ({ apiKey }) => `curl -fsSL ... -o install-joinquest-dev.sh\nless install-joinquest-dev.sh`,
@@ -49,6 +52,7 @@ describe('DeveloperMcpWizard', () => {
 
     await user.click(screen.getByRole('button', { name: /show setup/i }))
 
+    expect(screen.getByRole('tablist', { name: /your ai editor/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /generate api key/i })).toBeInTheDocument()
     expect(screen.getAllByText(/@joinquest\/mcp-integration/).length).toBeGreaterThan(0)
   })
@@ -66,13 +70,12 @@ describe('DeveloperMcpWizard', () => {
 
     const quickCopy = document.querySelector('.developer-mcp__quick-copy')
     expect(quickCopy).not.toBeNull()
-    expect(within(quickCopy).getByRole('button', { name: /copy cursor install/i })).toBeInTheDocument()
-    expect(within(quickCopy).getByRole('button', { name: /copy claude install/i })).toBeInTheDocument()
+    expect(within(quickCopy).getByRole('button', { name: /copy install command/i })).toBeInTheDocument()
     expect(buildMcpServerConfig).toHaveBeenCalledWith(
       expect.objectContaining({ apiKey: 'lq_dev_test_secret', clientId: 'cursor' }),
     )
-    expect(buildClaudeMcpAddCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ apiKey: 'lq_dev_test_secret' }),
+    expect(buildInstallDevCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: 'lq_dev_test_secret', client: 'cursor' }),
     )
   })
 })

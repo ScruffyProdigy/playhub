@@ -2447,6 +2447,17 @@
   opacity: 0.9;
 }
 
+.developer-mcp__hint {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 200, 80, 0.35);
+  background: rgba(255, 200, 80, 0.08);
+}
+
+.developer-mcp__client-picker {
+  margin: 1rem 0 0.25rem;
+}
+
 .developer-mcp__skill,
 .developer-mcp__keys,
 .developer-mcp__install,
