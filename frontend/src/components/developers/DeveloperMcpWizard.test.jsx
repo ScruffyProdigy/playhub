@@ -52,7 +52,7 @@ describe('DeveloperMcpWizard', () => {
 
     await user.click(screen.getByRole('button', { name: /show setup/i }))
 
-    expect(screen.getByRole('tablist', { name: /your ai editor/i })).toBeInTheDocument()
+    expect(screen.getByRole('tablist', { name: /which editor do you use/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /generate api key/i })).toBeInTheDocument()
     expect(screen.getAllByText(/@joinquest\/mcp-integration/).length).toBeGreaterThan(0)
   })

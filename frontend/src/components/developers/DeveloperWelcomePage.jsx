@@ -72,7 +72,7 @@ export default function DeveloperWelcomePage({ gameId }) {
         {connected ? (
           <p className="panel-copy">
             We connected to your API and synced your game modes. Head to your dashboard to run
-            integration checks and spin up a test table.
+            checks and spin up a test table.
           </p>
         ) : (
           <p className="panel-copy">
@@ -81,17 +81,12 @@ export default function DeveloperWelcomePage({ gameId }) {
           </p>
         )}
         <p className="panel-copy">
-          <strong>Vibe coding with an AI agent?</strong> Copy the JoinQuest agent skill into your game
-          repo (<code>.agents/skills/joinquest-integration/</code>) — see setup below. It walks through
-          discovery, integration, and release.
+          Prefer doing it yourself? Your dashboard has a step-by-step checklist and example
+          provision requests.
         </p>
         <p className="panel-copy">
-          <strong>Prefer doing it yourself?</strong> Your dashboard has a step-by-step checklist and
-          example provision requests.
-        </p>
-        <p className="panel-copy">
-          When things look good, spin up a <strong>test table</strong> and invite friends into your
-          room. They can play before your game goes public.
+          When things look good, spin up a <strong>test table</strong> and invite friends. They can
+          play before your game goes public.
         </p>
         <button
           type="button"

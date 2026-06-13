@@ -1,5 +1,6 @@
 import AuthPanel from '../auth/AuthPanel'
 import { APP_NAME } from '../../lib/brand'
+import DeveloperMcpWizard from './DeveloperMcpWizard'
 import RegisterGameForm from './RegisterGameForm'
 
 export default function DeveloperLandingPage() {
@@ -29,20 +30,14 @@ export default function DeveloperLandingPage() {
           had a quick look).
         </p>
         <p className="panel-copy">
-          Building with an AI agent? After you register, copy the{' '}
-          <a
-            className="auth-link"
-            href="https://github.com/scruffyprodigy/playhub/tree/main/.agents/skills/joinquest-integration"
-            target="_blank"
-            rel="noreferrer"
-          >
-            JoinQuest integration skill
-          </a>{' '}
-          into your game repo at <code>.agents/skills/joinquest-integration/</code>.
+          Using Cursor or Claude? Sign in below, open the setup section, and your assistant can help
+          you register and integrate.
         </p>
       </section>
 
       <AuthPanel />
+
+      <DeveloperMcpWizard />
 
       <section className="panel-card" aria-labelledby="register-game-heading">
         <h2 id="register-game-heading">Register your game</h2>
