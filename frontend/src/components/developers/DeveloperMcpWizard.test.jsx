@@ -30,7 +30,7 @@ vi.mock('../../lib/developers', () => ({
   ),
   buildInstallDevCommand: vi.fn(
     ({ apiKey, client }) =>
-      `${apiKey ? `JOINQUEST_API_KEY=${apiKey} ` : ''}curl -fsSL .../install-joinquest-dev.sh | sh -s -- --${client}`,
+      `JOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'} curl -fsSL .../install-joinquest-dev.sh | sh -s -- --${client}`,
   ),
   buildInstallDevInspectCommand: vi.fn(
     ({ apiKey }) => `curl -fsSL ... -o install-joinquest-dev.sh\nless install-joinquest-dev.sh`,

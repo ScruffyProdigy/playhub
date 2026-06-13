@@ -2,9 +2,6 @@
 # Install JoinQuest agent skill + MCP setup for game developers.
 #
 # From your game repo root:
-#   curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-dev.sh | sh
-#
-# With API key (from developer dashboard):
 #   JOINQUEST_API_KEY=lq_dev_... curl -fsSL .../install-joinquest-dev.sh | sh -s -- --cursor
 set -euo pipefail
 

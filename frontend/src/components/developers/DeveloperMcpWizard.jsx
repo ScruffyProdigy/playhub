@@ -148,11 +148,8 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
   )
 
   const installDevCommand = useMemo(
-    () =>
-      activeKey
-        ? installCursorCommand
-        : buildInstallDevCommand({ apiKey: undefined, client: 'cursor' }),
-    [activeKey, installCursorCommand],
+    () => buildInstallDevCommand({ apiKey: activeKey ?? undefined, client: 'cursor' }),
+    [activeKey],
   )
 
   const installInspectCommand = useMemo(
@@ -304,8 +301,8 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
               </li>
             </ul>
             <p className="panel-copy">
-              <strong>Quick install</strong> (pipes the script into your shell — review first if you
-              prefer):
+              <strong>Quick install</strong> — run from your game repo. Keep{' '}
+              <code>| sh -s -- --cursor</code> at the end (configures MCP, not just the skill):
             </p>
             <pre className="developer-mcp__config">{installDevCommand}</pre>
             <button
