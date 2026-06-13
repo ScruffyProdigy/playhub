@@ -2516,6 +2516,18 @@
   font-size: 0.85rem;
 }
 
+.developer-mcp__quick-copy {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.developer-mcp__quick-copy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .developer-mcp__details {
   margin-top: 0.75rem;
   font-size: 0.9rem;

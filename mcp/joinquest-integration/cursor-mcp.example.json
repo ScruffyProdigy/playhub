@@ -1,10 +1,10 @@
 {
   "mcpServers": {
     "joinquest-integration": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@joinquest/mcp-integration"],
+      "args": ["--yes", "--package", "@joinquest/mcp-integration", "joinquest-integration-mcp-cursor"],
       "env": {
-        "JOINQUEST_API_URL": "https://joinquest.cc/graphql",
         "JOINQUEST_API_KEY": "paste-api-key-from-dashboard"
       }
     }

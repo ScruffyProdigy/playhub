@@ -1,5 +1,7 @@
+export const DEFAULT_JOINQUEST_API_URL = 'https://joinquest.cc/graphql'
+
 export function loadConfig() {
-  const apiUrl = (process.env.JOINQUEST_API_URL || 'http://localhost:8080/graphql').trim()
+  const apiUrl = (process.env.JOINQUEST_API_URL || DEFAULT_JOINQUEST_API_URL).trim()
   const apiKey = (process.env.JOINQUEST_API_KEY || '').trim()
   const session = (process.env.JOINQUEST_SESSION || process.env.JOINQUEST_SESSION_COOKIE || '').trim()
   const cookieName = (process.env.JOINQUEST_SESSION_COOKIE_NAME || 'lobby_session').trim()

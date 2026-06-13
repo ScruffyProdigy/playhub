@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getGraphQLUrl } from '../../lib/env'
 import {
+  buildClaudeMcpAddCommand,
   buildMcpServerConfig,
   createDeveloperApiKey,
   fetchMyDeveloperApiKeys,
@@ -12,8 +12,9 @@ const CLIENTS = [
     label: 'Cursor',
     steps: [
       'Generate an API key below (shown once).',
-      'Open Cursor → Settings → Tools & MCP → Add server, or save to .cursor/mcp.json in your project.',
-      'Paste the config, restart Cursor if tools do not appear.',
+      'Copy the MCP config below into ~/.cursor/mcp.json or .cursor/mcp.json (uses npx — Node.js 20+).',
+      'Fully quit Cursor (Cmd+Q), reopen the project, and start a new Agent chat.',
+      'Verify: ask the agent to call joinquest_integration_list_my_games.',
     ],
     configPath: '~/.cursor/mcp.json or .cursor/mcp.json',
   },
@@ -32,10 +33,10 @@ const CLIENTS = [
     label: 'Claude Code',
     steps: [
       'Generate an API key below (shown once).',
-      'Save the config as .mcp.json in your project root (or run claude mcp add).',
-      'Start a new Claude Code session in the project and approve the server when prompted.',
+      'Run the claude mcp add command below in your game repo (uses npx — Node.js 20+).',
+      'Start a new claude session and approve joinquest-integration when prompted.',
     ],
-    configPath: '.mcp.json in project root',
+    configPath: '.mcp.json (created automatically by claude mcp add)',
   },
 ]
 
@@ -43,8 +44,7 @@ const SKILL_GITHUB =
   'https://github.com/scruffyprodigy/playhub/tree/main/.agents/skills/joinquest-integration'
 const INSTALL_SKILL = `mkdir -p .agents/skills
 cp -r /path/to/lobby/.agents/skills/joinquest-integration .agents/skills/`
-const INSTALL_NPX = 'npx -y @joinquest/mcp-integration'
-const INSTALL_LINK = 'curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-mcp.sh | sh'
+const INSTALL_CLI = 'curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-mcp.sh | sh'
 
 function buildClaudeCodeConfig(base) {
   const server = base.mcpServers['joinquest-integration']
@@ -59,11 +59,6 @@ function buildClaudeCodeConfig(base) {
 }
 
 export default function DeveloperMcpWizard({ defaultExpanded = false }) {
-  const graphqlUrl = useMemo(() => {
-    const base = getGraphQLUrl()
-    return base.startsWith('/') ? 'http://localhost:8080/graphql' : base
-  }, [])
-
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [clientId, setClientId] = useState('cursor')
   const [apiKeys, setApiKeys] = useState([])
@@ -92,10 +87,34 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
   const client = CLIENTS.find((item) => item.id === clientId) ?? CLIENTS[0]
 
   const configText = useMemo(() => {
-    const base = buildMcpServerConfig({ apiKey: activeKey ?? '<paste-api-key-here>', graphqlUrl })
+    const base = buildMcpServerConfig({
+      apiKey: activeKey ?? '<paste-api-key-here>',
+      clientId,
+    })
     const payload = clientId === 'claude-code' ? buildClaudeCodeConfig(base) : base
     return JSON.stringify(payload, null, 2)
-  }, [activeKey, clientId, graphqlUrl])
+  }, [activeKey, clientId])
+
+  const cursorConfigText = useMemo(
+    () =>
+      JSON.stringify(
+        buildMcpServerConfig({
+          apiKey: activeKey ?? '<paste-api-key-here>',
+          clientId: 'cursor',
+        }),
+        null,
+        2,
+      ),
+    [activeKey],
+  )
+
+  const claudeAddCommand = useMemo(
+    () =>
+      buildClaudeMcpAddCommand({
+        apiKey: activeKey ?? '<paste-api-key-here>',
+      }),
+    [activeKey],
+  )
 
   async function handleGenerateKey() {
     setBusy(true)
@@ -189,6 +208,27 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
                 >
                   {copied === 'key' ? 'Copied' : 'Copy API key'}
                 </button>
+                <div className="developer-mcp__quick-copy">
+                  <p className="panel-copy">
+                    <strong>One-click setup</strong> — configs below include your new key:
+                  </p>
+                  <div className="developer-mcp__quick-copy-actions">
+                    <button
+                      type="button"
+                      className="button-primary"
+                      onClick={() => void handleCopy(cursorConfigText, 'cursor-json')}
+                    >
+                      {copied === 'cursor-json' ? 'Copied' : 'Copy Cursor JSON'}
+                    </button>
+                    <button
+                      type="button"
+                      className="button-primary"
+                      onClick={() => void handleCopy(claudeAddCommand, 'claude-cmd')}
+                    >
+                      {copied === 'claude-cmd' ? 'Copied' : 'Copy Claude command'}
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : (
               <button
@@ -203,26 +243,18 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
           </div>
 
           <div className="developer-mcp__install">
-            <h3>2. Install MCP (one time)</h3>
+            <h3>2. Node.js</h3>
             <p className="panel-copy">
-              Requires Node.js 20+. Either let <code>npx</code> download it automatically (recommended),
-              or install the CLI globally:
+              Requires Node.js 20+. The config below uses <code>npx</code> to run{' '}
+              <code>@joinquest/mcp-integration</code> — no separate install step.
             </p>
-            <pre className="developer-mcp__config">{INSTALL_NPX}</pre>
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={() => void handleCopy(INSTALL_NPX, 'npx')}
-            >
-              {copied === 'npx' ? 'Copied' : 'Copy npx command'}
-            </button>
             <details className="developer-mcp__details">
-              <summary>Alternative: install CLI globally</summary>
-              <pre className="developer-mcp__config">{INSTALL_LINK}</pre>
+              <summary>Optional: global install (offline / pinned version)</summary>
+              <pre className="developer-mcp__config">{INSTALL_CLI}</pre>
               <button
                 type="button"
                 className="button-secondary"
-                onClick={() => void handleCopy(INSTALL_LINK, 'install')}
+                onClick={() => void handleCopy(INSTALL_CLI, 'install')}
               >
                 {copied === 'install' ? 'Copied' : 'Copy install script'}
               </button>
@@ -253,14 +285,51 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
             <p className="panel-copy">
               Config file: <code>{client.configPath}</code>
             </p>
-            <pre className="developer-mcp__config">{configText}</pre>
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={() => void handleCopy(configText, 'config')}
-            >
-              {copied === 'config' ? 'Copied' : 'Copy MCP config'}
-            </button>
+            {clientId === 'claude-code' ? (
+              <>
+                <p className="panel-copy">
+                  <strong>Recommended</strong> — from your game repo:
+                </p>
+                <pre className="developer-mcp__config">{claudeAddCommand}</pre>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => void handleCopy(claudeAddCommand, 'claude-add')}
+                >
+                  {copied === 'claude-add' ? 'Copied' : 'Copy Claude command'}
+                </button>
+                <p className="panel-copy">
+                  Or run the helper (install + prompt for API key):{' '}
+                  <code>bash scripts/add-joinquest-mcp-claude.sh</code>
+                </p>
+                <details className="developer-mcp__details">
+                  <summary>Manual .mcp.json instead</summary>
+                  <pre className="developer-mcp__config">{configText}</pre>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => void handleCopy(configText, 'config-manual')}
+                  >
+                    {copied === 'config-manual' ? 'Copied' : 'Copy .mcp.json'}
+                  </button>
+                </details>
+              </>
+            ) : (
+              <>
+                <pre className="developer-mcp__config">{configText}</pre>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => void handleCopy(configText, 'config')}
+                >
+                  {copied === 'config'
+                    ? 'Copied'
+                    : clientId === 'cursor'
+                      ? 'Copy Cursor JSON'
+                      : 'Copy MCP config'}
+                </button>
+              </>
+            )}
           </div>
 
           {error ? (

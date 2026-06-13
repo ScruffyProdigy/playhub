@@ -61,18 +61,20 @@ End-to-end workflow for AI agents helping a developer integrate a multiplayer ga
 
 **Developer actions (guide them):**
 
-1. Sign in at [joinquest.cc/developers](https://joinquest.cc/developers) (or local dev).
-2. Developer dashboard → **Connect an AI assistant** → **Generate API key** (copy once).
-3. Add MCP config (Node.js 20+):
+1. Sign in at [joinquest.cc/developers](https://joinquest.cc/developers).
+2. Developer dashboard → **Connect an AI assistant** → **Show setup** → **Generate API key** (copy once).
+3. Install MCP CLI is **not required** — configs use `npx -y @joinquest/mcp-integration` (Node.js 20+).
+
+4. Add MCP config — **Cursor** (note the cursor-specific npx bin):
 
 ```json
 {
   "mcpServers": {
     "joinquest-integration": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@joinquest/mcp-integration"],
+      "args": ["--yes", "--package", "@joinquest/mcp-integration", "joinquest-integration-mcp-cursor"],
       "env": {
-        "JOINQUEST_API_URL": "https://joinquest.cc/graphql",
         "JOINQUEST_API_KEY": "lq_dev_..."
       }
     }
@@ -80,7 +82,11 @@ End-to-end workflow for AI agents helping a developer integrate a multiplayer ga
 }
 ```
 
-4. Restart the agent client (Cursor, Claude Code, Codex, etc.).
+**Claude Code:** `claude mcp add --scope project --transport stdio --env JOINQUEST_API_KEY=lq_dev_... joinquest-integration -- npx -y @joinquest/mcp-integration`
+
+Config paths: Cursor → `~/.cursor/mcp.json` or `.cursor/mcp.json`; Claude Code → `.mcp.json`.
+
+5. **Fully quit** the agent client and reopen (Cursor: **Cmd+Q**, not just Reload Window). Start a **new Agent chat**.
 
 **Optional — Agent Skill (no MCP required for workflow text):**
 
@@ -88,7 +94,7 @@ Copy `.agents/skills/joinquest-integration/` from the [JoinQuest repo](https://g
 
 **Verify MCP:**
 
-Call `joinquest_integration_list_my_games`. If auth fails, re-check API key and URL.
+In Agent mode, ask the agent to call `joinquest_integration_list_my_games`. If auth fails, re-check API key and URL. Some Cursor versions have no **Tools & MCP** settings tab — a successful tool call is the real test.
 
 **Done when:** MCP tools respond successfully.
 

@@ -2,20 +2,22 @@
 
 stdio MCP server for **game developers** integrating with JoinQuest. Exposes developer dashboard operations to Cursor, Claude, and other agents via the same GraphQL API as the portal.
 
-## Quick setup (recommended)
+## Quick setup
 
 1. Sign in at [JoinQuest](https://joinquest.cc) and open your **developer dashboard**.
-2. Expand **Connect an AI assistant** → **Generate API key** (copy it once).
-3. Add this to Cursor (`.cursor/mcp.json`) or Claude Desktop config:
+2. **Connect an AI assistant** → **Show setup** → **Generate API key** (copy once).
+3. Add MCP config (Node.js 20+, uses `npx` — no install step):
+
+**Cursor** — `.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "joinquest-integration": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@joinquest/mcp-integration"],
+      "args": ["--yes", "--package", "@joinquest/mcp-integration", "joinquest-integration-mcp-cursor"],
       "env": {
-        "JOINQUEST_API_URL": "https://joinquest.cc/graphql",
         "JOINQUEST_API_KEY": "lq_dev_..."
       }
     }
@@ -23,33 +25,50 @@ stdio MCP server for **game developers** integrating with JoinQuest. Exposes dev
 }
 ```
 
-Node.js 20+ required. The first run downloads the package via `npx`.
+**Claude Code:**
 
-### Alternative: global CLI install
+```bash
+claude mcp add --scope project --transport stdio \
+  --env JOINQUEST_API_KEY=lq_dev_... \
+  joinquest-integration -- npx -y @joinquest/mcp-integration
+```
+
+**Other stdio clients** — use `npx` with args `["-y", "@joinquest/mcp-integration"]` and the same `env`.
+
+4. Fully quit and reopen your agent client. Test: ask the agent to call `joinquest_integration_list_my_games`.
+
+### Why a separate Cursor bin?
+
+Cursor injects `ELECTRON_RUN_AS_NODE` into MCP child processes. Use the second npx arg `joinquest-integration-mcp-cursor` (wrapper that unsets it). Other clients use the default bin.
+
+### Optional global install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-mcp.sh | sh
 ```
-
-Then use `"command": "joinquest-integration-mcp"` with the same `env` block (no `args`).
 
 ## Environment
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `JOINQUEST_API_KEY` | Yes* | From developer dashboard → Connect AI assistant |
-| `JOINQUEST_API_URL` | No | GraphQL URL (default `http://localhost:8080/graphql`) |
 | `JOINQUEST_ISSUER_URL` | No | Lobby JWT issuer / provision `lobbyId` |
 | `JOINQUEST_PUBLIC_URL` | No | Browser Lobby URL for example provision payloads |
 | `JOINQUEST_SESSION` | Legacy | Session cookie (prefer API key) |
 
-## Client-specific paths
+Advanced (lobby contributors): `JOINQUEST_API_URL=http://localhost:8080/graphql` — see [docs/development.md](../../docs/development.md).
+
+## Publishing
+
+Maintainers: `./scripts/publish-joinquest-mcp.sh` (requires npm login + `@joinquest` scope). Roadmap: [docs/developer-ai-setup-roadmap.md](../../docs/developer-ai-setup-roadmap.md).
+
+## Client config paths
 
 | Client | Config file |
 |--------|-------------|
 | Cursor | `~/.cursor/mcp.json` or `.cursor/mcp.json` |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Claude Code | `.mcp.json` at project root (add `"type": "stdio"`) |
+| Claude Code | `.mcp.json` at project root |
 
 ## Tools
 
@@ -67,7 +86,7 @@ Then use `"command": "joinquest-integration-mcp"` with the same `env` block (no 
 | `joinquest_integration_get_example_provision_payload` | Sample provision JSON |
 | `joinquest_integration_request_public_release` | Submit for catalog review |
 
-## Run manually
+## Run from repo
 
 ```bash
 cd mcp/joinquest-integration
@@ -80,3 +99,13 @@ JOINQUEST_API_KEY=your-key node src/index.js
 ```bash
 npm test
 ```
+
+## Publishing (maintainers)
+
+From repo root (requires `@joinquest` scope access + npm 2FA):
+
+```bash
+NPM_OTP=123456 ./scripts/publish-joinquest-mcp.sh
+```
+
+Use a code from your authenticator app when prompted. For GitHub Actions, add a **granular access token** with **Publish** on `@joinquest/*` and **bypass 2FA** enabled as `NPM_TOKEN`.

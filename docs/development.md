@@ -152,13 +152,21 @@ Production deploys also run `k8s/jobs/patch-game-handoff-urls.yaml` via `./scrip
 
 ### JoinQuest integration MCP (developer agents)
 
-The MCP server in `mcp/joinquest-integration/` exposes developer dashboard operations to Cursor and other agents via stdio. It calls the same GraphQL API as the portal.
+The MCP server in `mcp/joinquest-integration/` exposes developer dashboard operations to Cursor and other agents via stdio. It calls the same GraphQL API as the portal (defaults to `https://joinquest.cc/graphql`).
 
-1. Sign in at JoinQuest and copy your `lobby_session` cookie.
-2. Add the config from `/developers/games/:id/welcome` (“Add to Cursor”) or [cursor-mcp.example.json](../mcp/joinquest-integration/cursor-mcp.example.json).
-3. Set `JOINQUEST_SESSION` and `JOINQUEST_API_URL` in the MCP env.
+**Game developers:** dashboard wizard or [`.agents/skills/joinquest-integration/mcp-setup.md`](../.agents/skills/joinquest-integration/mcp-setup.md). MCP runs via `npx -y @joinquest/mcp-integration` (only `JOINQUEST_API_KEY` in env).
 
-Tools include integration guide, discovery prompt, run checks, update metadata, and request public release. Full list: [mcp/joinquest-integration/README.md](../mcp/joinquest-integration/README.md).
+**Lobby contributors** testing against `./scripts/dev.sh`:
+
+1. Generate a developer API key (local dashboard or joinquest.cc).
+2. Run `./scripts/install-joinquest-mcp.sh`.
+3. Add `.cursor/mcp.json` using [cursor-mcp.example.json](../mcp/joinquest-integration/cursor-mcp.example.json) plus:
+   ```json
+   "JOINQUEST_API_URL": "http://localhost:8080/graphql"
+   ```
+   Or use `scripts/run-joinquest-mcp-cursor.sh` as the Cursor `command` with that env override.
+
+Run MCP tests: `cd mcp/joinquest-integration && npm test`.
 
 ### Linting
 

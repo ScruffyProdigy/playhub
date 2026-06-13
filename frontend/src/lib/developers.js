@@ -387,27 +387,33 @@ export function integrationNextSteps(game) {
   })
 }
 
-export function buildMcpServerConfig({ apiKey, graphqlUrl, useNpx = true }) {
-  const env = {
+function joinquestMcpEnv({ apiKey }) {
+  return {
     JOINQUEST_API_KEY: apiKey || '<generate-on-dashboard>',
-    JOINQUEST_API_URL: graphqlUrl,
   }
-  if (useNpx) {
-    return {
-      mcpServers: {
-        'joinquest-integration': {
-          command: 'npx',
-          args: ['-y', '@joinquest/mcp-integration'],
-          env,
-        },
-      },
-    }
-  }
+}
+
+const MCP_NPX_PACKAGE = '@joinquest/mcp-integration'
+
+export function buildClaudeMcpAddCommand({ apiKey }) {
+  const key = apiKey || 'lq_dev_PASTE_HERE'
+  return `claude mcp add --scope project --transport stdio \\
+  --env JOINQUEST_API_KEY=${key} \\
+  joinquest-integration -- npx -y ${MCP_NPX_PACKAGE}`
+}
+
+export function buildMcpServerConfig({ apiKey, clientId = 'cursor' }) {
+  const env = joinquestMcpEnv({ apiKey })
+  const args =
+    clientId === 'cursor'
+      ? ['--yes', '--package', MCP_NPX_PACKAGE, 'joinquest-integration-mcp-cursor']
+      : ['-y', MCP_NPX_PACKAGE]
   return {
     mcpServers: {
       'joinquest-integration': {
-        command: 'joinquest-integration-mcp',
-        args: [],
+        type: 'stdio',
+        command: 'npx',
+        args,
         env,
       },
     },
