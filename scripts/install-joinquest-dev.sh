@@ -33,6 +33,7 @@ _joinquest_load_libs
 MODE="${JOINQUEST_SETUP_MODE:-auto}"
 SETUP_CURSOR=false
 SETUP_CLAUDE=false
+SETUP_CLAUDE_DESKTOP=false
 
 usage() {
   cat <<EOF
@@ -43,6 +44,7 @@ What this script does:
      (agent instructions — markdown only, no code execution from the skill itself).
   2. With --cursor + JOINQUEST_API_KEY: merges joinquest-integration into .cursor/mcp.json
   3. With --claude + JOINQUEST_API_KEY: runs "claude mcp add" for this repo
+  4. With --claude-desktop + JOINQUEST_API_KEY: merges into Claude Desktop config
   MCP uses npx @joinquest/mcp-integration and calls joinquest.cc when tools run.
 
 Source (read before running):
@@ -57,10 +59,11 @@ Quick install (pipes into shell):
   JOINQUEST_API_KEY=lq_dev_... curl -fsSL $GITHUB_RAW/install-joinquest-dev.sh | sh -s -- --cursor
 
 Options:
-  --cursor      Skill + .cursor/mcp.json (needs JOINQUEST_API_KEY)
-  --claude      Skill + claude mcp add (needs JOINQUEST_API_KEY + claude CLI)
-  --all         Skill + Cursor + Claude Code MCP
-  --skill-only  Agent skill only
+  --cursor          Skill + .cursor/mcp.json (needs JOINQUEST_API_KEY)
+  --claude          Skill + claude mcp add (needs JOINQUEST_API_KEY + claude CLI)
+  --claude-desktop  Skill + Claude Desktop claude_desktop_config.json (needs JOINQUEST_API_KEY)
+  --all             Skill + Cursor + Claude Code MCP
+  --skill-only      Agent skill only
   -h, --help    Show this help
 
 Generate an API key: https://joinquest.cc/developers → Connect an AI assistant
@@ -71,6 +74,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --cursor) MODE=manual; SETUP_CURSOR=true ;;
     --claude) MODE=manual; SETUP_CLAUDE=true ;;
+    --claude-desktop) MODE=manual; SETUP_CLAUDE_DESKTOP=true ;;
     --all) MODE=manual; SETUP_CURSOR=true; SETUP_CLAUDE=true ;;
     --skill-only) MODE=skill-only ;;
     -h | --help) usage; exit 0 ;;
@@ -83,13 +87,13 @@ joinquest_install_skill
 
 if [ "$MODE" = "skill-only" ]; then
   echo ""
-  echo "Next: generate an API key on https://joinquest.cc/developers and re-run with --cursor or --claude."
+  echo "Next: generate an API key on https://joinquest.cc/developers and re-run with --cursor, --claude, or --claude-desktop."
   exit 0
 fi
 
 NEED_KEY=false
 if [ "$MODE" = "manual" ]; then
-  if $SETUP_CURSOR || $SETUP_CLAUDE; then
+  if $SETUP_CURSOR || $SETUP_CLAUDE || $SETUP_CLAUDE_DESKTOP; then
     NEED_KEY=true
   fi
 else
@@ -118,7 +122,11 @@ if $SETUP_CLAUDE; then
   joinquest_setup_claude_mcp || true
 fi
 
-if ! $SETUP_CURSOR && ! $SETUP_CLAUDE; then
+if $SETUP_CLAUDE_DESKTOP; then
+  joinquest_write_claude_desktop_mcp
+fi
+
+if ! $SETUP_CURSOR && ! $SETUP_CLAUDE && ! $SETUP_CLAUDE_DESKTOP; then
   echo ""
   echo "MCP manual setup (API key included):"
   echo ""
@@ -127,6 +135,9 @@ if ! $SETUP_CURSOR && ! $SETUP_CLAUDE; then
   echo ""
   echo "Claude Code — run:"
   joinquest_print_claude_command
+  echo ""
+  echo "Claude Desktop — add to $(joinquest_claude_desktop_config_path):"
+  joinquest_claude_desktop_mcp_json
 fi
 
 echo ""

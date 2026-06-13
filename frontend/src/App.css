@@ -2454,6 +2454,34 @@
   background: rgba(255, 200, 80, 0.08);
 }
 
+.developer-mcp__key-field {
+  margin: 0.75rem 0;
+}
+
+.developer-mcp__key-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.developer-mcp__key-input-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  font: inherit;
+}
+
+.developer-mcp__key-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .developer-mcp__client-picker {
   margin: 1rem 0 0.25rem;
 }

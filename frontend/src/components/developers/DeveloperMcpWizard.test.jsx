@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import DeveloperMcpWizard from './DeveloperMcpWizard'
@@ -53,7 +53,8 @@ describe('DeveloperMcpWizard', () => {
     await user.click(screen.getByRole('button', { name: /show setup/i }))
 
     expect(screen.getByRole('tablist', { name: /which editor do you use/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /generate api key/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /generate new api key/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/your api key/i)).toBeInTheDocument()
     expect(screen.getAllByText(/@joinquest\/mcp-integration/).length).toBeGreaterThan(0)
   })
 
@@ -66,16 +67,27 @@ describe('DeveloperMcpWizard', () => {
     const user = userEvent.setup()
     render(<DeveloperMcpWizard defaultExpanded />)
 
-    await user.click(screen.getByRole('button', { name: /generate api key/i }))
+    await user.click(screen.getByRole('button', { name: /generate new api key/i }))
 
-    const quickCopy = document.querySelector('.developer-mcp__quick-copy')
-    expect(quickCopy).not.toBeNull()
-    expect(within(quickCopy).getByRole('button', { name: /copy install command/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/your api key/i)).toHaveValue('lq_dev_test_secret')
     expect(buildMcpServerConfig).toHaveBeenCalledWith(
       expect.objectContaining({ apiKey: 'lq_dev_test_secret', clientId: 'cursor' }),
     )
     expect(buildInstallDevCommand).toHaveBeenCalledWith(
       expect.objectContaining({ apiKey: 'lq_dev_test_secret', client: 'cursor' }),
     )
+    expect(screen.getByRole('button', { name: /copy install command/i })).toBeInTheDocument()
+  })
+
+  it('fills install command when an existing key is pasted', async () => {
+    const user = userEvent.setup()
+    render(<DeveloperMcpWizard defaultExpanded />)
+
+    await user.type(screen.getByLabelText(/your api key/i), 'lq_dev_saved_key_abc')
+
+    expect(buildInstallDevCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: 'lq_dev_saved_key_abc', client: 'cursor' }),
+    )
+    expect(screen.getByText(/export JOINQUEST_API_KEY=lq_dev_saved_key_abc/)).toBeInTheDocument()
   })
 })

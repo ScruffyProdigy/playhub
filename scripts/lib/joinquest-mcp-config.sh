@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Write JoinQuest MCP config for Cursor / Claude Code.
+# Write JoinQuest MCP config for Cursor / Claude Code / Claude Desktop.
 set -euo pipefail
 
 joinquest_cursor_mcp_json() {
@@ -55,6 +55,72 @@ config.mcpServers['joinquest-integration'] = server
 fs.writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`)
 NODE
   echo "Wrote joinquest-integration MCP to $config_path"
+}
+
+joinquest_claude_desktop_config_path() {
+  case "$(uname -s)" in
+    Darwin)
+      printf '%s/Library/Application Support/Claude/claude_desktop_config.json' "$HOME"
+      ;;
+    MINGW* | MSYS* | CYGWIN*)
+      printf '%s/Claude/claude_desktop_config.json' "${APPDATA:-$HOME/AppData/Roaming}"
+      ;;
+    *)
+      printf '%s/Claude/claude_desktop_config.json' "${XDG_CONFIG_HOME:-$HOME/.config}"
+      ;;
+  esac
+}
+
+joinquest_claude_desktop_mcp_json() {
+  cat <<EOF
+{
+  "mcpServers": {
+    "joinquest-integration": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@joinquest/mcp-integration"],
+      "env": {
+        "JOINQUEST_API_KEY": "$JOINQUEST_API_KEY"
+      }
+    }
+  }
+}
+EOF
+}
+
+joinquest_write_claude_desktop_mcp() {
+  local config_path
+  config_path="$(joinquest_claude_desktop_config_path)"
+
+  if ! command -v node >/dev/null 2>&1; then
+    echo "Node.js is required to write $config_path (merge with existing MCP servers)." >&2
+    echo "Paste this into $config_path:" >&2
+    joinquest_claude_desktop_mcp_json
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$config_path")"
+  CONFIG_PATH="$config_path" JOINQUEST_API_KEY="$JOINQUEST_API_KEY" node <<'NODE'
+const fs = require('fs')
+const path = process.env.CONFIG_PATH
+const server = {
+  type: 'stdio',
+  command: 'npx',
+  args: ['-y', '@joinquest/mcp-integration'],
+  env: { JOINQUEST_API_KEY: process.env.JOINQUEST_API_KEY },
+}
+let config = { mcpServers: {} }
+if (fs.existsSync(path)) {
+  config = JSON.parse(fs.readFileSync(path, 'utf8'))
+  if (!config.mcpServers || typeof config.mcpServers !== 'object') {
+    config.mcpServers = {}
+  }
+}
+config.mcpServers['joinquest-integration'] = server
+fs.writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`)
+NODE
+  echo "Wrote joinquest-integration MCP to $config_path"
+  echo "Fully quit Claude Desktop, reopen it, and start a new conversation."
 }
 
 joinquest_setup_claude_mcp() {

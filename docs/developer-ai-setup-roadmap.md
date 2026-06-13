@@ -37,7 +37,7 @@ Production only for game devs: `JOINQUEST_API_KEY` in MCP env (no URL). Lobby co
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 8 | **npx-first docs everywhere** | In progress | After npm publish, install script = fallback only |
-| 9 | **Claude Desktop / Copilot** | Pending | Same stdio JSON; no separate wizards |
+| 9 | **Claude Desktop / Copilot** | Partial | `--claude-desktop` install flag; Copilot still manual |
 | 10 | **Skill install automation** | Done | Bundled in `install-joinquest-dev.sh` |
 | 11 | **Dashboard API key management UX** | Pending | Clear list/revoke/regenerate for MCP |
 

@@ -403,11 +403,13 @@ export function buildInstallDevCommand({ apiKey, client = 'cursor' }) {
   const flag =
     client === 'claude'
       ? '--claude'
-      : client === 'all'
-        ? '--all'
-        : client === 'skill-only'
-          ? '--skill-only'
-          : '--cursor'
+      : client === 'claude-desktop'
+        ? '--claude-desktop'
+        : client === 'all'
+          ? '--all'
+          : client === 'skill-only'
+            ? '--skill-only'
+            : '--cursor'
   if (client === 'skill-only') {
     return `curl -fsSL ${INSTALL_DEV_SCRIPT_URL} | sh -s -- ${flag}`
   }
@@ -420,11 +422,13 @@ export function buildInstallDevInspectCommand({ apiKey, client = 'cursor' }) {
   const flag =
     client === 'claude'
       ? '--claude'
-      : client === 'all'
-        ? '--all'
-        : client === 'skill-only'
-          ? '--skill-only'
-          : '--cursor'
+      : client === 'claude-desktop'
+        ? '--claude-desktop'
+        : client === 'all'
+          ? '--all'
+          : client === 'skill-only'
+            ? '--skill-only'
+            : '--cursor'
   if (client === 'skill-only') {
     return `curl -fsSL ${INSTALL_DEV_SCRIPT_URL} -o install-joinquest-dev.sh
 less install-joinquest-dev.sh

@@ -25,8 +25,8 @@ const CLIENTS = [
   {
     id: 'claude-desktop',
     label: 'Claude Desktop',
-    installClient: 'skill-only',
-    configPath: '~/Library/Application Support/Claude/claude_desktop_config.json',
+    installClient: 'claude-desktop',
+    configPath: 'Settings → Developer → Edit Config (see manual setup below)',
   },
 ]
 
@@ -94,7 +94,8 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [clientId, setClientId] = useState('cursor')
   const [apiKeys, setApiKeys] = useState([])
-  const [newSecret, setNewSecret] = useState('')
+  const [apiKeyValue, setApiKeyValue] = useState('')
+  const [showApiKey, setShowApiKey] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState('')
@@ -115,7 +116,7 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
     }
   }, [])
 
-  const activeKey = newSecret || null
+  const activeKey = apiKeyValue.trim() || null
   const client = CLIENTS.find((item) => item.id === clientId) ?? CLIENTS[0]
   const restartSteps = RESTART_STEPS[clientId] ?? RESTART_STEPS.cursor
 
@@ -159,7 +160,8 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
     setError('')
     try {
       const result = await createDeveloperApiKey('Integration agent')
-      setNewSecret(result.secret)
+      setApiKeyValue(result.secret)
+      setShowApiKey(true)
       setApiKeys((prev) => [result.apiKey, ...prev])
     } catch (err) {
       setError(err.message || 'Could not create API key.')
@@ -210,102 +212,85 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
           <div className="developer-mcp__keys">
             <h3>1. Get an API key</h3>
             <p className="panel-copy">
-              This tells JoinQuest it&apos;s your agent calling. Copy the key when we show it — we
-              won&apos;t display it again.
-              {clientId === 'claude-desktop'
-                ? ' You&apos;ll paste it into the MCP config in step 2.'
-                : ' Step 2 uses it as JOINQUEST_API_KEY in the install command.'}
+              This tells JoinQuest it&apos;s your agent calling. Paste a saved key below, or
+              generate a new one — either way, step 2 fills in the install command for you.
             </p>
-            {apiKeys.length > 0 && !newSecret ? (
+            {apiKeys.length > 0 ? (
               <p className="panel-copy">
                 You already have a key (<code>{apiKeys[0].keyPrefix}…</code>
-                {apiKeys[0].lastUsedAt ? ', used recently' : ', not used yet'}). Generate a new one
-                if you need a fresh copy for the install command.
+                {apiKeys[0].lastUsedAt ? ', used recently' : ', not used yet'}). Paste it if you
+                saved it, or generate a new one.
               </p>
             ) : null}
-            {newSecret ? (
-              <div className="developer-mcp__secret" role="status">
-                <p className="panel-copy">
-                  <strong>Here&apos;s your key.</strong> Copy it now.
-                </p>
-                <code>{newSecret}</code>
+            <div className="developer-form__field developer-mcp__key-field">
+              <label htmlFor="developer-mcp-api-key">Your API key</label>
+              <div className="developer-mcp__key-input-row">
+                <input
+                  id="developer-mcp-api-key"
+                  type={showApiKey ? 'text' : 'password'}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="lq_dev_…"
+                  value={apiKeyValue}
+                  onChange={(event) => setApiKeyValue(event.target.value)}
+                />
                 <button
                   type="button"
                   className="button-secondary"
-                  onClick={() => void handleCopy(newSecret, 'key')}
+                  onClick={() => setShowApiKey((value) => !value)}
+                  disabled={!apiKeyValue}
+                >
+                  {showApiKey ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <p className="developer-form__hint">
+                We only use this in your browser to build the copy-paste commands below — nothing
+                gets sent until you run them.
+              </p>
+            </div>
+            <div className="developer-mcp__key-actions">
+              <button
+                type="button"
+                className="button-primary"
+                disabled={busy}
+                onClick={() => void handleGenerateKey()}
+              >
+                {busy ? 'Generating…' : 'Generate new API key'}
+              </button>
+              {activeKey ? (
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => void handleCopy(activeKey, 'key')}
                 >
                   {copied === 'key' ? 'Copied' : 'Copy API key'}
                 </button>
-                <div className="developer-mcp__quick-copy">
-                  <p className="panel-copy">
-                    Ready for step 2 — this sets <code>JOINQUEST_API_KEY</code> and runs the
-                    installer for {client.label}. Copy and run from your game repo:
-                  </p>
-                  <pre className="developer-mcp__config">{installDevCommand}</pre>
-                  <div className="developer-mcp__quick-copy-actions">
-                    <button
-                      type="button"
-                      className="button-primary"
-                      onClick={() => void handleCopy(installDevCommand, 'install')}
-                    >
-                      {copied === 'install' ? 'Copied' : 'Copy install command'}
-                    </button>
-                    {clientId === 'claude-desktop' ? (
-                      <button
-                        type="button"
-                        className="button-secondary"
-                        onClick={() => void handleCopy(configText, 'config')}
-                      >
-                        {copied === 'config' ? 'Copied' : 'Copy MCP config'}
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="button-primary"
-                  disabled={busy}
-                  onClick={() => void handleGenerateKey()}
-                >
-                  {busy ? 'Generating…' : 'Generate API key'}
-                </button>
-              </>
-            )}
+              ) : null}
+            </div>
           </div>
 
           <div className="developer-mcp__install">
             <h3>2. Install the skill and MCP</h3>
-            {newSecret && activeKey ? (
-              <p className="panel-copy">
-                Run the install command you copied in step 1 from your <strong>game repo root</strong>.
-              </p>
-            ) : (
-              <>
-                <p className="panel-copy">
-                  From your <strong>game repo root</strong>, run the command below.
-                  {activeKey ? (
-                    <> Your API key is already in the first line.</>
-                  ) : (
-                    <>
-                      {' '}
-                      Generate a key in step 1 first, or replace{' '}
-                      <code>lq_dev_PASTE_YOUR_KEY</code> with a key you saved earlier.
-                    </>
-                  )}
-                </p>
-                <pre className="developer-mcp__config">{installDevCommand}</pre>
-                <button
-                  type="button"
-                  className="button-secondary"
-                  onClick={() => void handleCopy(installDevCommand, 'install-main')}
-                >
-                  {copied === 'install-main' ? 'Copied' : 'Copy install command'}
-                </button>
-              </>
-            )}
+            <p className="panel-copy">
+              From your <strong>game repo root</strong>, run the command below.
+              {activeKey ? (
+                <> Your key is already in the first line — copy and run as-is.</>
+              ) : (
+                <>
+                  {' '}
+                  Paste or generate your key in step 1 first — we&apos;ll fill in{' '}
+                  <code>JOINQUEST_API_KEY</code> for you.
+                </>
+              )}
+            </p>
+            <pre className="developer-mcp__config">{installDevCommand}</pre>
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={() => void handleCopy(installDevCommand, 'install-main')}
+            >
+              {copied === 'install-main' ? 'Copied' : 'Copy install command'}
+            </button>
             <p className="panel-copy developer-mcp__what-it-does">What the script does:</p>
             <ul className="developer-mcp__explainer">
               <li>
@@ -325,8 +310,8 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
               ) : null}
               {clientId === 'claude-desktop' ? (
                 <li>
-                  With <code>--skill-only</code>, installs the skill only — you paste the MCP JSON
-                  below into <code>{client.configPath}</code>.
+                  With <code>--claude-desktop</code>, merges MCP into Claude Desktop&apos;s config
+                  (macOS, Windows, or Linux).
                 </li>
               ) : null}
               <li>
@@ -350,22 +335,6 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
                 {copied === 'inspect' ? 'Copied' : 'Copy review-first commands'}
               </button>
             </details>
-            {clientId === 'claude-desktop' ? (
-              <details className="developer-mcp__details" open>
-                <summary>Paste this into Claude Desktop</summary>
-                <p className="panel-copy">
-                  Config file: <code>{client.configPath}</code>
-                </p>
-                <pre className="developer-mcp__config">{configText}</pre>
-                <button
-                  type="button"
-                  className="button-secondary"
-                  onClick={() => void handleCopy(configText, 'config')}
-                >
-                  {copied === 'config' ? 'Copied' : 'Copy MCP config'}
-                </button>
-              </details>
-            ) : null}
             <details className="developer-mcp__details">
               <summary>Offline or pinned install</summary>
               <p className="panel-copy">Optional — if you don&apos;t want to use npx each time:</p>
@@ -399,48 +368,60 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
             </p>
           </div>
 
-          {clientId !== 'claude-desktop' ? (
-            <details className="developer-mcp__details developer-mcp__manual">
-              <summary>Manual setup (skip the script)</summary>
-              <p className="panel-copy">
-                Prefer to paste config yourself? File: <code>{client.configPath}</code>
-              </p>
-              {clientId === 'claude-code' ? (
+          <details className="developer-mcp__details developer-mcp__manual">
+            <summary>Manual setup (skip the script)</summary>
+            <p className="panel-copy">
+              Prefer to paste config yourself?{' '}
+              {clientId === 'claude-desktop' ? (
                 <>
-                  <pre className="developer-mcp__config">{claudeAddCommand}</pre>
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={() => void handleCopy(claudeAddCommand, 'claude-add')}
-                  >
-                    {copied === 'claude-add' ? 'Copied' : 'Copy Claude command'}
-                  </button>
-                  <details className="developer-mcp__details">
-                    <summary>Manual .mcp.json instead</summary>
-                    <pre className="developer-mcp__config">{configText}</pre>
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      onClick={() => void handleCopy(configText, 'config-manual')}
-                    >
-                      {copied === 'config-manual' ? 'Copied' : 'Copy .mcp.json'}
-                    </button>
-                  </details>
+                  In Claude Desktop: <strong>Settings → Developer → Edit Config</strong>. Or edit
+                  the file directly (macOS:{' '}
+                  <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                  ).
                 </>
               ) : (
-                <>
+                <>File: <code>{client.configPath}</code></>
+              )}
+            </p>
+            {clientId === 'claude-code' ? (
+              <>
+                <pre className="developer-mcp__config">{claudeAddCommand}</pre>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => void handleCopy(claudeAddCommand, 'claude-add')}
+                >
+                  {copied === 'claude-add' ? 'Copied' : 'Copy Claude command'}
+                </button>
+                <details className="developer-mcp__details">
+                  <summary>Manual .mcp.json instead</summary>
                   <pre className="developer-mcp__config">{configText}</pre>
                   <button
                     type="button"
                     className="button-secondary"
-                    onClick={() => void handleCopy(configText, 'config')}
+                    onClick={() => void handleCopy(configText, 'config-manual')}
                   >
-                    {copied === 'config' ? 'Copied' : 'Copy Cursor JSON'}
+                    {copied === 'config-manual' ? 'Copied' : 'Copy .mcp.json'}
                   </button>
-                </>
-              )}
-            </details>
-          ) : null}
+                </details>
+              </>
+            ) : (
+              <>
+                <pre className="developer-mcp__config">{configText}</pre>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => void handleCopy(configText, 'config')}
+                >
+                  {copied === 'config'
+                    ? 'Copied'
+                    : clientId === 'claude-desktop'
+                      ? 'Copy MCP config'
+                      : 'Copy Cursor JSON'}
+                </button>
+              </>
+            )}
+          </details>
 
           {error ? (
             <p className="status-message status-message-error" role="alert">

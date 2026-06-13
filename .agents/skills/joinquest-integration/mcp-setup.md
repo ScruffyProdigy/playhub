@@ -42,7 +42,17 @@ Start a new `claude` session and approve **joinquest-integration**.
 }
 ```
 
-### Claude Desktop / other stdio clients
+### Claude Desktop
+
+From your game repo (same one-liner as Cursor):
+
+```bash
+JOINQUEST_API_KEY=lq_dev_PASTE_HERE curl -fsSL .../install-joinquest-dev.sh | sh -s -- --claude-desktop
+```
+
+That merges MCP into Claude Desktop's config (macOS / Windows / Linux). Fully quit Claude Desktop and reopen.
+
+Or paste manually via **Settings → Developer → Edit Config**:
 
 ```json
 {
@@ -59,7 +69,7 @@ Start a new `claude` session and approve **joinquest-integration**.
 }
 ```
 
-3. **Restart the agent client fully** — Cursor: **Cmd+Q**, reopen, new Agent chat.
+3. **Restart the agent client fully** — Cursor: **Cmd+Q**, reopen, new Agent chat. Claude Desktop: fully quit and reopen.
 
 4. **Verify** — ask the agent: “List my JoinQuest games using the MCP tools.”
 
