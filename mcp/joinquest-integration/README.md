@@ -79,6 +79,7 @@ Maintainers: `./scripts/publish-joinquest-mcp.sh` (requires npm login + `@joinqu
 | `joinquest_integration_get_discovery_prompt` | Agent interview script |
 | `joinquest_integration_get_catalog_tag_taxonomy` | Valid tag IDs |
 | `joinquest_integration_list_my_games` | Owner's games + visibility |
+| `joinquest_integration_register_game` | Register a new game (confirm fields with developer first) |
 | `joinquest_integration_get_game_checks` | Checklist + metadata |
 | `joinquest_integration_run_game_checks` | Run manifest / provision / JWT suite |
 | `joinquest_integration_update_game_metadata` | Save catalog copy + tags |

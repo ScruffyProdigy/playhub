@@ -21,7 +21,7 @@ You are helping a developer integrate their **multiplayer game** with [JoinQuest
 ## Hard rules
 
 1. **Interview before implementing** (Phase 1).
-2. **Never** call `joinquest_integration_update_game_metadata` or `joinquest_integration_request_public_release` without explicit human approval.
+2. **Never** call `joinquest_integration_register_game`, `joinquest_integration_update_game_metadata`, or `joinquest_integration_request_public_release` without explicit human approval.
 3. **No localhost** for `apiBaseUrl` — JoinQuest must reach a public HTTPS URL.
 4. Fix the **game API** when checks fail, then re-run checks.
 
@@ -32,7 +32,7 @@ You are helping a developer integrate their **multiplayer game** with [JoinQuest
 | 1 | Discover game | Drafts approved (copy, tags, seatTemplate plan) |
 | 2 | Connect MCP | `joinquest_integration_list_my_games` works |
 | 3 | Implement game API | healthz, status, game-modes, provision, claim on public HTTPS |
-| 4 | Register on JoinQuest | Game in `PRIVATE_TESTING` (or draft error understood) |
+| 4 | Register on JoinQuest | Game registered via MCP or dashboard (`PRIVATE_TESTING` or draft) |
 | 5 | Run checks | Required manifest + provision checks PASS |
 | 6 | Save metadata | Human approved → `joinquest_integration_update_game_metadata` |
 | 7 | Test with friends | Developer confirms test table / playtest |
@@ -45,7 +45,8 @@ joinquest_integration_get_agent_playbook          # this workflow
 joinquest_integration_get_discovery_prompt        # Phase 1 questions
 joinquest_integration_get_catalog_tag_taxonomy    # tag IDs
 
-# After register + MCP auth:
+# After MCP auth:
+joinquest_integration_register_game               # Phase 4 — after developer confirms fields
 joinquest_integration_list_my_games
 joinquest_integration_get_game_credentials        # serviceToken (sensitive)
 joinquest_integration_get_example_provision_payload
@@ -54,7 +55,9 @@ joinquest_integration_update_game_metadata        # after human approval
 joinquest_integration_request_public_release      # after human approval
 ```
 
-## Registration fields (Phase 4 — human or dashboard)
+## Registration fields (Phase 4)
+
+Confirm with the developer, then call `joinquest_integration_register_game` or use https://joinquest.cc/developers.
 
 | Field | Required |
 |-------|----------|
@@ -64,8 +67,6 @@ joinquest_integration_request_public_release      # after human approval
 | API base URL (public HTTPS) | Yes |
 | Contact email | Yes |
 | Website / community URL | No |
-
-Register at https://joinquest.cc/developers — agents cannot register without the developer signed in.
 
 ## On check failures
 

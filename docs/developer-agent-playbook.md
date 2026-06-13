@@ -17,7 +17,7 @@ End-to-end workflow for AI agents helping a developer integrate a multiplayer ga
 ## Agent rules (always)
 
 1. **Interview before implementing.** Understand the game before writing API code or catalog copy.
-2. **Human gates.** Never call `updateMyGameMetadata` or `requestPublicRelease` without explicit developer approval of the draft.
+2. **Human gates.** Never call `joinquest_integration_register_game`, `joinquest_integration_update_game_metadata`, or `joinquest_integration_request_public_release` without explicit developer approval of the draft values.
 3. **Public HTTPS only.** JoinQuest cannot reach `localhost` — use staging, Render, Fly, ngrok, etc.
 4. **One phase at a time.** Finish the current phase (or get explicit skip) before moving on.
 5. **MCP first when connected.** Prefer MCP tools over guessing dashboard state. If MCP is not configured, tell the developer how to set it up (Phase 2).
@@ -136,7 +136,7 @@ Use Phase 1 seatTemplate plan. Full details: integration guide §3–§7.
 
 **Goal:** Game row exists; manifest sync attempted.
 
-**Registration fields** (developer fills at [/developers](https://joinquest.cc/developers) or you guide them):
+**Registration fields** — confirm values with the developer (Phase 1 drafts), then register via MCP or [/developers](https://joinquest.cc/developers):
 
 | Field | Required | Notes |
 |-------|----------|-------|
@@ -148,11 +148,13 @@ Use Phase 1 seatTemplate plan. Full details: integration guide §3–§7.
 | Website URL | No | |
 | Community URL | No | Discord, etc. |
 
-**After register:** JoinQuest calls `healthz` + `game-modes`. Success → `private_testing`. Failure → stays `draft` with `connectError`.
+**MCP:** `joinquest_integration_register_game` with the fields above. JoinQuest probes `healthz` + `game-modes` on register.
+
+**After register:** Success → `private_testing`. Failure → stays `draft` with `connectError`.
 
 **MCP (after register):**
 
-- `joinquest_integration_list_my_games` — find `gameId`
+- `joinquest_integration_list_my_games` — confirm `gameId`
 - `joinquest_integration_get_game_checks` — current state
 - `joinquest_integration_get_game_credentials` — `serviceToken`, `webhookSecret` (sensitive)
 - `joinquest_integration_get_example_provision_payload` — sample POST body for local debugging
@@ -258,7 +260,7 @@ Friends join via the developer's room link. Game stays off the public catalog un
 |-------|-------|
 | Setup | `joinquest_integration_get_agent_playbook` (this doc), `joinquest_integration_get_integration_guide` |
 | Discover | `joinquest_integration_get_discovery_prompt`, `joinquest_integration_get_catalog_tag_taxonomy` |
-| Register / status | `joinquest_integration_list_my_games`, `joinquest_integration_get_game_checks`, `joinquest_integration_get_game_credentials`, `joinquest_integration_get_example_provision_payload` |
+| Register / status | `joinquest_integration_register_game`, `joinquest_integration_list_my_games`, `joinquest_integration_get_game_checks`, `joinquest_integration_get_game_credentials`, `joinquest_integration_get_example_provision_payload` |
 | Checks | `joinquest_integration_run_game_checks` |
 | Metadata | `joinquest_integration_update_game_metadata` |
 | Release | `joinquest_integration_request_public_release` |

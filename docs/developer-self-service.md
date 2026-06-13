@@ -313,6 +313,7 @@ Goal: agent runs the **same probes** as the dashboard without the developer in t
 | `joinquest_integration_get_discovery_prompt` | Returns discovery interview script (guide §0) |
 | `joinquest_integration_get_catalog_tag_taxonomy` | Valid tag IDs + labels |
 | `joinquest_integration_list_my_games` | Owner's games + states |
+| `joinquest_integration_register_game` | Register a new game (after developer confirms fields) |
 | `joinquest_integration_get_game_checks` | Latest checklist results + errors |
 | `joinquest_integration_run_game_checks` | Run manifest / provision / JWT suite |
 | `joinquest_integration_update_game_metadata` | Save catalog copy + tags (after dev approval) |

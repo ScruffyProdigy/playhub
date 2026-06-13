@@ -143,4 +143,21 @@ export const MUTATIONS = {
       }
     }
   `,
+  registerMyGame: `
+    mutation RegisterMyGame($input: RegisterMyGameInput!) {
+      registerMyGame(input: $input) {
+        connected
+        connectError
+        webhookSecret
+        serviceToken
+        game {
+          id
+          slug
+          name
+          visibility
+          apiBaseUrl
+        }
+      }
+    }
+  `,
 }

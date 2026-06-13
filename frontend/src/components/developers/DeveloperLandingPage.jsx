@@ -30,8 +30,8 @@ export default function DeveloperLandingPage() {
           had a quick look).
         </p>
         <p className="panel-copy">
-          Using Cursor or Claude? Sign in below, open the setup section, and your assistant can help
-          you register and integrate.
+          Using Cursor or Claude? Sign in below, connect your assistant, and it can register
+          and integrate your game from your editor.
         </p>
       </section>
 

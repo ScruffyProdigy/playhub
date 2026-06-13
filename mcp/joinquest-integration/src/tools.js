@@ -93,6 +93,51 @@ export function registerJoinQuestIntegrationTools(server, config) {
   )
 
   server.registerTool(
+    'joinquest_integration_register_game',
+    {
+      description:
+        'Register a new game on JoinQuest for the authenticated developer. JoinQuest probes the public HTTPS apiBaseUrl (healthz + game-modes). Confirm field values with the developer before calling. Returns game id, visibility, serviceToken, webhookSecret, and connectError if the API is unreachable.',
+      inputSchema: z.object({
+        name: z.string().describe('Display name'),
+        slug: z.string().describe('Lowercase URL slug (unique on JoinQuest)'),
+        shortDescription: z.string().describe('Initial catalog card blurb (~1–2 sentences)'),
+        apiBaseUrl: z
+          .string()
+          .describe('Public HTTPS origin for the game API, e.g. https://mygame.example.com'),
+        contactEmail: z.string().describe('Email for review notifications'),
+        websiteUrl: z.string().optional().describe('Optional marketing or docs URL'),
+        communityUrl: z.string().optional().describe('Optional Discord or community URL'),
+      }),
+    },
+    async ({
+      name,
+      slug,
+      shortDescription,
+      apiBaseUrl,
+      contactEmail,
+      websiteUrl,
+      communityUrl,
+    }) => {
+      const input = {
+        name,
+        slug,
+        shortDescription,
+        apiBaseUrl,
+        contactEmail,
+      }
+      if (websiteUrl !== undefined) {
+        input.websiteUrl = websiteUrl
+      }
+      if (communityUrl !== undefined) {
+        input.communityUrl = communityUrl
+      }
+
+      const data = await gql(MUTATIONS.registerMyGame, { input })
+      return textResult(data.registerMyGame)
+    },
+  )
+
+  server.registerTool(
     'joinquest_integration_get_game_checks',
     {
       description: 'Fetch latest integration checklist results and catalog metadata for one owned game.',
