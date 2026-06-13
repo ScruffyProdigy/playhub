@@ -61,11 +61,25 @@ Start a new `claude` session and approve **joinquest-integration**.
 
 3. **Restart the agent client fully** — Cursor: **Cmd+Q**, reopen, new Agent chat.
 
-4. **Verify** — ask the agent to call `joinquest_integration_list_my_games`.
+4. **Verify** — ask the agent: “List my JoinQuest games using the MCP tools.”
+
+5. **Start** — say: “I want to create a game on JoinQuest.” (Same prompt works if your game is already registered — the agent continues integration from there.)
 
 ## Agent skill (recommended)
 
-Copy `.agents/skills/joinquest-integration/` into the **game repo** at the same path. See dashboard **Connect an AI assistant** or the [JoinQuest repo](https://github.com/scruffyprodigy/playhub/tree/main/.agents/skills/joinquest-integration).
+From your **game repo root**. [Read the install script on GitHub](https://github.com/scruffyprodigy/playhub/blob/main/scripts/install-joinquest-dev.sh) before running.
+
+It copies `.agents/skills/joinquest-integration/` from GitHub; with `--cursor` merges MCP into `.cursor/mcp.json`. MCP only calls joinquest.cc when tools run.
+
+**Review first:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-dev.sh -o install-joinquest-dev.sh
+less install-joinquest-dev.sh
+JOINQUEST_API_KEY=lq_dev_... bash install-joinquest-dev.sh --cursor
+```
+
+**Quick install:** `JOINQUEST_API_KEY=... curl -fsSL .../install-joinquest-dev.sh | sh -s -- --cursor`
 
 ## Troubleshooting (Cursor)
 

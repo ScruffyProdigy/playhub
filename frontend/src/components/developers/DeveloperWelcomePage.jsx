@@ -66,6 +66,8 @@ export default function DeveloperWelcomePage({ gameId }) {
         <p className="tagline">{game.name} · {visibilityLabel(game.visibility)}</p>
       </header>
 
+      <DeveloperMcpWizard defaultExpanded />
+
       <section className="panel-card">
         {connected ? (
           <p className="panel-copy">
@@ -99,8 +101,6 @@ export default function DeveloperWelcomePage({ gameId }) {
           Open developer dashboard
         </button>
       </section>
-
-      <DeveloperMcpWizard defaultExpanded />
     </main>
   )
 }

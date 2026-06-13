@@ -6,7 +6,7 @@ Track simplifying JoinQuest integration for game developers using Cursor, Claude
 
 | Audience | Done when |
 |----------|-----------|
-| **Cursor** | Dashboard → copy config → Cmd+Q → Agent chat → “integrate my game with JoinQuest” |
+| **Cursor** | Dashboard → copy config → Cmd+Q → Agent chat → verify MCP → “I want to create a game on JoinQuest” |
 | **Claude Code** | Dashboard → copy `claude mcp add …` → new session → approve MCP → same prompt |
 | **Everyone** | Agent skill installed in game repo automatically (not a separate GitHub copy) |
 
@@ -20,7 +20,8 @@ Production only for game devs: `JOINQUEST_API_KEY` in MCP env (no URL). Lobby co
 |---|------|--------|-------|
 | 1 | **Publish `@joinquest/mcp-integration` to npm** | Republish 0.1.1 | 0.1.0 missing default bin; Cursor wrapper path fix in 0.1.1 |
 | 2 | **Dashboard copy-ready commands** | Done | One-click Copy Cursor JSON + Copy Claude command after key gen |
-| 3 | **Unified setup script** (skill + MCP hints) | Pending | e.g. `install-joinquest-dev.sh` → skill into cwd + print/run client setup |
+| 3 | **Unified setup script** (skill + MCP hints) | Done | `install-joinquest-dev.sh` — skill + `--cursor` / `--claude` / `--all` |
+| 10 | **Skill install automation** | Done | Bundled in `install-joinquest-dev.sh` |
 | 4 | **Deploy doc/wizard/MCP fixes to joinquest.cc** | Done | Deployed commit 816bb8f to joinquest.cc |
 
 ## Tier 2 — Remove secrets & friction
@@ -37,7 +38,7 @@ Production only for game devs: `JOINQUEST_API_KEY` in MCP env (no URL). Lobby co
 |---|------|--------|-------|
 | 8 | **npx-first docs everywhere** | In progress | After npm publish, install script = fallback only |
 | 9 | **Claude Desktop / Copilot** | Pending | Same stdio JSON; no separate wizards |
-| 10 | **Skill install automation** | Pending | `install-joinquest-skill.sh` or bundled in unified setup |
+| 10 | **Skill install automation** | Done | Bundled in `install-joinquest-dev.sh` |
 | 11 | **Dashboard API key management UX** | Pending | Clear list/revoke/regenerate for MCP |
 
 ## Explicitly not now

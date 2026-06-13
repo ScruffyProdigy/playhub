@@ -90,7 +90,13 @@ Config paths: Cursor → `~/.cursor/mcp.json` or `.cursor/mcp.json`; Claude Code
 
 **Optional — Agent Skill (no MCP required for workflow text):**
 
-Copy `.agents/skills/joinquest-integration/` from the [JoinQuest repo](https://github.com/scruffyprodigy/playhub) into the developer's project at `.agents/skills/joinquest-integration/` (works across Claude Code, Codex, Cursor, Copilot, Gemini CLI, and others per [agentskills.io](https://agentskills.io/)).
+From the developer's **game repo root** (installs agent skill + MCP):
+
+```bash
+JOINQUEST_API_KEY=lq_dev_... curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-dev.sh | sh -s -- --cursor
+```
+
+Use `--claude` for Claude Code or `--all` for both. Skill-only: omit flags and API key.
 
 **Verify MCP:**
 

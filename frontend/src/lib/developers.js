@@ -394,6 +394,26 @@ function joinquestMcpEnv({ apiKey }) {
 }
 
 const MCP_NPX_PACKAGE = '@joinquest/mcp-integration'
+export const INSTALL_DEV_SCRIPT_URL =
+  'https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-dev.sh'
+export const INSTALL_DEV_SCRIPT_GITHUB =
+  'https://github.com/scruffyprodigy/playhub/blob/main/scripts/install-joinquest-dev.sh'
+
+export function buildInstallDevCommand({ apiKey, client = 'cursor' }) {
+  const prefix = apiKey ? `JOINQUEST_API_KEY=${apiKey} ` : ''
+  const flag =
+    client === 'claude' ? '--claude' : client === 'all' ? '--all' : '--cursor'
+  return `${prefix}curl -fsSL ${INSTALL_DEV_SCRIPT_URL} | sh -s -- ${flag}`
+}
+
+export function buildInstallDevInspectCommand({ apiKey, client = 'cursor' }) {
+  const prefix = apiKey ? `JOINQUEST_API_KEY=${apiKey} ` : ''
+  const flag =
+    client === 'claude' ? '--claude' : client === 'all' ? '--all' : '--cursor'
+  return `${prefix}curl -fsSL ${INSTALL_DEV_SCRIPT_URL} -o install-joinquest-dev.sh
+less install-joinquest-dev.sh
+bash install-joinquest-dev.sh ${flag}`
+}
 
 export function buildClaudeMcpAddCommand({ apiKey }) {
   const key = apiKey || 'lq_dev_PASTE_HERE'

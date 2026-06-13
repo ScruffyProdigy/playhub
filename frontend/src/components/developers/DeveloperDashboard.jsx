@@ -179,6 +179,8 @@ export default function DeveloperDashboard({ gameId }) {
         <p className="tagline">{visibilityLabel(game.visibility)}</p>
       </header>
 
+      <DeveloperMcpWizard />
+
       <DeveloperNextSteps game={game} />
 
       <section className="panel-card developer-actions">
@@ -278,8 +280,6 @@ export default function DeveloperDashboard({ gameId }) {
       ) : null}
 
       {showCatalog ? <DeveloperCatalogMetadata game={game} onSaved={setGame} /> : null}
-
-      <DeveloperMcpWizard />
 
       {guide ? (
         <details className="panel-card developer-guide">

@@ -28,6 +28,14 @@ vi.mock('../../lib/developers', () => ({
   buildClaudeMcpAddCommand: vi.fn(
     ({ apiKey }) => `claude mcp add --env JOINQUEST_API_KEY=${apiKey} ...`,
   ),
+  buildInstallDevCommand: vi.fn(
+    ({ apiKey, client }) =>
+      `${apiKey ? `JOINQUEST_API_KEY=${apiKey} ` : ''}curl -fsSL .../install-joinquest-dev.sh | sh -s -- --${client}`,
+  ),
+  buildInstallDevInspectCommand: vi.fn(
+    ({ apiKey }) => `curl -fsSL ... -o install-joinquest-dev.sh\nless install-joinquest-dev.sh`,
+  ),
+  INSTALL_DEV_SCRIPT_GITHUB: 'https://github.com/example/install-joinquest-dev.sh',
 }))
 
 describe('DeveloperMcpWizard', () => {
@@ -58,8 +66,8 @@ describe('DeveloperMcpWizard', () => {
 
     const quickCopy = document.querySelector('.developer-mcp__quick-copy')
     expect(quickCopy).not.toBeNull()
-    expect(within(quickCopy).getByRole('button', { name: /copy cursor json/i })).toBeInTheDocument()
-    expect(within(quickCopy).getByRole('button', { name: /copy claude command/i })).toBeInTheDocument()
+    expect(within(quickCopy).getByRole('button', { name: /copy cursor install/i })).toBeInTheDocument()
+    expect(within(quickCopy).getByRole('button', { name: /copy claude install/i })).toBeInTheDocument()
     expect(buildMcpServerConfig).toHaveBeenCalledWith(
       expect.objectContaining({ apiKey: 'lq_dev_test_secret', clientId: 'cursor' }),
     )
