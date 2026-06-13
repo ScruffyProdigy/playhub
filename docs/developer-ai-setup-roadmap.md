@@ -21,7 +21,7 @@ Production only for game devs: `JOINQUEST_API_KEY` in MCP env (no URL). Lobby co
 | 1 | **Publish `@joinquest/mcp-integration` to npm** | Republish 0.1.1 | 0.1.0 missing default bin; Cursor wrapper path fix in 0.1.1 |
 | 2 | **Dashboard copy-ready commands** | Done | One-click Copy Cursor JSON + Copy Claude command after key gen |
 | 3 | **Unified setup script** (skill + MCP hints) | Pending | e.g. `install-joinquest-dev.sh` → skill into cwd + print/run client setup |
-| 4 | **Deploy doc/wizard/MCP fixes to joinquest.cc** | In progress | Commit + deploy batch |
+| 4 | **Deploy doc/wizard/MCP fixes to joinquest.cc** | Done | Deployed commit 816bb8f to joinquest.cc |
 
 ## Tier 2 — Remove secrets & friction
 
