@@ -1,0 +1,33 @@
+{
+  "name": "@joinquest/mcp-integration",
+  "version": "0.1.0",
+  "description": "JoinQuest integration MCP server for game developer agents",
+  "type": "module",
+  "private": false,
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scruffyprodigy/playhub.git",
+    "directory": "mcp/joinquest-integration"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "joinquest-integration-mcp": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
+  }
+}

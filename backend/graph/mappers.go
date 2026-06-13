@@ -173,6 +173,19 @@ func rawJSONToStringPtr(raw json.RawMessage) *string {
 	return &s
 }
 
+func ToGraphQLDeveloperAPIKey(key *store.DeveloperAPIKey) *model.DeveloperAPIKey {
+	if key == nil {
+		return nil
+	}
+	return &model.DeveloperAPIKey{
+		ID:         key.ID.String(),
+		Name:       key.Name,
+		KeyPrefix:  key.KeyPrefix,
+		CreatedAt:  key.CreatedAt,
+		LastUsedAt: key.LastUsedAt,
+	}
+}
+
 func ToGraphQLGameModes(modes []store.GameMode) []*model.GameMode {
 	result := make([]*model.GameMode, len(modes))
 	for i := range modes {

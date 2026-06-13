@@ -45,6 +45,56 @@ func (r *gameResolver) IntegrationChecks(ctx context.Context, obj *model.Game) (
 	return ToGraphQLIntegrationChecks(checks), nil
 }
 
+// CreateDeveloperAPIKey is the resolver for the createDeveloperApiKey field.
+func (r *mutationResolver) CreateDeveloperAPIKey(ctx context.Context, name *string) (*model.CreateDeveloperAPIKeyPayload, error) {
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+
+	keyName := "Integration agent"
+	if name != nil && strings.TrimSpace(*name) != "" {
+		keyName = strings.TrimSpace(*name)
+	}
+
+	rawKey, key, err := st.CreateDeveloperAPIKey(ctx, userID, keyName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.CreateDeveloperAPIKeyPayload{
+		APIKey: ToGraphQLDeveloperAPIKey(&key),
+		Secret: rawKey,
+	}, nil
+}
+
+// RevokeDeveloperAPIKey is the resolver for the revokeDeveloperApiKey field.
+func (r *mutationResolver) RevokeDeveloperAPIKey(ctx context.Context, id string) (bool, error) {
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return false, err
+	}
+	st, err := r.requireStore()
+	if err != nil {
+		return false, err
+	}
+	keyID, err := parseUUID(id, "api key id")
+	if err != nil {
+		return false, err
+	}
+	if err := st.RevokeDeveloperAPIKey(ctx, keyID, userID); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return false, fmt.Errorf("api key not found")
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 // RegisterMyGame is the resolver for the registerMyGame field.
 func (r *mutationResolver) RegisterMyGame(ctx context.Context, input model.RegisterMyGameInput) (*model.RegisterMyGamePayload, error) {
 	userID, err := requireAuthUserID(ctx)
@@ -140,6 +190,96 @@ func (r *mutationResolver) RunMyGameChecks(ctx context.Context, gameID string) (
 	return r.persistGameChecks(ctx, game)
 }
 
+// UpdateMyGameMetadata is the resolver for the updateMyGameMetadata field.
+func (r *mutationResolver) UpdateMyGameMetadata(ctx context.Context, input model.UpdateMyGameMetadataInput) (*model.Game, error) {
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+	gameID, err := parseUUID(input.GameID, "game id")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := st.GetOwnedGame(ctx, gameID, userID); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, fmt.Errorf("game not found")
+		}
+		return nil, err
+	}
+
+	params := store.UpdateMyGameMetadataParams{}
+	if input.ShortDescription != nil {
+		trimmed := strings.TrimSpace(*input.ShortDescription)
+		params.ShortDescription = &trimmed
+	}
+	if input.LongDescription != nil {
+		trimmed := strings.TrimSpace(*input.LongDescription)
+		params.LongDescription = &trimmed
+	}
+	if input.HowToPlay != nil {
+		trimmed := strings.TrimSpace(*input.HowToPlay)
+		params.HowToPlay = &trimmed
+	}
+	if input.Tags != nil {
+		if err := developer.ValidateCatalogTags(input.Tags); err != nil {
+			return nil, err
+		}
+		params.Tags = input.Tags
+	}
+
+	game, err := st.UpdateMyGameMetadata(ctx, gameID, userID, params)
+	if err != nil {
+		return nil, err
+	}
+	return ToGraphQLGame(game), nil
+}
+
+// RequestPublicRelease is the resolver for the requestPublicRelease field.
+func (r *mutationResolver) RequestPublicRelease(ctx context.Context, gameID string) (*model.Game, error) {
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+	id, err := parseUUID(gameID, "game id")
+	if err != nil {
+		return nil, err
+	}
+	game, err := st.RequestPublicRelease(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+	return ToGraphQLGame(game), nil
+}
+
+// ReviewGameRelease is the resolver for the reviewGameRelease field.
+func (r *mutationResolver) ReviewGameRelease(ctx context.Context, gameID string, approve bool, reason *string) (*model.Game, error) {
+	if _, err := r.requireAdmin(ctx); err != nil {
+		return nil, err
+	}
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+	id, err := parseUUID(gameID, "game id")
+	if err != nil {
+		return nil, err
+	}
+	game, err := st.ReviewGameRelease(ctx, id, approve)
+	if err != nil {
+		return nil, err
+	}
+	_ = reason // email notification is follow-up work
+	return ToGraphQLGame(game), nil
+}
+
 // MyGames is the resolver for the myGames field.
 func (r *queryResolver) MyGames(ctx context.Context) ([]*model.Game, error) {
 	userID, err := requireAuthUserID(ctx)
@@ -216,7 +356,67 @@ func (r *queryResolver) MyGameCredentials(ctx context.Context, id string) (*mode
 	}, nil
 }
 
+// MyDeveloperAPIKeys is the resolver for the myDeveloperApiKeys field.
+func (r *queryResolver) MyDeveloperAPIKeys(ctx context.Context) ([]*model.DeveloperAPIKey, error) {
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+	keys, err := st.ListDeveloperAPIKeys(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*model.DeveloperAPIKey, len(keys))
+	for i := range keys {
+		out[i] = ToGraphQLDeveloperAPIKey(&keys[i])
+	}
+	return out, nil
+}
+
 // DeveloperIntegrationGuide is the resolver for the developerIntegrationGuide field.
 func (r *queryResolver) DeveloperIntegrationGuide(ctx context.Context) (string, error) {
 	return developer.IntegrationGuide(), nil
+}
+
+// DeveloperAgentPlaybook is the resolver for the developerAgentPlaybook field.
+func (r *queryResolver) DeveloperAgentPlaybook(ctx context.Context) (string, error) {
+	return developer.AgentPlaybook(), nil
+}
+
+// DeveloperDiscoveryPrompt is the resolver for the developerDiscoveryPrompt field.
+func (r *queryResolver) DeveloperDiscoveryPrompt(ctx context.Context) (string, error) {
+	return developer.DiscoveryPrompt(), nil
+}
+
+// CatalogTagTaxonomy is the resolver for the catalogTagTaxonomy field.
+func (r *queryResolver) CatalogTagTaxonomy(ctx context.Context) ([]*model.CatalogTagOption, error) {
+	out := make([]*model.CatalogTagOption, len(developer.CatalogTagTaxonomy))
+	for i, tag := range developer.CatalogTagTaxonomy {
+		out[i] = &model.CatalogTagOption{
+			ID:          tag.ID,
+			Label:       tag.Label,
+			Description: tag.Description,
+		}
+	}
+	return out, nil
+}
+
+// PendingGameReviews is the resolver for the pendingGameReviews field.
+func (r *queryResolver) PendingGameReviews(ctx context.Context) ([]*model.Game, error) {
+	if _, err := r.requireAdmin(ctx); err != nil {
+		return nil, err
+	}
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+	games, err := st.ListPendingGameReviews(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return ToGraphQLGames(games), nil
 }

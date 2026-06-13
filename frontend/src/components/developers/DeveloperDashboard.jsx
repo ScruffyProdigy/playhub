@@ -1,17 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { APP_NAME } from '../../lib/brand'
 import {
+  canRequestPublicRelease,
+  checkFixHint,
   checkSectionTitle,
   checkStatusLabel,
   defaultModeForMyGame,
   fetchDeveloperIntegrationGuide,
   fetchMyGame,
   fetchMyGameCredentials,
+  requestPublicRelease,
   runMyGameChecks,
   visibilityLabel,
 } from '../../lib/developers'
 import { createPrivateTable } from '../../lib/tables'
 import { useActiveRoom } from '../rooms/ActiveRoomProvider'
+import DeveloperCatalogMetadata from './DeveloperCatalogMetadata'
+import DeveloperMcpWizard from './DeveloperMcpWizard'
+import DeveloperNextSteps from './DeveloperNextSteps'
+import DeveloperProvisionExample from './DeveloperProvisionExample'
 
 function groupChecks(checks) {
   const groups = new Map()
@@ -60,6 +67,7 @@ export default function DeveloperDashboard({ gameId }) {
   const [status, setStatus] = useState('loading')
   const [checksBusy, setChecksBusy] = useState(false)
   const [tableBusy, setTableBusy] = useState(false)
+  const [releaseBusy, setReleaseBusy] = useState(false)
   const [actionError, setActionError] = useState('')
 
   const load = useCallback(async () => {
@@ -86,6 +94,9 @@ export default function DeveloperDashboard({ gameId }) {
   const checkGroups = useMemo(() => groupChecks(game?.integrationChecks), [game?.integrationChecks])
   const defaultMode = useMemo(() => defaultModeForMyGame(game), [game])
   const canTestTable = game?.visibility === 'PRIVATE_TESTING' || game?.visibility === 'PENDING_REVIEW'
+  const showRelease = canRequestPublicRelease(game)
+  const showCatalog = game?.visibility !== 'DRAFT'
+  const showCredentials = showCatalog && credentials
 
   async function handleRunChecks() {
     setChecksBusy(true)
@@ -97,6 +108,19 @@ export default function DeveloperDashboard({ gameId }) {
       setActionError(err.message || 'Could not run checks.')
     } finally {
       setChecksBusy(false)
+    }
+  }
+
+  async function handleRequestRelease() {
+    setReleaseBusy(true)
+    setActionError('')
+    try {
+      const updated = await requestPublicRelease(gameId)
+      setGame((prev) => (prev ? { ...prev, visibility: updated.visibility } : prev))
+    } catch (err) {
+      setActionError(err.message || 'Could not request public release.')
+    } finally {
+      setReleaseBusy(false)
     }
   }
 
@@ -155,6 +179,8 @@ export default function DeveloperDashboard({ gameId }) {
         <p className="tagline">{visibilityLabel(game.visibility)}</p>
       </header>
 
+      <DeveloperNextSteps game={game} />
+
       <section className="panel-card developer-actions">
         <h2>Actions</h2>
         <div className="developer-actions__row">
@@ -176,7 +202,22 @@ export default function DeveloperDashboard({ gameId }) {
               {tableBusy ? 'Creating table…' : 'Create test table'}
             </button>
           ) : null}
+          {showRelease ? (
+            <button
+              type="button"
+              className="button-secondary"
+              disabled={releaseBusy}
+              onClick={() => void handleRequestRelease()}
+            >
+              {releaseBusy ? 'Submitting…' : 'Request public release'}
+            </button>
+          ) : null}
         </div>
+        {game?.visibility === 'PENDING_REVIEW' ? (
+          <p className="panel-copy" role="status">
+            Your game is pending review — we&apos;ll email you at {game.contactEmail} when it&apos;s approved.
+          </p>
+        ) : null}
         {actionError ? (
           <p className="status-message status-message-error" role="alert">
             {actionError}
@@ -187,14 +228,6 @@ export default function DeveloperDashboard({ gameId }) {
           review — mostly so names aren&apos;t spam or obvious IP issues.
         </p>
       </section>
-
-      {credentials ? (
-        <section className="panel-card" aria-labelledby="credentials-heading">
-          <h2 id="credentials-heading">Integration credentials</h2>
-          <CredentialField label="Service token" value={credentials.serviceToken} />
-          <CredentialField label="Webhook secret" value={credentials.webhookSecret} />
-        </section>
-      ) : null}
 
       <section className="panel-card" aria-labelledby="checklist-heading">
         <h2 id="checklist-heading">Integration checklist</h2>
@@ -215,6 +248,15 @@ export default function DeveloperDashboard({ gameId }) {
                       <span className="developer-check__status">{checkStatusLabel(check.status)}</span>
                     </div>
                     {check.message ? <p className="developer-check__message">{check.message}</p> : null}
+                    {check.status === 'FAIL' ? (
+                      <p className="developer-check__fix">{checkFixHint(check.checkId)}</p>
+                    ) : null}
+                    {check.detail ? (
+                      <details className="developer-check__detail">
+                        <summary>Details</summary>
+                        <pre>{check.detail}</pre>
+                      </details>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -223,11 +265,27 @@ export default function DeveloperDashboard({ gameId }) {
         )}
       </section>
 
-      {guide ? (
-        <section className="panel-card developer-guide" aria-labelledby="guide-heading">
-          <h2 id="guide-heading">Integration guide</h2>
-          <pre className="developer-guide__body">{guide}</pre>
+      {showCredentials ? (
+        <section className="panel-card" aria-labelledby="credentials-heading">
+          <h2 id="credentials-heading">Integration credentials</h2>
+          <CredentialField label="Service token" value={credentials.serviceToken} />
+          <CredentialField label="Webhook secret" value={credentials.webhookSecret} />
         </section>
+      ) : null}
+
+      {showCredentials ? (
+        <DeveloperProvisionExample game={game} credentials={credentials} />
+      ) : null}
+
+      {showCatalog ? <DeveloperCatalogMetadata game={game} onSaved={setGame} /> : null}
+
+      <DeveloperMcpWizard />
+
+      {guide ? (
+        <details className="panel-card developer-guide">
+          <summary>Integration guide (full reference)</summary>
+          <pre className="developer-guide__body">{guide}</pre>
+        </details>
       ) : null}
     </main>
   )

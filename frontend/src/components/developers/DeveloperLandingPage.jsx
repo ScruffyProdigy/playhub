@@ -28,6 +28,18 @@ export default function DeveloperLandingPage() {
           won&apos;t show up for other players until <em>you</em> say it&apos;s ready (and we&apos;ve
           had a quick look).
         </p>
+        <p className="panel-copy">
+          Building with an AI agent? After you register, copy the{' '}
+          <a
+            className="auth-link"
+            href="https://github.com/scruffyprodigy/playhub/tree/main/.agents/skills/joinquest-integration"
+            target="_blank"
+            rel="noreferrer"
+          >
+            JoinQuest integration skill
+          </a>{' '}
+          into your game repo at <code>.agents/skills/joinquest-integration/</code>.
+        </p>
       </section>
 
       <AuthPanel />

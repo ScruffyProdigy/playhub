@@ -6,6 +6,7 @@ import {
   visibilityLabel,
 } from '../../lib/developers'
 import { navigateTo } from '../../lib/usePathname'
+import DeveloperMcpWizard from './DeveloperMcpWizard'
 
 export default function DeveloperWelcomePage({ gameId }) {
   const [game, setGame] = useState(null)
@@ -78,13 +79,13 @@ export default function DeveloperWelcomePage({ gameId }) {
           </p>
         )}
         <p className="panel-copy">
-          <strong>Using Claude, Cursor, or another AI assistant?</strong> Turn on the JoinQuest MCP
-          and point your agent at our integration guide — it can run the same checks as the
-          dashboard.
+          <strong>Vibe coding with an AI agent?</strong> Copy the JoinQuest agent skill into your game
+          repo (<code>.agents/skills/joinquest-integration/</code>) — see setup below. It walks through
+          discovery, integration, and release.
         </p>
         <p className="panel-copy">
-          <strong>Prefer doing it yourself?</strong> The integration guide on your dashboard works
-          for humans — step by step.
+          <strong>Prefer doing it yourself?</strong> Your dashboard has a step-by-step checklist and
+          example provision requests.
         </p>
         <p className="panel-copy">
           When things look good, spin up a <strong>test table</strong> and invite friends into your
@@ -98,6 +99,8 @@ export default function DeveloperWelcomePage({ gameId }) {
           Open developer dashboard
         </button>
       </section>
+
+      <DeveloperMcpWizard defaultExpanded />
     </main>
   )
 }

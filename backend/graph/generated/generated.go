@@ -74,6 +74,25 @@ type ComplexityRoot struct {
 		Status               func(childComplexity int) int
 	}
 
+	CatalogTagOption struct {
+		Description func(childComplexity int) int
+		ID          func(childComplexity int) int
+		Label       func(childComplexity int) int
+	}
+
+	CreateDeveloperApiKeyPayload struct {
+		APIKey func(childComplexity int) int
+		Secret func(childComplexity int) int
+	}
+
+	DeveloperApiKey struct {
+		CreatedAt  func(childComplexity int) int
+		ID         func(childComplexity int) int
+		KeyPrefix  func(childComplexity int) int
+		LastUsedAt func(childComplexity int) int
+		Name       func(childComplexity int) int
+	}
+
 	DigitalGood struct {
 		Code        func(childComplexity int) int
 		Description func(childComplexity int) int
@@ -173,6 +192,7 @@ type ComplexityRoot struct {
 		BeginSpiritAnimalReading     func(childComplexity int, forceRestart *bool) int
 		CompleteSignInWithCode       func(childComplexity int, email string, code string) int
 		CompleteSignInWithLink       func(childComplexity int, token string) int
+		CreateDeveloperAPIKey        func(childComplexity int, name *string) int
 		CreatePrivateTable           func(childComplexity int, gameID string, modeID string) int
 		CreateRoom                   func(childComplexity int) int
 		CreateTable                  func(childComplexity int, roomID string, gameID string, modeID string) int
@@ -191,7 +211,10 @@ type ComplexityRoot struct {
 		RegisterMyGame               func(childComplexity int, input model.RegisterMyGameInput) int
 		ReportMatchResult            func(childComplexity int, matchID string, status model.MatchResultStatus, winnerLobbyUserIds []string, metadata map[string]any) int
 		ReportPlayerFinished         func(childComplexity int, matchID string, lobbyUserID string, reason model.PlayerFinishReason, placement *int, metadata map[string]any) int
+		RequestPublicRelease         func(childComplexity int, gameID string) int
 		RequestSignIn                func(childComplexity int, email string) int
+		ReviewGameRelease            func(childComplexity int, gameID string, approve bool, reason *string) int
+		RevokeDeveloperAPIKey        func(childComplexity int, id string) int
 		RevokeGood                   func(childComplexity int, userID string, goodID string, quantity *int) int
 		RunMyGameChecks              func(childComplexity int, gameID string) int
 		SelectSpiritAnimalTotem      func(childComplexity int, totemName string) int
@@ -200,6 +223,7 @@ type ComplexityRoot struct {
 		StartTable                   func(childComplexity int, tableID string) int
 		StartTableBackfill           func(childComplexity int, tableID string, queueID string) int
 		SubmitSpiritAnimalAnswers    func(childComplexity int, answers []string) int
+		UpdateMyGameMetadata         func(childComplexity int, input model.UpdateMyGameMetadataInput) int
 		UpdatePlayerProfile          func(childComplexity int, displayName string, avatarKey *string) int
 	}
 
@@ -232,6 +256,9 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
+		CatalogTagTaxonomy               func(childComplexity int) int
+		DeveloperAgentPlaybook           func(childComplexity int) int
+		DeveloperDiscoveryPrompt         func(childComplexity int) int
 		DeveloperIntegrationGuide        func(childComplexity int) int
 		Game                             func(childComplexity int, id string) int
 		GameBySlug                       func(childComplexity int, slug string) int
@@ -240,6 +267,7 @@ type ComplexityRoot struct {
 		Healthz                          func(childComplexity int) int
 		Me                               func(childComplexity int) int
 		MyActiveIntent                   func(childComplexity int) int
+		MyDeveloperAPIKeys               func(childComplexity int) int
 		MyGame                           func(childComplexity int, id string) int
 		MyGameCredentials                func(childComplexity int, id string) int
 		MyGames                          func(childComplexity int) int
@@ -249,6 +277,7 @@ type ComplexityRoot struct {
 		MySpiritAnimalJourneyEligibility func(childComplexity int) int
 		MySpiritAnimalReading            func(childComplexity int) int
 		MyTableSeat                      func(childComplexity int) int
+		PendingGameReviews               func(childComplexity int) int
 		Player                           func(childComplexity int, id string) int
 		ReturnDestination                func(childComplexity int, matchID *string) int
 		Room                             func(childComplexity int, inviteCode string) int
@@ -484,8 +513,13 @@ type MutationResolver interface {
 	UpdatePlayerProfile(ctx context.Context, displayName string, avatarKey *string) (*model.User, error)
 	RegisterGame(ctx context.Context, input model.RegisterGameInput) (*model.RegisterGamePayload, error)
 	RefreshGameManifest(ctx context.Context, gameID string) (*model.Game, error)
+	CreateDeveloperAPIKey(ctx context.Context, name *string) (*model.CreateDeveloperAPIKeyPayload, error)
+	RevokeDeveloperAPIKey(ctx context.Context, id string) (bool, error)
 	RegisterMyGame(ctx context.Context, input model.RegisterMyGameInput) (*model.RegisterMyGamePayload, error)
 	RunMyGameChecks(ctx context.Context, gameID string) ([]*model.GameIntegrationCheck, error)
+	UpdateMyGameMetadata(ctx context.Context, input model.UpdateMyGameMetadataInput) (*model.Game, error)
+	RequestPublicRelease(ctx context.Context, gameID string) (*model.Game, error)
+	ReviewGameRelease(ctx context.Context, gameID string, approve bool, reason *string) (*model.Game, error)
 	ReportPlayerFinished(ctx context.Context, matchID string, lobbyUserID string, reason model.PlayerFinishReason, placement *int, metadata map[string]any) (bool, error)
 	ReportMatchResult(ctx context.Context, matchID string, status model.MatchResultStatus, winnerLobbyUserIds []string, metadata map[string]any) (bool, error)
 	CreateRoom(ctx context.Context) (*model.Room, error)
@@ -526,7 +560,12 @@ type QueryResolver interface {
 	MyGames(ctx context.Context) ([]*model.Game, error)
 	MyGame(ctx context.Context, id string) (*model.Game, error)
 	MyGameCredentials(ctx context.Context, id string) (*model.MyGameCredentials, error)
+	MyDeveloperAPIKeys(ctx context.Context) ([]*model.DeveloperAPIKey, error)
 	DeveloperIntegrationGuide(ctx context.Context) (string, error)
+	DeveloperAgentPlaybook(ctx context.Context) (string, error)
+	DeveloperDiscoveryPrompt(ctx context.Context) (string, error)
+	CatalogTagTaxonomy(ctx context.Context) ([]*model.CatalogTagOption, error)
+	PendingGameReviews(ctx context.Context) ([]*model.Game, error)
 	ReturnDestination(ctx context.Context, matchID *string) (*model.ReturnDestination, error)
 	Room(ctx context.Context, inviteCode string) (*model.Room, error)
 	MyRoom(ctx context.Context) (*model.Room, error)
@@ -664,6 +703,69 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ActiveIntent.Status(childComplexity), true
+
+	case "CatalogTagOption.description":
+		if e.complexity.CatalogTagOption.Description == nil {
+			break
+		}
+
+		return e.complexity.CatalogTagOption.Description(childComplexity), true
+	case "CatalogTagOption.id":
+		if e.complexity.CatalogTagOption.ID == nil {
+			break
+		}
+
+		return e.complexity.CatalogTagOption.ID(childComplexity), true
+	case "CatalogTagOption.label":
+		if e.complexity.CatalogTagOption.Label == nil {
+			break
+		}
+
+		return e.complexity.CatalogTagOption.Label(childComplexity), true
+
+	case "CreateDeveloperApiKeyPayload.apiKey":
+		if e.complexity.CreateDeveloperApiKeyPayload.APIKey == nil {
+			break
+		}
+
+		return e.complexity.CreateDeveloperApiKeyPayload.APIKey(childComplexity), true
+	case "CreateDeveloperApiKeyPayload.secret":
+		if e.complexity.CreateDeveloperApiKeyPayload.Secret == nil {
+			break
+		}
+
+		return e.complexity.CreateDeveloperApiKeyPayload.Secret(childComplexity), true
+
+	case "DeveloperApiKey.createdAt":
+		if e.complexity.DeveloperApiKey.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.DeveloperApiKey.CreatedAt(childComplexity), true
+	case "DeveloperApiKey.id":
+		if e.complexity.DeveloperApiKey.ID == nil {
+			break
+		}
+
+		return e.complexity.DeveloperApiKey.ID(childComplexity), true
+	case "DeveloperApiKey.keyPrefix":
+		if e.complexity.DeveloperApiKey.KeyPrefix == nil {
+			break
+		}
+
+		return e.complexity.DeveloperApiKey.KeyPrefix(childComplexity), true
+	case "DeveloperApiKey.lastUsedAt":
+		if e.complexity.DeveloperApiKey.LastUsedAt == nil {
+			break
+		}
+
+		return e.complexity.DeveloperApiKey.LastUsedAt(childComplexity), true
+	case "DeveloperApiKey.name":
+		if e.complexity.DeveloperApiKey.Name == nil {
+			break
+		}
+
+		return e.complexity.DeveloperApiKey.Name(childComplexity), true
 
 	case "DigitalGood.code":
 		if e.complexity.DigitalGood.Code == nil {
@@ -1120,6 +1222,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.CompleteSignInWithLink(childComplexity, args["token"].(string)), true
+	case "Mutation.createDeveloperApiKey":
+		if e.complexity.Mutation.CreateDeveloperAPIKey == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createDeveloperApiKey_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateDeveloperAPIKey(childComplexity, args["name"].(*string)), true
 	case "Mutation.createPrivateTable":
 		if e.complexity.Mutation.CreatePrivateTable == nil {
 			break
@@ -1293,6 +1406,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.ReportPlayerFinished(childComplexity, args["matchId"].(string), args["lobbyUserId"].(string), args["reason"].(model.PlayerFinishReason), args["placement"].(*int), args["metadata"].(map[string]any)), true
+	case "Mutation.requestPublicRelease":
+		if e.complexity.Mutation.RequestPublicRelease == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_requestPublicRelease_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RequestPublicRelease(childComplexity, args["gameId"].(string)), true
 	case "Mutation.requestSignIn":
 		if e.complexity.Mutation.RequestSignIn == nil {
 			break
@@ -1304,6 +1428,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RequestSignIn(childComplexity, args["email"].(string)), true
+	case "Mutation.reviewGameRelease":
+		if e.complexity.Mutation.ReviewGameRelease == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_reviewGameRelease_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ReviewGameRelease(childComplexity, args["gameId"].(string), args["approve"].(bool), args["reason"].(*string)), true
+	case "Mutation.revokeDeveloperApiKey":
+		if e.complexity.Mutation.RevokeDeveloperAPIKey == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_revokeDeveloperApiKey_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RevokeDeveloperAPIKey(childComplexity, args["id"].(string)), true
 	case "Mutation.revokeGood":
 		if e.complexity.Mutation.RevokeGood == nil {
 			break
@@ -1392,6 +1538,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.SubmitSpiritAnimalAnswers(childComplexity, args["answers"].([]string)), true
+	case "Mutation.updateMyGameMetadata":
+		if e.complexity.Mutation.UpdateMyGameMetadata == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateMyGameMetadata_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateMyGameMetadata(childComplexity, args["input"].(model.UpdateMyGameMetadataInput)), true
 	case "Mutation.updatePlayerProfile":
 		if e.complexity.Mutation.UpdatePlayerProfile == nil {
 			break
@@ -1521,6 +1678,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.PublicPlayer.ID(childComplexity), true
 
+	case "Query.catalogTagTaxonomy":
+		if e.complexity.Query.CatalogTagTaxonomy == nil {
+			break
+		}
+
+		return e.complexity.Query.CatalogTagTaxonomy(childComplexity), true
+	case "Query.developerAgentPlaybook":
+		if e.complexity.Query.DeveloperAgentPlaybook == nil {
+			break
+		}
+
+		return e.complexity.Query.DeveloperAgentPlaybook(childComplexity), true
+	case "Query.developerDiscoveryPrompt":
+		if e.complexity.Query.DeveloperDiscoveryPrompt == nil {
+			break
+		}
+
+		return e.complexity.Query.DeveloperDiscoveryPrompt(childComplexity), true
 	case "Query.developerIntegrationGuide":
 		if e.complexity.Query.DeveloperIntegrationGuide == nil {
 			break
@@ -1589,6 +1764,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.MyActiveIntent(childComplexity), true
+	case "Query.myDeveloperApiKeys":
+		if e.complexity.Query.MyDeveloperAPIKeys == nil {
+			break
+		}
+
+		return e.complexity.Query.MyDeveloperAPIKeys(childComplexity), true
 	case "Query.myGame":
 		if e.complexity.Query.MyGame == nil {
 			break
@@ -1663,6 +1844,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.MyTableSeat(childComplexity), true
+	case "Query.pendingGameReviews":
+		if e.complexity.Query.PendingGameReviews == nil {
+			break
+		}
+
+		return e.complexity.Query.PendingGameReviews(childComplexity), true
 	case "Query.player":
 		if e.complexity.Query.Player == nil {
 			break
@@ -2553,6 +2740,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputPartyNodeInput,
 		ec.unmarshalInputRegisterGameInput,
 		ec.unmarshalInputRegisterMyGameInput,
+		ec.unmarshalInputUpdateMyGameMetadataInput,
 	)
 	first := true
 
@@ -2837,6 +3025,12 @@ type GameIntegrationCheck {
   ranAt: Time
 }
 
+type CatalogTagOption {
+  id: String!
+  label: String!
+  description: String!
+}
+
 input RegisterMyGameInput {
   slug: String!
   name: String!
@@ -2855,6 +3049,14 @@ type RegisterMyGamePayload {
   connectError: String
 }
 
+input UpdateMyGameMetadataInput {
+  gameId: ID!
+  shortDescription: String
+  longDescription: String
+  howToPlay: String
+  tags: [String!]
+}
+
 extend type Game {
   visibility: GameVisibility!
   contactEmail: String
@@ -2869,16 +3071,39 @@ type MyGameCredentials {
   webhookSecret: String!
 }
 
+type DeveloperApiKey {
+  id: ID!
+  name: String!
+  keyPrefix: String!
+  createdAt: Time!
+  lastUsedAt: Time
+}
+
+type CreateDeveloperApiKeyPayload {
+  apiKey: DeveloperApiKey!
+  secret: String!
+}
+
 extend type Query {
   myGames: [Game!]!
   myGame(id: ID!): Game
   myGameCredentials(id: ID!): MyGameCredentials
+  myDeveloperApiKeys: [DeveloperApiKey!]!
   developerIntegrationGuide: String!
+  developerAgentPlaybook: String!
+  developerDiscoveryPrompt: String!
+  catalogTagTaxonomy: [CatalogTagOption!]!
+  pendingGameReviews: [Game!]!
 }
 
 extend type Mutation {
+  createDeveloperApiKey(name: String): CreateDeveloperApiKeyPayload!
+  revokeDeveloperApiKey(id: ID!): Boolean!
   registerMyGame(input: RegisterMyGameInput!): RegisterMyGamePayload!
   runMyGameChecks(gameId: ID!): [GameIntegrationCheck!]!
+  updateMyGameMetadata(input: UpdateMyGameMetadataInput!): Game!
+  requestPublicRelease(gameId: ID!): Game!
+  reviewGameRelease(gameId: ID!, approve: Boolean!, reason: String): Game!
 }
 `, BuiltIn: false},
 	{Name: "../schema/game.graphqls", Input: `enum SessionStatus { PENDING ACTIVE ENDED }
@@ -3305,6 +3530,17 @@ func (ec *executionContext) field_Mutation_completeSignInWithLink_args(ctx conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_createDeveloperApiKey_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "name", ec.unmarshalOString2ᚖstring)
+	if err != nil {
+		return nil, err
+	}
+	args["name"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createPrivateTable_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -3518,6 +3754,17 @@ func (ec *executionContext) field_Mutation_reportPlayerFinished_args(ctx context
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_requestPublicRelease_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "gameId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["gameId"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_requestSignIn_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -3526,6 +3773,38 @@ func (ec *executionContext) field_Mutation_requestSignIn_args(ctx context.Contex
 		return nil, err
 	}
 	args["email"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_reviewGameRelease_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "gameId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["gameId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "approve", ec.unmarshalNBoolean2bool)
+	if err != nil {
+		return nil, err
+	}
+	args["approve"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "reason", ec.unmarshalOString2ᚖstring)
+	if err != nil {
+		return nil, err
+	}
+	args["reason"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_revokeDeveloperApiKey_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -3639,6 +3918,17 @@ func (ec *executionContext) field_Mutation_submitSpiritAnimalAnswers_args(ctx co
 		return nil, err
 	}
 	args["answers"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateMyGameMetadata_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNUpdateMyGameMetadataInput2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUpdateMyGameMetadataInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -4242,6 +4532,308 @@ func (ec *executionContext) fieldContext_ActiveIntent_formingGaps(_ context.Cont
 				return ec.fieldContext_QueuePathGap_needed(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type QueuePathGap", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CatalogTagOption_id(ctx context.Context, field graphql.CollectedField, obj *model.CatalogTagOption) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CatalogTagOption_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CatalogTagOption_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CatalogTagOption",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CatalogTagOption_label(ctx context.Context, field graphql.CollectedField, obj *model.CatalogTagOption) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CatalogTagOption_label,
+		func(ctx context.Context) (any, error) {
+			return obj.Label, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CatalogTagOption_label(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CatalogTagOption",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CatalogTagOption_description(ctx context.Context, field graphql.CollectedField, obj *model.CatalogTagOption) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CatalogTagOption_description,
+		func(ctx context.Context) (any, error) {
+			return obj.Description, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CatalogTagOption_description(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CatalogTagOption",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CreateDeveloperApiKeyPayload_apiKey(ctx context.Context, field graphql.CollectedField, obj *model.CreateDeveloperAPIKeyPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CreateDeveloperApiKeyPayload_apiKey,
+		func(ctx context.Context) (any, error) {
+			return obj.APIKey, nil
+		},
+		nil,
+		ec.marshalNDeveloperApiKey2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐDeveloperAPIKey,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CreateDeveloperApiKeyPayload_apiKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CreateDeveloperApiKeyPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_DeveloperApiKey_id(ctx, field)
+			case "name":
+				return ec.fieldContext_DeveloperApiKey_name(ctx, field)
+			case "keyPrefix":
+				return ec.fieldContext_DeveloperApiKey_keyPrefix(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_DeveloperApiKey_createdAt(ctx, field)
+			case "lastUsedAt":
+				return ec.fieldContext_DeveloperApiKey_lastUsedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DeveloperApiKey", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CreateDeveloperApiKeyPayload_secret(ctx context.Context, field graphql.CollectedField, obj *model.CreateDeveloperAPIKeyPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CreateDeveloperApiKeyPayload_secret,
+		func(ctx context.Context) (any, error) {
+			return obj.Secret, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CreateDeveloperApiKeyPayload_secret(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CreateDeveloperApiKeyPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeveloperApiKey_id(ctx context.Context, field graphql.CollectedField, obj *model.DeveloperAPIKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_DeveloperApiKey_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_DeveloperApiKey_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeveloperApiKey",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeveloperApiKey_name(ctx context.Context, field graphql.CollectedField, obj *model.DeveloperAPIKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_DeveloperApiKey_name,
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_DeveloperApiKey_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeveloperApiKey",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeveloperApiKey_keyPrefix(ctx context.Context, field graphql.CollectedField, obj *model.DeveloperAPIKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_DeveloperApiKey_keyPrefix,
+		func(ctx context.Context) (any, error) {
+			return obj.KeyPrefix, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_DeveloperApiKey_keyPrefix(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeveloperApiKey",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeveloperApiKey_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.DeveloperAPIKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_DeveloperApiKey_createdAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_DeveloperApiKey_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeveloperApiKey",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeveloperApiKey_lastUsedAt(ctx context.Context, field graphql.CollectedField, obj *model.DeveloperAPIKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_DeveloperApiKey_lastUsedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.LastUsedAt, nil
+		},
+		nil,
+		ec.marshalOTime2ᚖtimeᚐTime,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_DeveloperApiKey_lastUsedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeveloperApiKey",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
 		},
 	}
 	return fc, nil
@@ -6971,6 +7563,94 @@ func (ec *executionContext) fieldContext_Mutation_refreshGameManifest(ctx contex
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_createDeveloperApiKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_createDeveloperApiKey,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().CreateDeveloperAPIKey(ctx, fc.Args["name"].(*string))
+		},
+		nil,
+		ec.marshalNCreateDeveloperApiKeyPayload2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐCreateDeveloperAPIKeyPayload,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createDeveloperApiKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "apiKey":
+				return ec.fieldContext_CreateDeveloperApiKeyPayload_apiKey(ctx, field)
+			case "secret":
+				return ec.fieldContext_CreateDeveloperApiKeyPayload_secret(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CreateDeveloperApiKeyPayload", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createDeveloperApiKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_revokeDeveloperApiKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_revokeDeveloperApiKey,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().RevokeDeveloperAPIKey(ctx, fc.Args["id"].(string))
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_revokeDeveloperApiKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_revokeDeveloperApiKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_registerMyGame(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -7071,6 +7751,285 @@ func (ec *executionContext) fieldContext_Mutation_runMyGameChecks(ctx context.Co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_runMyGameChecks_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateMyGameMetadata(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_updateMyGameMetadata,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().UpdateMyGameMetadata(ctx, fc.Args["input"].(model.UpdateMyGameMetadataInput))
+		},
+		nil,
+		ec.marshalNGame2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGame,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateMyGameMetadata(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Game_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Game_name(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Game_createdAt(ctx, field)
+			case "activeSessions":
+				return ec.fieldContext_Game_activeSessions(ctx, field)
+			case "slug":
+				return ec.fieldContext_Game_slug(ctx, field)
+			case "apiBaseUrl":
+				return ec.fieldContext_Game_apiBaseUrl(ctx, field)
+			case "manifestSyncedAt":
+				return ec.fieldContext_Game_manifestSyncedAt(ctx, field)
+			case "manifestHash":
+				return ec.fieldContext_Game_manifestHash(ctx, field)
+			case "gameVersion":
+				return ec.fieldContext_Game_gameVersion(ctx, field)
+			case "iconUrl":
+				return ec.fieldContext_Game_iconUrl(ctx, field)
+			case "heroUrl":
+				return ec.fieldContext_Game_heroUrl(ctx, field)
+			case "catalogHeroUrl":
+				return ec.fieldContext_Game_catalogHeroUrl(ctx, field)
+			case "longDescription":
+				return ec.fieldContext_Game_longDescription(ctx, field)
+			case "shortDescription":
+				return ec.fieldContext_Game_shortDescription(ctx, field)
+			case "howToPlay":
+				return ec.fieldContext_Game_howToPlay(ctx, field)
+			case "tutorialUrl":
+				return ec.fieldContext_Game_tutorialUrl(ctx, field)
+			case "screenshots":
+				return ec.fieldContext_Game_screenshots(ctx, field)
+			case "tags":
+				return ec.fieldContext_Game_tags(ctx, field)
+			case "modes":
+				return ec.fieldContext_Game_modes(ctx, field)
+			case "visibility":
+				return ec.fieldContext_Game_visibility(ctx, field)
+			case "contactEmail":
+				return ec.fieldContext_Game_contactEmail(ctx, field)
+			case "websiteUrl":
+				return ec.fieldContext_Game_websiteUrl(ctx, field)
+			case "communityUrl":
+				return ec.fieldContext_Game_communityUrl(ctx, field)
+			case "ownerUserId":
+				return ec.fieldContext_Game_ownerUserId(ctx, field)
+			case "integrationChecks":
+				return ec.fieldContext_Game_integrationChecks(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Game", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateMyGameMetadata_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_requestPublicRelease(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_requestPublicRelease,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().RequestPublicRelease(ctx, fc.Args["gameId"].(string))
+		},
+		nil,
+		ec.marshalNGame2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGame,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_requestPublicRelease(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Game_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Game_name(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Game_createdAt(ctx, field)
+			case "activeSessions":
+				return ec.fieldContext_Game_activeSessions(ctx, field)
+			case "slug":
+				return ec.fieldContext_Game_slug(ctx, field)
+			case "apiBaseUrl":
+				return ec.fieldContext_Game_apiBaseUrl(ctx, field)
+			case "manifestSyncedAt":
+				return ec.fieldContext_Game_manifestSyncedAt(ctx, field)
+			case "manifestHash":
+				return ec.fieldContext_Game_manifestHash(ctx, field)
+			case "gameVersion":
+				return ec.fieldContext_Game_gameVersion(ctx, field)
+			case "iconUrl":
+				return ec.fieldContext_Game_iconUrl(ctx, field)
+			case "heroUrl":
+				return ec.fieldContext_Game_heroUrl(ctx, field)
+			case "catalogHeroUrl":
+				return ec.fieldContext_Game_catalogHeroUrl(ctx, field)
+			case "longDescription":
+				return ec.fieldContext_Game_longDescription(ctx, field)
+			case "shortDescription":
+				return ec.fieldContext_Game_shortDescription(ctx, field)
+			case "howToPlay":
+				return ec.fieldContext_Game_howToPlay(ctx, field)
+			case "tutorialUrl":
+				return ec.fieldContext_Game_tutorialUrl(ctx, field)
+			case "screenshots":
+				return ec.fieldContext_Game_screenshots(ctx, field)
+			case "tags":
+				return ec.fieldContext_Game_tags(ctx, field)
+			case "modes":
+				return ec.fieldContext_Game_modes(ctx, field)
+			case "visibility":
+				return ec.fieldContext_Game_visibility(ctx, field)
+			case "contactEmail":
+				return ec.fieldContext_Game_contactEmail(ctx, field)
+			case "websiteUrl":
+				return ec.fieldContext_Game_websiteUrl(ctx, field)
+			case "communityUrl":
+				return ec.fieldContext_Game_communityUrl(ctx, field)
+			case "ownerUserId":
+				return ec.fieldContext_Game_ownerUserId(ctx, field)
+			case "integrationChecks":
+				return ec.fieldContext_Game_integrationChecks(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Game", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_requestPublicRelease_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_reviewGameRelease(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_reviewGameRelease,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().ReviewGameRelease(ctx, fc.Args["gameId"].(string), fc.Args["approve"].(bool), fc.Args["reason"].(*string))
+		},
+		nil,
+		ec.marshalNGame2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGame,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_reviewGameRelease(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Game_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Game_name(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Game_createdAt(ctx, field)
+			case "activeSessions":
+				return ec.fieldContext_Game_activeSessions(ctx, field)
+			case "slug":
+				return ec.fieldContext_Game_slug(ctx, field)
+			case "apiBaseUrl":
+				return ec.fieldContext_Game_apiBaseUrl(ctx, field)
+			case "manifestSyncedAt":
+				return ec.fieldContext_Game_manifestSyncedAt(ctx, field)
+			case "manifestHash":
+				return ec.fieldContext_Game_manifestHash(ctx, field)
+			case "gameVersion":
+				return ec.fieldContext_Game_gameVersion(ctx, field)
+			case "iconUrl":
+				return ec.fieldContext_Game_iconUrl(ctx, field)
+			case "heroUrl":
+				return ec.fieldContext_Game_heroUrl(ctx, field)
+			case "catalogHeroUrl":
+				return ec.fieldContext_Game_catalogHeroUrl(ctx, field)
+			case "longDescription":
+				return ec.fieldContext_Game_longDescription(ctx, field)
+			case "shortDescription":
+				return ec.fieldContext_Game_shortDescription(ctx, field)
+			case "howToPlay":
+				return ec.fieldContext_Game_howToPlay(ctx, field)
+			case "tutorialUrl":
+				return ec.fieldContext_Game_tutorialUrl(ctx, field)
+			case "screenshots":
+				return ec.fieldContext_Game_screenshots(ctx, field)
+			case "tags":
+				return ec.fieldContext_Game_tags(ctx, field)
+			case "modes":
+				return ec.fieldContext_Game_modes(ctx, field)
+			case "visibility":
+				return ec.fieldContext_Game_visibility(ctx, field)
+			case "contactEmail":
+				return ec.fieldContext_Game_contactEmail(ctx, field)
+			case "websiteUrl":
+				return ec.fieldContext_Game_websiteUrl(ctx, field)
+			case "communityUrl":
+				return ec.fieldContext_Game_communityUrl(ctx, field)
+			case "ownerUserId":
+				return ec.fieldContext_Game_ownerUserId(ctx, field)
+			case "integrationChecks":
+				return ec.fieldContext_Game_integrationChecks(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Game", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_reviewGameRelease_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -9530,6 +10489,47 @@ func (ec *executionContext) fieldContext_Query_myGameCredentials(ctx context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_myDeveloperApiKeys(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_myDeveloperApiKeys,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().MyDeveloperAPIKeys(ctx)
+		},
+		nil,
+		ec.marshalNDeveloperApiKey2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐDeveloperAPIKeyᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_myDeveloperApiKeys(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_DeveloperApiKey_id(ctx, field)
+			case "name":
+				return ec.fieldContext_DeveloperApiKey_name(ctx, field)
+			case "keyPrefix":
+				return ec.fieldContext_DeveloperApiKey_keyPrefix(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_DeveloperApiKey_createdAt(ctx, field)
+			case "lastUsedAt":
+				return ec.fieldContext_DeveloperApiKey_lastUsedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DeveloperApiKey", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_developerIntegrationGuide(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -9554,6 +10554,182 @@ func (ec *executionContext) fieldContext_Query_developerIntegrationGuide(_ conte
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_developerAgentPlaybook(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_developerAgentPlaybook,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().DeveloperAgentPlaybook(ctx)
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_developerAgentPlaybook(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_developerDiscoveryPrompt(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_developerDiscoveryPrompt,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().DeveloperDiscoveryPrompt(ctx)
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_developerDiscoveryPrompt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_catalogTagTaxonomy(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_catalogTagTaxonomy,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().CatalogTagTaxonomy(ctx)
+		},
+		nil,
+		ec.marshalNCatalogTagOption2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐCatalogTagOptionᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_catalogTagTaxonomy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_CatalogTagOption_id(ctx, field)
+			case "label":
+				return ec.fieldContext_CatalogTagOption_label(ctx, field)
+			case "description":
+				return ec.fieldContext_CatalogTagOption_description(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CatalogTagOption", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_pendingGameReviews(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_pendingGameReviews,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().PendingGameReviews(ctx)
+		},
+		nil,
+		ec.marshalNGame2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐGameᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_pendingGameReviews(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Game_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Game_name(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Game_createdAt(ctx, field)
+			case "activeSessions":
+				return ec.fieldContext_Game_activeSessions(ctx, field)
+			case "slug":
+				return ec.fieldContext_Game_slug(ctx, field)
+			case "apiBaseUrl":
+				return ec.fieldContext_Game_apiBaseUrl(ctx, field)
+			case "manifestSyncedAt":
+				return ec.fieldContext_Game_manifestSyncedAt(ctx, field)
+			case "manifestHash":
+				return ec.fieldContext_Game_manifestHash(ctx, field)
+			case "gameVersion":
+				return ec.fieldContext_Game_gameVersion(ctx, field)
+			case "iconUrl":
+				return ec.fieldContext_Game_iconUrl(ctx, field)
+			case "heroUrl":
+				return ec.fieldContext_Game_heroUrl(ctx, field)
+			case "catalogHeroUrl":
+				return ec.fieldContext_Game_catalogHeroUrl(ctx, field)
+			case "longDescription":
+				return ec.fieldContext_Game_longDescription(ctx, field)
+			case "shortDescription":
+				return ec.fieldContext_Game_shortDescription(ctx, field)
+			case "howToPlay":
+				return ec.fieldContext_Game_howToPlay(ctx, field)
+			case "tutorialUrl":
+				return ec.fieldContext_Game_tutorialUrl(ctx, field)
+			case "screenshots":
+				return ec.fieldContext_Game_screenshots(ctx, field)
+			case "tags":
+				return ec.fieldContext_Game_tags(ctx, field)
+			case "modes":
+				return ec.fieldContext_Game_modes(ctx, field)
+			case "visibility":
+				return ec.fieldContext_Game_visibility(ctx, field)
+			case "contactEmail":
+				return ec.fieldContext_Game_contactEmail(ctx, field)
+			case "websiteUrl":
+				return ec.fieldContext_Game_websiteUrl(ctx, field)
+			case "communityUrl":
+				return ec.fieldContext_Game_communityUrl(ctx, field)
+			case "ownerUserId":
+				return ec.fieldContext_Game_ownerUserId(ctx, field)
+			case "integrationChecks":
+				return ec.fieldContext_Game_integrationChecks(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Game", field.Name)
 		},
 	}
 	return fc, nil
@@ -16005,6 +17181,61 @@ func (ec *executionContext) unmarshalInputRegisterMyGameInput(ctx context.Contex
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUpdateMyGameMetadataInput(ctx context.Context, obj any) (model.UpdateMyGameMetadataInput, error) {
+	var it model.UpdateMyGameMetadataInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"gameId", "shortDescription", "longDescription", "howToPlay", "tags"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "gameId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gameId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GameID = data
+		case "shortDescription":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("shortDescription"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ShortDescription = data
+		case "longDescription":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("longDescription"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LongDescription = data
+		case "howToPlay":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("howToPlay"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HowToPlay = data
+		case "tags":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tags"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Tags = data
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -16089,6 +17320,155 @@ func (ec *executionContext) _ActiveIntent(ctx context.Context, sel ast.Selection
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var catalogTagOptionImplementors = []string{"CatalogTagOption"}
+
+func (ec *executionContext) _CatalogTagOption(ctx context.Context, sel ast.SelectionSet, obj *model.CatalogTagOption) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, catalogTagOptionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CatalogTagOption")
+		case "id":
+			out.Values[i] = ec._CatalogTagOption_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "label":
+			out.Values[i] = ec._CatalogTagOption_label(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "description":
+			out.Values[i] = ec._CatalogTagOption_description(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var createDeveloperApiKeyPayloadImplementors = []string{"CreateDeveloperApiKeyPayload"}
+
+func (ec *executionContext) _CreateDeveloperApiKeyPayload(ctx context.Context, sel ast.SelectionSet, obj *model.CreateDeveloperAPIKeyPayload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, createDeveloperApiKeyPayloadImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CreateDeveloperApiKeyPayload")
+		case "apiKey":
+			out.Values[i] = ec._CreateDeveloperApiKeyPayload_apiKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "secret":
+			out.Values[i] = ec._CreateDeveloperApiKeyPayload_secret(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var developerApiKeyImplementors = []string{"DeveloperApiKey"}
+
+func (ec *executionContext) _DeveloperApiKey(ctx context.Context, sel ast.SelectionSet, obj *model.DeveloperAPIKey) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, developerApiKeyImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DeveloperApiKey")
+		case "id":
+			out.Values[i] = ec._DeveloperApiKey_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._DeveloperApiKey_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "keyPrefix":
+			out.Values[i] = ec._DeveloperApiKey_keyPrefix(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._DeveloperApiKey_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "lastUsedAt":
+			out.Values[i] = ec._DeveloperApiKey_lastUsedAt(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -16997,6 +18377,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "createDeveloperApiKey":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createDeveloperApiKey(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "revokeDeveloperApiKey":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_revokeDeveloperApiKey(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "registerMyGame":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_registerMyGame(ctx, field)
@@ -17007,6 +18401,27 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "runMyGameChecks":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_runMyGameChecks(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateMyGameMetadata":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateMyGameMetadata(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requestPublicRelease":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_requestPublicRelease(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "reviewGameRelease":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_reviewGameRelease(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -17766,6 +19181,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "myDeveloperApiKeys":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_myDeveloperApiKeys(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "developerIntegrationGuide":
 			field := field
 
@@ -17776,6 +19213,94 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_developerIntegrationGuide(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "developerAgentPlaybook":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_developerAgentPlaybook(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "developerDiscoveryPrompt":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_developerDiscoveryPrompt(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "catalogTagTaxonomy":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_catalogTagTaxonomy(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "pendingGameReviews":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_pendingGameReviews(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -20211,6 +21736,128 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNCatalogTagOption2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐCatalogTagOptionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CatalogTagOption) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCatalogTagOption2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐCatalogTagOption(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNCatalogTagOption2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐCatalogTagOption(ctx context.Context, sel ast.SelectionSet, v *model.CatalogTagOption) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CatalogTagOption(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNCreateDeveloperApiKeyPayload2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐCreateDeveloperAPIKeyPayload(ctx context.Context, sel ast.SelectionSet, v model.CreateDeveloperAPIKeyPayload) graphql.Marshaler {
+	return ec._CreateDeveloperApiKeyPayload(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCreateDeveloperApiKeyPayload2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐCreateDeveloperAPIKeyPayload(ctx context.Context, sel ast.SelectionSet, v *model.CreateDeveloperAPIKeyPayload) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CreateDeveloperApiKeyPayload(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNDeveloperApiKey2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐDeveloperAPIKeyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.DeveloperAPIKey) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNDeveloperApiKey2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐDeveloperAPIKey(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNDeveloperApiKey2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐDeveloperAPIKey(ctx context.Context, sel ast.SelectionSet, v *model.DeveloperAPIKey) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._DeveloperApiKey(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNDigitalGood2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐDigitalGoodᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.DigitalGood) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -21545,6 +23192,11 @@ func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel as
 	return res
 }
 
+func (ec *executionContext) unmarshalNUpdateMyGameMetadataInput2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUpdateMyGameMetadataInput(ctx context.Context, v any) (model.UpdateMyGameMetadataInput, error) {
+	res, err := ec.unmarshalInputUpdateMyGameMetadataInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNUser2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v model.User) graphql.Marshaler {
 	return ec._User(ctx, sel, &v)
 }
@@ -22183,6 +23835,42 @@ func (ec *executionContext) marshalOSpiritAnimalTotem2ᚕᚖgithubᚗcomᚋscruf
 
 	}
 	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
 
 	for _, e := range ret {
 		if e == graphql.Null {

@@ -12,14 +12,14 @@ import (
 
 // NewGraphQLServer builds the production GraphQL handler (HTTP + graphql-ws).
 // main and integration tests must use this so WebSocket origin and auth stay consistent.
-func NewGraphQLServer(signer *auth.Signer, resolver *Resolver) *handler.Server {
+func NewGraphQLServer(signer *auth.Signer, apiKeys auth.DeveloperAPIKeyVerifier, resolver *Resolver) *handler.Server {
 	gql := handler.New(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
 	gql.AddTransport(transport.Websocket{
 		Upgrader: websocket.Upgrader{
 			CheckOrigin: auth.WebSocketOriginAllowed,
 		},
 		KeepAlivePingInterval: 10 * time.Second,
-		InitFunc:              WebsocketInitFunc(signer),
+		InitFunc:              WebsocketInitFunc(signer, apiKeys),
 	})
 	gql.AddTransport(transport.Options{})
 	gql.AddTransport(transport.GET{})

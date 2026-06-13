@@ -59,7 +59,7 @@ func newAuthGraphQLTestClientWithMailer(t *testing.T, mailer email.Sender) (*cli
 
 	resolver := NewResolver(st, authService, pubsub.NewMemory())
 	gql := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
-	handlerWithAuth := auth.Middleware(signer, gql)
+	handlerWithAuth := auth.Middleware(signer, st, gql)
 	c := client.New(handlerWithAuth)
 
 	return c, handlerWithAuth, st

@@ -11,7 +11,7 @@ import (
 
 // WebsocketInitFunc authenticates GraphQL websocket connections using the HTTP
 // upgrade request context (session cookie) or connection_init Authorization.
-func WebsocketInitFunc(signer *auth.Signer) transport.WebsocketInitFunc {
+func WebsocketInitFunc(signer *auth.Signer, apiKeys auth.DeveloperAPIKeyVerifier) transport.WebsocketInitFunc {
 	return func(ctx context.Context, initPayload transport.InitPayload) (context.Context, *transport.InitPayload, error) {
 		if _, ok := auth.UserIDFromContext(ctx); ok {
 			return ctx, nil, nil
@@ -23,6 +23,13 @@ func WebsocketInitFunc(signer *auth.Signer) transport.WebsocketInitFunc {
 		}
 		if strings.HasPrefix(strings.ToLower(token), "bearer ") {
 			token = strings.TrimSpace(token[7:])
+		}
+
+		if auth.MatchesDeveloperAPIKey(token) && apiKeys != nil {
+			if userID, err := apiKeys.VerifyDeveloperAPIKey(ctx, token); err == nil {
+				ctx = auth.WithUserID(ctx, userID.String())
+				return ctx, nil, nil
+			}
 		}
 
 		userID, err := signer.VerifyUserToken(token)

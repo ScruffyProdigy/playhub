@@ -26,12 +26,14 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 - **Developer self-service (Phase A)**: `registerMyGame`, `myGames`, `myGame`, `myGameCredentials`, `runMyGameChecks`, `developerIntegrationGuide`; public `games` / `gameBySlug` filter to `visibility = public` — [developer-self-service.md](./developer-self-service.md)
 
 ### 🚧 In Development
+- **Developer self-service (Phase B)**: real provision/JWT checks, `updateMyGameMetadata`, `catalogTagTaxonomy`, `requestPublicRelease`, `reviewGameRelease`, full [developer-integration-guide.md](./developer-integration-guide.md), JoinQuest integration MCP
 - **Player-facing goods**: purchase/trade flows
 - **Rate limiting**
 
 ### 📋 Planned
 - **File uploads**: game asset uploads (avatars use starter assets + generated spirit-animal URLs today)
 - **Phase C LFG**: weighted dequeue, `allocations` by affinity — see [seat-templates-and-matchmaking.md](./seat-templates-and-matchmaking.md)
+- **Scheduled integration re-checks** + email on manifest changes
 
 ## Base URL
 

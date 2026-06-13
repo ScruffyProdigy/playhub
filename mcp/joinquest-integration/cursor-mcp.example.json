@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "joinquest-integration": {
+      "command": "npx",
+      "args": ["-y", "@joinquest/mcp-integration"],
+      "env": {
+        "JOINQUEST_API_URL": "https://joinquest.cc/graphql",
+        "JOINQUEST_API_KEY": "paste-api-key-from-dashboard"
+      }
+    }
+  }
+}

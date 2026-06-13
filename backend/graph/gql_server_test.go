@@ -18,8 +18,8 @@ import (
 func TestGraphQLServerWebSocketAllowsLoopbackOrigin(t *testing.T) {
 	signer, bearer := testSignerAndBearer(t)
 
-	gql := NewGraphQLServer(signer, NewResolver(nil, nil, pubsub.NewMemory()))
-	srv := httptest.NewServer(auth.Middleware(signer, gql))
+	gql := NewGraphQLServer(signer, nil, NewResolver(nil, nil, pubsub.NewMemory()))
+	srv := httptest.NewServer(auth.Middleware(signer, nil, gql))
 	defer srv.Close()
 
 	connectGraphQLWS(t, graphQLWSURL(srv.URL), "http://127.0.0.1:5173", bearer)
@@ -28,8 +28,8 @@ func TestGraphQLServerWebSocketAllowsLoopbackOrigin(t *testing.T) {
 func TestGraphQLServerWebSocketRejectsForeignOrigin(t *testing.T) {
 	signer, bearer := testSignerAndBearer(t)
 
-	gql := NewGraphQLServer(signer, NewResolver(nil, nil, pubsub.NewMemory()))
-	srv := httptest.NewServer(auth.Middleware(signer, gql))
+	gql := NewGraphQLServer(signer, nil, NewResolver(nil, nil, pubsub.NewMemory()))
+	srv := httptest.NewServer(auth.Middleware(signer, nil, gql))
 	defer srv.Close()
 
 	// Sanity: production wiring accepts loopback.
@@ -57,10 +57,10 @@ func TestNewDefaultServerWebSocketPreventsLoopbackOriginFix(t *testing.T) {
 		Upgrader: websocket.Upgrader{
 			CheckOrigin: auth.WebSocketOriginAllowed,
 		},
-		InitFunc: WebsocketInitFunc(signer),
+		InitFunc:              WebsocketInitFunc(signer, nil),
 	})
 
-	srv := httptest.NewServer(auth.Middleware(signer, broken))
+	srv := httptest.NewServer(auth.Middleware(signer, nil, broken))
 	defer srv.Close()
 
 	header := http.Header{}

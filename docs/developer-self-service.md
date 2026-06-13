@@ -1,9 +1,8 @@
 # Developer self-service — game registration & integration
 
 **Status:** Phase A shipped (registration, dashboard, private testing)  
-**Next:** Phase B — provision/JWT checks, public release review, MCP  
-**Related:** [game-minted launch URLs](./game-minted-launch-urls.md) ✅ · [player experience roadmap](./player-experience-roadmap.md) (optional catalog polish)  
-**Related:** [game-catalog-architecture.md](./game-catalog-architecture.md) · [lobby-protocol-handoff.md](./lobby-protocol-handoff.md) · [end-to-end-partner-checklist.md](./end-to-end-partner-checklist.md)
+**Next:** Phase B in progress — integration checks, catalog metadata + agent discovery, public release, MCP  
+**Related:** [developer-integration-guide.md](./developer-integration-guide.md) · [game-minted launch URLs](./game-minted-launch-urls.md) ✅ · [player experience roadmap](./player-experience-roadmap.md)
 
 Today, adding a game means backfilling the database or calling admin-only `registerGame`. That works for us, but it blocks the goal of **any web developer** plugging in their game. This spec is the v1 path from homepage curiosity → registered game → working integration → friends testing → public release.
 
@@ -27,7 +26,7 @@ Today, adding a game means backfilling the database or calling admin-only `regis
 | API URL | Public HTTPS only — **no `localhost`** | Optional tunnel/CLI helper (v2+) |
 | Play URL | From game provision response ([spec](./game-minted-launch-urls.md)) | — |
 | Player counts | From manifest | — |
-| Icons / tags | See [player experience roadmap](./player-experience-roadmap.md) — likely before or with Phase A | Required for public release? TBD |
+| Icons / tags | Agent-assisted draft + owner edit; tags from fixed taxonomy | Custom tag vocabulary (v2) |
 | PDF guide | Hold or generate from same source as agent doc | Phase C |
 
 **Why no localhost:** Lobby servers must reach the game API to sync manifests and provision matches. A URL only you can hit from your laptop can't work in production. Devs should use a staging deploy, ngrok, or similar for early integration — we'll say that plainly in copy and errors.
@@ -48,6 +47,7 @@ Homepage (signed in)
 
 Developer dashboard (/developers/games/:id)
 ├── Checklist + errors
+├── Catalog listing (short/long copy, tags, how to play) — agent drafts, dev approves
 ├── Integration credentials (serviceToken, webhook secret)
 └── Actions: test table, request public release
 
@@ -121,7 +121,7 @@ Link text:
 >
 > Next up: teach your game how to talk to JoinQuest.
 >
-> **Using Claude, Cursor, or another AI assistant?** Turn on the JoinQuest MCP and point your agent at our integration guide — it can run the same checks as the dashboard and fix issues for you.
+> **Using Claude, Cursor, or another AI assistant?** Turn on the JoinQuest integration MCP and point your agent at our integration guide — it can run the same checks as the dashboard and fix issues for you.
 >
 > **Prefer doing it yourself?** Same guide works for humans — step by step, no agent required.
 >
@@ -212,9 +212,68 @@ Each row: **status** (pass / fail / not run), **last checked**, **plain-language
 ### Dashboard actions
 
 - Copy `serviceToken`, webhook secret (masked + reveal)  
+- **Edit catalog listing** — short/long description, how to play, tags (taxonomy-backed)  
 - **Run all checks**  
 - **Create test table** → `createPrivateTable` + open room panel  
-- **Request public release** (enabled when required checks pass + name/description present)
+- **Request public release** (enabled when required checks pass + catalog metadata complete)
+
+---
+
+## Agent-assisted catalog metadata (Phase B)
+
+Many lobby UI fields benefit from an agent that **interviews the developer**, drafts copy in **JoinQuest voice**, and saves via the same API the dashboard uses.
+
+### Flow
+
+```text
+Discovery (agent ↔ developer)
+  →  Draft metadata + seatTemplate guidance
+  →  Developer approves / edits in dashboard or chat
+  →  updateMyGameMetadata mutation
+  →  Technical checks (manifest / provision / JWT)
+  →  Request public release
+```
+
+### Discovery script
+
+Agents call `developerDiscoveryPrompt` (or read integration guide §0) and ask:
+
+1. One-liner — what do players do together?  
+2. Player count — typical group size, min/max, teams vs FFA?  
+3. Structure — duel, teams, roles/composition?  
+4. Social mode — competitive, co-op, or party?  
+5. Session length — quick rounds vs longer?  
+6. Vibe — casual, brainy, chaotic, tactical?
+
+From answers, the agent drafts:
+
+| Output | Constraints |
+|--------|-------------|
+| `shortDescription` | ~120 chars, catalog card, JoinQuest tone |
+| `longDescription` | 2–4 paragraphs for detail page |
+| `howToPlay` | 3–6 bullet steps for new players |
+| `tags` | 1–3 IDs from `catalogTagTaxonomy` |
+| `seatTemplate` notes | Point to cookbook pattern (duel, 3v3, composition) — implemented on game API |
+
+**Agents do not publish without developer confirmation.** MCP and dashboard both use `updateMyGameMetadata`.
+
+### Catalog voice
+
+Warm, plain, player-first — “Find your group. Play together.” not “enter matchmaking.” No JWT/provision jargon on catalog cards. Full rules: [developer-integration-guide.md §1](./developer-integration-guide.md#1-catalog-voice-joinquest-tone).
+
+### Tag taxonomy (v1)
+
+Fixed IDs (not freeform): `competitive`, `cooperative`, `party`, `1v1`, `quick`, `words`, `strategy`, `casual`. UI shows human labels; max 3 chips on cards.
+
+Query: `catalogTagTaxonomy`. Validate on `updateMyGameMetadata`.
+
+### GraphQL (owner-scoped)
+
+```graphql
+catalogTagTaxonomy { id label description }
+developerDiscoveryPrompt  # markdown interview script
+updateMyGameMetadata(input: { gameId, shortDescription, longDescription, howToPlay, tags })
+```
 
 ---
 
@@ -222,10 +281,11 @@ Each row: **status** (pass / fail / not run), **last checked**, **plain-language
 
 **Developer prerequisites (automated gate):**
 
-- Required checklist items green  
-- Game name + description set  
+- Required checklist items green (manifest + provision; JWT where not skipped)  
+- Game name set  
+- `shortDescription`, `longDescription`, and at least one valid tag  
 - HTTPS API URL  
-- (Optional later) icon present  
+- (Optional later) custom icon present  
 
 **Human review (admin queue):**
 
@@ -238,49 +298,62 @@ Each row: **status** (pass / fail / not run), **last checked**, **plain-language
 
 ---
 
-## JoinQuest MCP (Phase B)
+## JoinQuest integration MCP (Phase B)
 
 Goal: agent runs the **same probes** as the dashboard without the developer in the loop.
 
-**Auth:** Developer session token or API key tied to `owner_user_id`.
+**Auth:** Developer API key (`lq_dev_…`) from the dashboard, or session cookie. MCP uses `JOINQUEST_API_KEY`.
 
 **Tools (sketch):**
 
 | Tool | Purpose |
 |------|---------|
-| `joinquest_get_integration_guide` | Returns markdown guide (single source of truth) |
-| `joinquest_list_my_games` | Owner's games + states |
-| `joinquest_get_game_checks` | Latest checklist results + errors |
-| `joinquest_run_game_checks` | Run manifest / provision / JWT suite |
-| `joinquest_get_game_credentials` | serviceToken, webhook URL (masked) |
-| `joinquest_get_example_provision_payload` | Sample assignment for copy-paste |
+| `joinquest_integration_get_agent_playbook` | Returns end-to-end agent workflow (discovery → release) |
+| `joinquest_integration_get_integration_guide` | Returns markdown guide (single source of truth) |
+| `joinquest_integration_get_discovery_prompt` | Returns discovery interview script (guide §0) |
+| `joinquest_integration_get_catalog_tag_taxonomy` | Valid tag IDs + labels |
+| `joinquest_integration_list_my_games` | Owner's games + states |
+| `joinquest_integration_get_game_checks` | Latest checklist results + errors |
+| `joinquest_integration_run_game_checks` | Run manifest / provision / JWT suite |
+| `joinquest_integration_update_game_metadata` | Save catalog copy + tags (after dev approval) |
+| `joinquest_integration_get_game_credentials` | serviceToken, webhook URL (masked) |
+| `joinquest_integration_get_example_provision_payload` | Sample assignment for copy-paste |
+| `joinquest_integration_request_public_release` | Submit for review when gates pass |
 
-MCP calls backend endpoints shared with dashboard — **one implementation**, two clients (UI + MCP).
+MCP calls backend GraphQL — **one implementation**, two clients (UI + MCP).
 
-**Cursor/Claude setup:** Published config snippet on `/developers` (“Add to Cursor”).
+**Implementation:** [`mcp/joinquest-integration/`](../../mcp/joinquest-integration/) — stdio server, `JOINQUEST_API_KEY` auth.
+
+**Agent skill:** [`.agents/skills/joinquest-integration/`](../../.agents/skills/joinquest-integration/) — cross-platform `SKILL.md` + bundled playbook (Claude Code, Codex, Cursor, Copilot, etc.).
+
+**Agent playbook (markdown):** [developer-agent-playbook.md](./developer-agent-playbook.md) — also served via GraphQL `developerAgentPlaybook` and MCP.
+
+**Cursor/Claude setup:** Copy the config from your welcome page or [`mcp/joinquest-integration/cursor-mcp.example.json`](../../mcp/joinquest-integration/cursor-mcp.example.json).
 
 ---
 
 ## Integration guide (single source of truth)
 
-**File:** `docs/developer-integration-guide.md` (to be written alongside Phase B MCP)
+**File:** [developer-integration-guide.md](./developer-integration-guide.md)
 
 **Consumers:**
 
 - Human-readable web page (`/developers/guide`)  
-- MCP `joinquest_get_integration_guide`  
+- MCP `joinquest_integration_get_integration_guide`  
 - PDF export (Phase C — generate from same markdown)
 
 **Structure:**
 
-1. Quick start (health, status, game-modes)  
-2. Seat manifest / `seatTemplate`  
-3. Provision contract + banlist  
-4. JWT + claim + JWKS  
-5. Launch URLs (game-minted)  
-6. Testing with a private table + room invite  
-7. Requesting public release  
-8. Troubleshooting index mapped 1:1 to dashboard check IDs  
+1. Discover your game (agent interview script)  
+2. Catalog voice + tag taxonomy  
+3. Quick start (health, status, game-modes)  
+4. Seat manifest / `seatTemplate`  
+5. Provision contract + banlist  
+6. JWT + claim + JWKS  
+7. Launch URLs (game-minted)  
+8. Testing with a private table + room invite  
+9. Requesting public release  
+10. Troubleshooting index mapped 1:1 to dashboard check IDs  
 
 Dashboard error strings link to anchor IDs in this doc (`#provision-403-banned`).
 
@@ -305,11 +378,13 @@ Registration, private testing, and the developer dashboard:
 
 **Optional polish:** game icons + catalog tags (see [player experience roadmap](./player-experience-roadmap.md)).
 
-### Phase B — Go public + agents
+### Phase B — Go public + agents (in progress)
 
-- Request public release + admin review queue  
-- JoinQuest MCP + full `developer-integration-guide.md`  
-- Scheduled re-checks + email on spec-breaking manifest changes  
+- Real provision + JWT integration checks (replace stubs)  
+- **Agent-assisted catalog metadata** — discovery script, voice guide, tag taxonomy, `updateMyGameMetadata`  
+- Request public release + admin review queue (`requestPublicRelease`, `reviewGameRelease`)  
+- JoinQuest integration MCP + [developer-integration-guide.md](./developer-integration-guide.md)  
+- Scheduled re-checks + email on spec-breaking manifest changes (follow-up)  
 
 ### Phase C — PDF (optional / defer)
 
@@ -320,10 +395,11 @@ Registration, private testing, and the developer dashboard:
 
 ## Open questions (minor)
 
-- [ ] Icons required before public release, or optional v1?  
+- [ ] Icons required before public release, or optional v1? → **optional v1**  
 - [ ] Admin review UI: in-app vs email + GraphQL script?  
 - [ ] Rate limits on `run checks` / synthetic provision (per game)?  
 - [ ] Webhook URL shown on dashboard for manifest-changed setup?  
+- [x] Tags: fixed taxonomy vs freeform? → **fixed taxonomy v1**  
 
 ---
 
@@ -353,3 +429,5 @@ Existing catalog games: backfill `owner_user_id = NULL`, `visibility = public` (
 - [ ] Game stays off public catalog until approved  
 - [ ] MCP runs full checklist; agent can fix a deliberate 403 banlist mistake from error output  
 - [ ] Integration guide section IDs match dashboard deep links  
+- [ ] Agent drafts catalog metadata from discovery script; developer saves via dashboard or MCP  
+- [ ] Public release blocked until long description + tags present  

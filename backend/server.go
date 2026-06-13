@@ -71,9 +71,9 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	gql := graph.NewGraphQLServer(signer, resolver)
+	gql := graph.NewGraphQLServer(signer, dataStore, resolver)
 
-	mux.Handle("/graphql", auth.Middleware(signer, gql))
+	mux.Handle("/graphql", auth.Middleware(signer, dataStore, gql))
 	spiritAvatarDir := strings.TrimSpace(os.Getenv("SPIRIT_AVATAR_STORAGE_DIR"))
 	if spiritAvatarDir == "" {
 		spiritAvatarDir = "data/spirit-avatars"

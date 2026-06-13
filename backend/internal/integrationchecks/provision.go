@@ -1,0 +1,394 @@
+package integrationchecks
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/scruffyprodigy/playhub/internal/auth"
+	"github.com/scruffyprodigy/playhub/internal/gameclient"
+	"github.com/scruffyprodigy/playhub/internal/store"
+)
+
+const (
+	checkMatchIDPrefix     = "joinquest-check-"
+	checkUserOne           = "a0000000-0000-4000-8000-000000000001"
+	checkUserTwo           = "a0000000-0000-4000-8000-000000000002"
+	checkBannedUser        = "a0000000-0000-4000-8000-000000000099"
+	wrongAudienceBaseURL   = "https://joinquest-check-invalid.example"
+)
+
+// ProvisionConfig carries Lobby-side values for synthetic provision checks.
+type ProvisionConfig struct {
+	LobbyID      string
+	Lobby        gameclient.LobbyInfo
+	ServiceToken string
+}
+
+// ProvisionCheckOutcome includes JWT follow-up context from a successful happy path.
+type ProvisionCheckOutcome struct {
+	Results  []Result
+	MatchID  string
+	SeatKey  string
+}
+
+// RunProvisionChecks exercises provision, auth, banlist shape, and launch URLs.
+func (r *Runner) RunProvisionChecks(
+	ctx context.Context,
+	game *store.Game,
+	modes []store.GameMode,
+	seatsByMode map[uuid.UUID][]store.GameModeSeat,
+	provisioner gameclient.MatchProvisioner,
+	cfg ProvisionConfig,
+) ProvisionCheckOutcome {
+	if game == nil || game.APIBaseURL == nil {
+		return ProvisionCheckOutcome{Results: provisionUnreachable("No API base URL is configured for this game.")}
+	}
+	if provisioner == nil {
+		provisioner = gameclient.NewClient()
+	}
+
+	mode, seats, ok := pickCheckMode(modes, seatsByMode)
+	if !ok {
+		return ProvisionCheckOutcome{Results: []Result{{
+			CheckID: "provision.happy_path",
+			Status:  StatusFail,
+			Message: "No active game mode with seats found — sync your manifest first.",
+		}}}
+	}
+
+	apiBase := strings.TrimRight(strings.TrimSpace(*game.APIBaseURL), "/")
+	matchID := checkMatchIDPrefix + uuid.NewString()
+	assignment := syntheticAssignment(mode, seats, matchID, []string{checkUserOne, checkUserTwo})
+	firstSeatKey := assignment.Seats[0].SeatKey
+
+	results := make([]Result, 0, 4)
+
+	// Happy path
+	happyReq := gameclient.ProvisionRequest{
+		APIBaseURL:   apiBase,
+		ServiceToken: cfg.ServiceToken,
+		LobbyID:      cfg.LobbyID,
+		Lobby:        cfg.Lobby,
+		Assignment:   assignment,
+	}
+	result, err := provisioner.ProvisionMatch(ctx, happyReq)
+	if err != nil {
+		results = append(results, Result{
+			CheckID: "provision.happy_path",
+			Status:  StatusFail,
+			Message: fmt.Sprintf("Provision failed: %s", friendlyProvisionError(err)),
+		})
+		results = append(results,
+			skipped("provision.auth", "Fix the happy-path provision first."),
+			skipped("provision.banlist", "Fix the happy-path provision first."),
+			skipped("provision.launch_urls", "Fix the happy-path provision first."),
+		)
+		return ProvisionCheckOutcome{Results: results}
+	}
+
+	results = append(results, Result{
+		CheckID: "provision.happy_path",
+		Status:  StatusPass,
+		Message: "We provisioned a synthetic test match successfully.",
+	})
+
+	// Auth — wrong token should not succeed
+	badAuthReq := happyReq
+	badAuthReq.ServiceToken = "Bearer invalid-check-token"
+	if _, err := provisioner.ProvisionMatch(ctx, badAuthReq); err == nil {
+		results = append(results, Result{
+			CheckID: "provision.auth",
+			Status:  StatusFail,
+			Message: "Your server accepted a provision request with an invalid service token.",
+		})
+	} else if strings.Contains(strings.ToLower(err.Error()), "401") || strings.Contains(strings.ToLower(err.Error()), "403") {
+		results = append(results, Result{
+			CheckID: "provision.auth",
+			Status:  StatusPass,
+			Message: "Your server rejected our invalid service token.",
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "provision.auth",
+			Status:  StatusPass,
+			Message: "Your server rejected our invalid service token.",
+		})
+	}
+
+	// Banlist — optional unless dev bans the test user
+	banAssignment := syntheticAssignment(mode, seats, checkMatchIDPrefix+"ban-"+uuid.NewString(), []string{checkUserOne, checkBannedUser})
+	banReq := happyReq
+	banReq.Assignment = banAssignment
+	if _, err := provisioner.ProvisionMatch(ctx, banReq); err != nil {
+		if banned, ok := err.(*gameclient.BannedPlayersError); ok {
+			if len(banned.BannedLobbyUserIDs) > 0 {
+				results = append(results, Result{
+					CheckID: "provision.banlist",
+					Status:  StatusPass,
+					Message: "Your server returned 403 with bannedLobbyUserIds as expected.",
+				})
+			} else {
+				results = append(results, Result{
+					CheckID: "provision.banlist",
+					Status:  StatusFail,
+					Message: "Your server returned 403 but bannedLobbyUserIds was missing or empty.",
+				})
+			}
+		} else {
+			results = append(results, Result{
+				CheckID: "provision.banlist",
+				Status:  StatusSkipped,
+				Message: fmt.Sprintf("Banlist check skipped — temporarily ban lobby user %s during checks to verify 403 shape.", checkBannedUser),
+			})
+		}
+	} else {
+		results = append(results, Result{
+			CheckID: "provision.banlist",
+			Status:  StatusSkipped,
+			Message: fmt.Sprintf("Banlist check skipped — temporarily ban lobby user %s during checks to verify 403 shape.", checkBannedUser),
+		})
+	}
+
+	// Launch URLs
+	if len(result.LaunchURLs) >= len(assignment.Seats) || result.LaunchURLTemplate != "" {
+		results = append(results, Result{
+			CheckID: "provision.launch_urls",
+			Status:  StatusPass,
+			Message: "Provision returned launch URL bases for seated players.",
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "provision.launch_urls",
+			Status:  StatusFail,
+			Message: fmt.Sprintf("Provision succeeded but launchUrls only covered %d of %d seats.", len(result.LaunchURLs), len(assignment.Seats)),
+		})
+	}
+
+	return ProvisionCheckOutcome{Results: results, MatchID: matchID, SeatKey: firstSeatKey}
+}
+
+// RunJWTChecks exercises claim endpoints using a provisioned synthetic match.
+func (r *Runner) RunJWTChecks(ctx context.Context, game *store.Game, signer *auth.Signer, provisionMatchID string, seatKey string) []Result {
+	if game == nil || game.APIBaseURL == nil {
+		return jwtSkippedAll("Connect your API before JWT checks.")
+	}
+	if signer == nil {
+		return jwtSkippedAll("Lobby JWT signer is not configured.")
+	}
+	if provisionMatchID == "" || seatKey == "" {
+		return jwtSkippedAll("Run provision checks first.")
+	}
+
+	apiBase := strings.TrimRight(strings.TrimSpace(*game.APIBaseURL), "/")
+	audience := apiBase
+
+	results := make([]Result, 0, 4)
+
+	jwksURL := strings.TrimRight(auth.LobbyIssuer(), "/") + "/.well-known/jwks.json"
+	if err := r.checkJWKSReachable(ctx, jwksURL); err != nil {
+		results = append(results, Result{
+			CheckID: "jwt.jwks",
+			Status:  StatusFail,
+			Message: fmt.Sprintf("We couldn't reach Lobby JWKS at %s — %v", jwksURL, err),
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "jwt.jwks",
+			Status:  StatusPass,
+			Message: "Lobby JWKS is reachable for your game to verify tokens.",
+		})
+	}
+
+	userID := uuid.MustParse(checkUserOne)
+	token, err := signer.SignSeatToken(userID, audience, provisionMatchID, seatKey, "JoinQuest Check", time.Hour)
+	if err != nil {
+		results = append(results, Result{
+			CheckID: "jwt.claim_happy_path",
+			Status:  StatusSkipped,
+			Message: "Could not mint a test seat token.",
+		})
+		return append(results, jwtSkippedRest("Fix token minting first.")...)
+	}
+
+	claimURL := fmt.Sprintf("%s/api/v1/matches/%s/claim", apiBase, provisionMatchID)
+	status, body := r.postClaim(ctx, claimURL, token)
+	switch {
+	case status >= 200 && status < 300:
+		results = append(results, Result{
+			CheckID: "jwt.claim_happy_path",
+			Status:  StatusPass,
+			Message: "Claim succeeded with a valid seat token.",
+		})
+	case status == 404:
+		results = append(results, Result{
+			CheckID: "jwt.claim_happy_path",
+			Status:  StatusFail,
+			Message: "Claim returned 404 — the synthetic test match may have expired. Re-run checks.",
+		})
+	default:
+		results = append(results, Result{
+			CheckID: "jwt.claim_happy_path",
+			Status:  StatusFail,
+			Message: fmt.Sprintf("Claim failed (HTTP %d): %s", status, strings.TrimSpace(body)),
+		})
+	}
+
+	badToken, err := signer.SignSeatToken(userID, wrongAudienceBaseURL, provisionMatchID, seatKey, "", time.Hour)
+	if err == nil {
+		status, _ := r.postClaim(ctx, claimURL, badToken)
+		if status == 401 || status == 403 {
+			results = append(results, Result{
+				CheckID: "jwt.wrong_audience",
+				Status:  StatusPass,
+				Message: "Your game rejected a token with the wrong audience.",
+			})
+		} else {
+			results = append(results, Result{
+				CheckID: "jwt.wrong_audience",
+				Status:  StatusFail,
+				Message: fmt.Sprintf("Your game should reject wrong aud with 401/403, got HTTP %d.", status),
+			})
+		}
+	}
+
+	bogusURL := fmt.Sprintf("%s/api/v1/matches/%s/claim", apiBase, checkMatchIDPrefix+"missing-"+uuid.NewString())
+	status, _ = r.postClaim(ctx, bogusURL, token)
+	if status == 404 {
+		results = append(results, Result{
+			CheckID: "jwt.unknown_match",
+			Status:  StatusPass,
+			Message: "Unknown match returned 404 as expected.",
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "jwt.unknown_match",
+			Status:  StatusFail,
+			Message: fmt.Sprintf("Unknown match should return 404, got HTTP %d.", status),
+		})
+	}
+
+	return results
+}
+
+func (r *Runner) checkJWKSReachable(ctx context.Context, jwksURL string) error {
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, jwksURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func (r *Runner) postClaim(ctx context.Context, url, token string) (int, string) {
+	client := &http.Client{Timeout: 15 * time.Second}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	if err != nil {
+		return 0, err.Error()
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err.Error()
+	}
+	defer resp.Body.Close()
+	payload, _ := io.ReadAll(io.LimitReader(resp.Body, 16*1024))
+	return resp.StatusCode, string(payload)
+}
+
+func pickCheckMode(modes []store.GameMode, seatsByMode map[uuid.UUID][]store.GameModeSeat) (store.GameMode, []store.GameModeSeat, bool) {
+	var bestMode store.GameMode
+	var bestSeats []store.GameModeSeat
+	bestScore := int(^uint(0) >> 1)
+
+	for _, mode := range modes {
+		if mode.Status != store.ModeStatusActive {
+			continue
+		}
+		seats := seatsByMode[mode.ID]
+		if len(seats) == 0 {
+			continue
+		}
+		score := mode.MinPlayers
+		if score < 2 {
+			score = len(seats)
+		}
+		if score < bestScore {
+			bestScore = score
+			bestMode = mode
+			bestSeats = seats
+		}
+	}
+	if len(bestSeats) == 0 {
+		return store.GameMode{}, nil, false
+	}
+	return bestMode, bestSeats, true
+}
+
+func syntheticAssignment(mode store.GameMode, seats []store.GameModeSeat, matchID string, userIDs []string) gameclient.Assignment {
+	seatCount := len(userIDs)
+	if seatCount > len(seats) {
+		seatCount = len(seats)
+	}
+	out := gameclient.Assignment{
+		ExternalMatchID: matchID,
+		GameMode:        mode.ModeKey,
+		Seats:           make([]gameclient.AssignmentSeat, 0, seatCount),
+	}
+	for i := 0; i < seatCount; i++ {
+		seat := seats[i]
+		out.Seats = append(out.Seats, gameclient.AssignmentSeat{
+			SeatKey:     seat.SeatKey,
+			LobbyUserID: userIDs[i],
+		})
+	}
+	return out
+}
+
+func provisionUnreachable(msg string) []Result {
+	return []Result{{
+		CheckID: "provision.happy_path",
+		Status:  StatusFail,
+		Message: msg,
+	}}
+}
+
+func friendlyProvisionError(err error) string {
+	if banned, ok := err.(*gameclient.BannedPlayersError); ok {
+		return fmt.Sprintf("roster banned: %v", banned.BannedLobbyUserIDs)
+	}
+	return err.Error()
+}
+
+func jwtSkippedAll(msg string) []Result {
+	return []Result{
+		skipped("jwt.jwks", msg),
+		skipped("jwt.claim_happy_path", msg),
+		skipped("jwt.wrong_audience", msg),
+		skipped("jwt.unknown_match", msg),
+	}
+}
+
+func jwtSkippedRest(msg string) []Result {
+	return []Result{
+		skipped("jwt.wrong_audience", msg),
+		skipped("jwt.unknown_match", msg),
+	}
+}
+
+// JWTSkippedNoProvision returns skipped JWT rows when provision did not succeed.
+func JWTSkippedNoProvision() []Result {
+	return jwtSkippedAll("Fix provision checks first.")
+}

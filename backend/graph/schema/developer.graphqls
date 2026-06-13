@@ -19,6 +19,12 @@ type GameIntegrationCheck {
   ranAt: Time
 }
 
+type CatalogTagOption {
+  id: String!
+  label: String!
+  description: String!
+}
+
 input RegisterMyGameInput {
   slug: String!
   name: String!
@@ -37,6 +43,14 @@ type RegisterMyGamePayload {
   connectError: String
 }
 
+input UpdateMyGameMetadataInput {
+  gameId: ID!
+  shortDescription: String
+  longDescription: String
+  howToPlay: String
+  tags: [String!]
+}
+
 extend type Game {
   visibility: GameVisibility!
   contactEmail: String
@@ -51,14 +65,37 @@ type MyGameCredentials {
   webhookSecret: String!
 }
 
+type DeveloperApiKey {
+  id: ID!
+  name: String!
+  keyPrefix: String!
+  createdAt: Time!
+  lastUsedAt: Time
+}
+
+type CreateDeveloperApiKeyPayload {
+  apiKey: DeveloperApiKey!
+  secret: String!
+}
+
 extend type Query {
   myGames: [Game!]!
   myGame(id: ID!): Game
   myGameCredentials(id: ID!): MyGameCredentials
+  myDeveloperApiKeys: [DeveloperApiKey!]!
   developerIntegrationGuide: String!
+  developerAgentPlaybook: String!
+  developerDiscoveryPrompt: String!
+  catalogTagTaxonomy: [CatalogTagOption!]!
+  pendingGameReviews: [Game!]!
 }
 
 extend type Mutation {
+  createDeveloperApiKey(name: String): CreateDeveloperApiKeyPayload!
+  revokeDeveloperApiKey(id: ID!): Boolean!
   registerMyGame(input: RegisterMyGameInput!): RegisterMyGamePayload!
   runMyGameChecks(gameId: ID!): [GameIntegrationCheck!]!
+  updateMyGameMetadata(input: UpdateMyGameMetadataInput!): Game!
+  requestPublicRelease(gameId: ID!): Game!
+  reviewGameRelease(gameId: ID!, approve: Boolean!, reason: String): Game!
 }

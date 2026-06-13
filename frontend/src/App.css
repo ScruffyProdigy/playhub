@@ -2381,6 +2381,219 @@
   font-size: 0.92rem;
 }
 
+.developer-check__fix {
+  margin: 0;
+  padding: 0 1rem 0.75rem;
+  font-size: 0.88rem;
+  opacity: 0.9;
+}
+
+.developer-check__detail {
+  margin: 0 1rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.developer-check__detail pre {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem;
+  overflow-x: auto;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.developer-next-steps__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.developer-next-steps__item {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.developer-next-steps__item--current {
+  border-color: rgba(100, 108, 255, 0.45);
+  background: rgba(100, 108, 255, 0.08);
+}
+
+.developer-next-steps__item--done {
+  opacity: 0.75;
+}
+
+.developer-next-steps__label {
+  font-weight: 600;
+}
+
+.developer-next-steps__badge {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+.developer-next-steps__badge--done {
+  color: #6dd4a0;
+}
+
+.developer-next-steps__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.developer-mcp__skill,
+.developer-mcp__keys,
+.developer-mcp__install,
+.developer-mcp__client {
+  margin-top: 1.25rem;
+}
+
+.developer-mcp__skill h3,
+.developer-mcp__keys h3,
+.developer-mcp__install h3,
+.developer-mcp__client h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.developer-mcp__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.developer-mcp__header h2 {
+  margin: 0;
+}
+
+.developer-mcp__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.developer-mcp__tab {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.developer-mcp__tab--active {
+  border-color: rgba(100, 108, 255, 0.55);
+  background: rgba(100, 108, 255, 0.15);
+}
+
+.developer-mcp__steps {
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.25rem;
+  font-size: 0.92rem;
+}
+
+.developer-mcp__secret {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(100, 108, 255, 0.35);
+  background: rgba(100, 108, 255, 0.08);
+}
+
+.developer-mcp__secret code {
+  word-break: break-all;
+  font-size: 0.85rem;
+}
+
+.developer-mcp__details {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.developer-provision__body {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.82rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.developer-guide summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.developer-tag-picker__list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.developer-tag-picker__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.developer-tag-picker__option:has(input:checked) {
+  border-color: rgba(100, 108, 255, 0.55);
+  background: rgba(100, 108, 255, 0.15);
+}
+
+@media (prefers-color-scheme: light) {
+  .developer-tag-picker__option {
+    border-color: rgba(0, 0, 0, 0.12);
+  }
+
+  .developer-tag-picker__option:has(input:checked) {
+    border-color: rgba(85, 88, 170, 0.45);
+    background: rgba(85, 88, 170, 0.1);
+  }
+}
+
+.developer-mcp__config {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.82rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (prefers-color-scheme: light) {
+  .developer-mcp__config {
+    border-color: rgba(0, 0, 0, 0.12);
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
 .developer-guide__body {
   margin: 0;
   white-space: pre-wrap;

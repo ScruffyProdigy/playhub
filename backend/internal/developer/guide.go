@@ -2,10 +2,10 @@ package developer
 
 import _ "embed"
 
-//go:embed guide.md
+//go:embed integration_guide.md
 var integrationGuide string
 
-// IntegrationGuide returns the developer integration guide markdown (stub for Phase A).
+// IntegrationGuide returns the developer integration guide markdown.
 func IntegrationGuide() string {
 	return integrationGuide
 }

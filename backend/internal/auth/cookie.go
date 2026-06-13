@@ -79,7 +79,7 @@ func ClearSessionCookie(w http.ResponseWriter, cfg CookieConfig) {
 }
 
 // Middleware authenticates requests and attaches user context.
-func Middleware(signer *Signer, next http.Handler) http.Handler {
+func Middleware(signer *Signer, apiKeys DeveloperAPIKeyVerifier, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := WithResponseWriter(r.Context(), w)
 
@@ -88,6 +88,10 @@ func Middleware(signer *Signer, next http.Handler) http.Handler {
 				ctx = WithGameServiceAuth(ctx)
 				if gameID, err := ParseGameServiceToken(token); err == nil {
 					ctx = WithGameServiceGameID(ctx, gameID.String())
+				}
+			} else if MatchesDeveloperAPIKey(token) && apiKeys != nil {
+				if userID, err := apiKeys.VerifyDeveloperAPIKey(r.Context(), token); err == nil {
+					ctx = WithUserID(ctx, userID.String())
 				}
 			} else if userID, err := signer.VerifyUserToken(token); err == nil {
 				ctx = WithUserID(ctx, userID.String())

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/scruffyprodigy/playhub/internal/gameclient"
 )
 
@@ -257,4 +258,162 @@ func (s *Store) ListIntegrationChecks(ctx context.Context, gameID uuid.UUID) ([]
 		checks = append(checks, *check)
 	}
 	return checks, rows.Err()
+}
+
+type UpdateMyGameMetadataParams struct {
+	ShortDescription *string
+	LongDescription  *string
+	HowToPlay        *string
+	Tags             []string
+}
+
+// UpdateMyGameMetadata updates owner-editable catalog fields.
+func (s *Store) UpdateMyGameMetadata(ctx context.Context, gameID, ownerUserID uuid.UUID, params UpdateMyGameMetadataParams) (*Game, error) {
+	game, err := s.GetOwnedGame(ctx, gameID, ownerUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if params.ShortDescription != nil {
+		game.ShortDescription = params.ShortDescription
+	}
+	if params.LongDescription != nil {
+		game.Description = params.LongDescription
+	}
+	if params.HowToPlay != nil {
+		game.HowToPlay = params.HowToPlay
+	}
+	if params.Tags != nil {
+		game.Tags = params.Tags
+	}
+
+	row := s.db.QueryRowContext(ctx, `
+		UPDATE games SET
+			short_description = $3,
+			description = $4,
+			how_to_play = $5,
+			tags = $6
+		WHERE id = $1 AND owner_user_id = $2
+		RETURNING `+gameColumns+`
+	`, gameID, ownerUserID, game.ShortDescription, game.Description, game.HowToPlay, pq.Array(game.Tags))
+	return scanGame(row)
+}
+
+// RequestPublicRelease moves a game to pending_review when gates pass.
+func (s *Store) RequestPublicRelease(ctx context.Context, gameID, ownerUserID uuid.UUID) (*Game, error) {
+	game, err := s.GetOwnedGame(ctx, gameID, ownerUserID)
+	if err != nil {
+		return nil, err
+	}
+	if game.Visibility != GameVisibilityPrivateTesting {
+		return nil, fmt.Errorf("store: only private testing games can request public release")
+	}
+	if err := ValidatePublicReleaseMetadata(game); err != nil {
+		return nil, err
+	}
+	checks, err := s.ListIntegrationChecks(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+	if err := ValidatePublicReleaseChecks(checks); err != nil {
+		return nil, err
+	}
+
+	row := s.db.QueryRowContext(ctx, `
+		UPDATE games SET visibility = $2
+		WHERE id = $1 AND owner_user_id = $3
+		RETURNING `+gameColumns+`
+	`, gameID, GameVisibilityPendingReview, ownerUserID)
+	return scanGame(row)
+}
+
+// ReviewGameRelease approves or rejects a pending game (admin).
+func (s *Store) ReviewGameRelease(ctx context.Context, gameID uuid.UUID, approve bool) (*Game, error) {
+	game, err := s.GetGameByID(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+	if game.Visibility != GameVisibilityPendingReview {
+		return nil, fmt.Errorf("store: game is not pending review")
+	}
+	next := GameVisibilityPrivateTesting
+	if approve {
+		next = GameVisibilityPublic
+	}
+	row := s.db.QueryRowContext(ctx, `
+		UPDATE games SET visibility = $2
+		WHERE id = $1
+		RETURNING `+gameColumns+`
+	`, gameID, next)
+	return scanGame(row)
+}
+
+// ListPendingGameReviews returns games awaiting admin approval.
+func (s *Store) ListPendingGameReviews(ctx context.Context) ([]Game, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT `+gameColumns+`
+		FROM games
+		WHERE visibility = $1
+		ORDER BY created_at ASC
+	`, GameVisibilityPendingReview)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var games []Game
+	for rows.Next() {
+		g, err := scanGame(rows)
+		if err != nil {
+			return nil, err
+		}
+		games = append(games, *g)
+	}
+	return games, rows.Err()
+}
+
+// ValidatePublicReleaseMetadata ensures catalog copy is ready for review.
+func ValidatePublicReleaseMetadata(game *Game) error {
+	if game == nil {
+		return fmt.Errorf("store: game is required")
+	}
+	if strings.TrimSpace(game.Name) == "" {
+		return fmt.Errorf("store: game name is required")
+	}
+	if game.ShortDescription == nil || strings.TrimSpace(*game.ShortDescription) == "" {
+		return fmt.Errorf("store: short description is required before public release")
+	}
+	if game.Description == nil || strings.TrimSpace(*game.Description) == "" {
+		return fmt.Errorf("store: long description is required before public release")
+	}
+	if len(game.Tags) == 0 {
+		return fmt.Errorf("store: at least one catalog tag is required before public release")
+	}
+	return nil
+}
+
+var requiredPassChecks = []string{
+	"manifest.reach_api",
+	"manifest.status",
+	"manifest.game_modes",
+	"manifest.sync_freshness",
+	"provision.happy_path",
+	"provision.auth",
+	"provision.launch_urls",
+}
+
+const integrationCheckStatusPass = "pass"
+
+// ValidatePublicReleaseChecks ensures required integration checks passed.
+func ValidatePublicReleaseChecks(checks []GameIntegrationCheck) error {
+	byID := make(map[string]string, len(checks))
+	for _, c := range checks {
+		byID[c.CheckID] = c.Status
+	}
+	for _, id := range requiredPassChecks {
+		if byID[id] != integrationCheckStatusPass {
+			return fmt.Errorf("store: required check %q must pass before public release", id)
+		}
+	}
+	return nil
 }

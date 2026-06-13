@@ -92,8 +92,8 @@ func newQueueIntegrationEnv(t *testing.T) *queueIntegrationEnv {
 
 func (env *queueIntegrationEnv) rebuildHTTPServer(t *testing.T) {
 	t.Helper()
-	gql := NewGraphQLServer(env.Signer, env.resolver)
-	gqlHandler := auth.Middleware(env.Signer, gql)
+	gql := NewGraphQLServer(env.Signer, env.Store, env.resolver)
+	gqlHandler := auth.Middleware(env.Signer, env.Store, gql)
 	mux := http.NewServeMux()
 	mux.Handle("/", gqlHandler)
 	mux.Handle("/graphql", gqlHandler)

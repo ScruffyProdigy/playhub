@@ -113,40 +113,9 @@ func (r *Runner) RunManifestChecks(ctx context.Context, game *store.Game) []Resu
 	return results
 }
 
-// StubChecks returns placeholder rows for provision and JWT sections (Phase B).
+// StubChecks is deprecated; provision and JWT checks run via RunProvisionChecks and RunJWTChecks.
 func StubChecks() []Result {
-	return []Result{
-		{
-			CheckID: "provision.happy_path",
-			Status:  StatusSkipped,
-			Message: "Provision checks ship in a later phase — use the integration guide to test manually.",
-		},
-		{
-			CheckID: "provision.auth",
-			Status:  StatusSkipped,
-			Message: "Provision checks ship in a later phase.",
-		},
-		{
-			CheckID: "provision.banlist",
-			Status:  StatusSkipped,
-			Message: "Provision checks ship in a later phase.",
-		},
-		{
-			CheckID: "provision.launch_urls",
-			Status:  StatusSkipped,
-			Message: "Provision checks ship in a later phase.",
-		},
-		{
-			CheckID: "jwt.jwks",
-			Status:  StatusSkipped,
-			Message: "JWT checks ship in a later phase.",
-		},
-		{
-			CheckID: "jwt.claim_happy_path",
-			Status:  StatusSkipped,
-			Message: "JWT checks ship in a later phase.",
-		},
-	}
+	return nil
 }
 
 func friendlyReachError(apiBase string, err error) string {

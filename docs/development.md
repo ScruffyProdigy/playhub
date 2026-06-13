@@ -147,6 +147,18 @@ Production deploys also run `k8s/jobs/patch-game-handoff-urls.yaml` via `./scrip
 - **Frontend E2E tests**: `cd frontend && npm run test:e2e` (uses dev `playhub` via running backend)
 - **All tests**: `./scripts/test.sh`
 - **Test DB only**: `./scripts/db.sh test-migrate` then `export DATABASE_URL="$(./scripts/db.sh test-url)"`
+- **JoinQuest integration MCP**: `cd mcp/joinquest-integration && npm test` — see [mcp/joinquest-integration/README.md](../mcp/joinquest-integration/README.md)
+- **Agent skill**: [`.agents/skills/joinquest-integration/`](../.agents/skills/joinquest-integration/) — copy into game projects; playbook at [docs/developer-agent-playbook.md](./developer-agent-playbook.md)
+
+### JoinQuest integration MCP (developer agents)
+
+The MCP server in `mcp/joinquest-integration/` exposes developer dashboard operations to Cursor and other agents via stdio. It calls the same GraphQL API as the portal.
+
+1. Sign in at JoinQuest and copy your `lobby_session` cookie.
+2. Add the config from `/developers/games/:id/welcome` (“Add to Cursor”) or [cursor-mcp.example.json](../mcp/joinquest-integration/cursor-mcp.example.json).
+3. Set `JOINQUEST_SESSION` and `JOINQUEST_API_URL` in the MCP env.
+
+Tools include integration guide, discovery prompt, run checks, update metadata, and request public release. Full list: [mcp/joinquest-integration/README.md](../mcp/joinquest-integration/README.md).
 
 ### Linting
 

@@ -40,7 +40,7 @@ Browse the catalog, sign in, join mode queues, and launch into registered third-
 
 ### 🚧 In Development
 - **Digital trading**: Player-facing purchase and trade flows
-- **Developer self-service Phase B**: Provision/JWT checks, public release review, MCP
+- **Developer self-service Phase B**: Provision/JWT checks, public release review, integration MCP — see [mcp/joinquest-integration/README.md](mcp/joinquest-integration/README.md)
 
 ### 📋 Planned
 - **Payment Processing**: Integration with payment providers

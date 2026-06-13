@@ -26,6 +26,25 @@ type ActiveIntent struct {
 	FormingGaps []*QueuePathGap `json:"formingGaps"`
 }
 
+type CatalogTagOption struct {
+	ID          string `json:"id"`
+	Label       string `json:"label"`
+	Description string `json:"description"`
+}
+
+type CreateDeveloperAPIKeyPayload struct {
+	APIKey *DeveloperAPIKey `json:"apiKey"`
+	Secret string           `json:"secret"`
+}
+
+type DeveloperAPIKey struct {
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	KeyPrefix  string     `json:"keyPrefix"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	LastUsedAt *time.Time `json:"lastUsedAt,omitempty"`
+}
+
 type DigitalGood struct {
 	ID          string  `json:"id"`
 	Code        string  `json:"code"`
@@ -376,6 +395,14 @@ type TableSeatSlot struct {
 	DisplayName string  `json:"displayName"`
 	TeamPrefix  *string `json:"teamPrefix,omitempty"`
 	User        *User   `json:"user,omitempty"`
+}
+
+type UpdateMyGameMetadataInput struct {
+	GameID           string   `json:"gameId"`
+	ShortDescription *string  `json:"shortDescription,omitempty"`
+	LongDescription  *string  `json:"longDescription,omitempty"`
+	HowToPlay        *string  `json:"howToPlay,omitempty"`
+	Tags             []string `json:"tags,omitempty"`
 }
 
 type User struct {
