@@ -43,6 +43,7 @@ const SKILL_GITHUB =
   'https://github.com/scruffyprodigy/playhub/tree/main/.agents/skills/joinquest-integration'
 const INSTALL_SKILL = `mkdir -p .agents/skills
 cp -r /path/to/lobby/.agents/skills/joinquest-integration .agents/skills/`
+const INSTALL_NPX = 'npx -y @joinquest/mcp-integration'
 const INSTALL_LINK = 'curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-mcp.sh | sh'
 
 function buildClaudeCodeConfig(base) {
