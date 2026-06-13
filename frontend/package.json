@@ -13,6 +13,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "test:integration-checks": "node ../scripts/check-required-integration-checks.mjs",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest --watch",
     "test:e2e": "playwright test",

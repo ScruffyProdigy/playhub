@@ -62,6 +62,7 @@ func (r *Runner) RunManifestChecks(ctx context.Context, game *store.Game) []Resu
 		})
 		results = append(results,
 			skipped("manifest.status", "Fix API reachability first."),
+			skipped("manifest.launch_urls_on_provision", "Fix API reachability first."),
 			skipped("manifest.game_modes", "Fix API reachability first."),
 			skipped("manifest.sync_freshness", "Fix API reachability first."),
 		)
@@ -81,6 +82,20 @@ func (r *Runner) RunManifestChecks(ctx context.Context, game *store.Game) []Resu
 		Message: fmt.Sprintf("Status endpoint returned game %q (version %s).", manifest.Status.Game, manifest.Status.Version),
 		Detail:  statusDetail,
 	})
+
+	if manifest.Status.LaunchUrlsOnProvision {
+		results = append(results, Result{
+			CheckID: "manifest.launch_urls_on_provision",
+			Status:  StatusPass,
+			Message: "Status reports launchUrlsOnProvision: true.",
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "manifest.launch_urls_on_provision",
+			Status:  StatusFail,
+			Message: "Status must include launchUrlsOnProvision: true — JoinQuest attaches seat JWTs to game-minted launch URLs.",
+		})
+	}
 
 	if len(manifest.Modes) == 0 {
 		results = append(results, Result{

@@ -395,11 +395,23 @@ func ValidatePublicReleaseMetadata(game *Game) error {
 var requiredPassChecks = []string{
 	"manifest.reach_api",
 	"manifest.status",
+	"manifest.launch_urls_on_provision",
 	"manifest.game_modes",
 	"manifest.sync_freshness",
 	"provision.happy_path",
+	"provision.idempotent_repush",
 	"provision.auth",
+	"provision.missing_auth",
 	"provision.launch_urls",
+	"provision.launch_url_no_jwt",
+	"jwt.jwks",
+	"jwt.claim_happy_path",
+	"jwt.wrong_audience",
+	"jwt.unknown_match",
+	"jwt.wrong_issuer",
+	"jwt.expired",
+	"jwt.invalid_token",
+	"jwt.wrong_seat",
 }
 
 const integrationCheckStatusPass = "pass"

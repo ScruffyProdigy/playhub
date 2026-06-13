@@ -75,13 +75,13 @@ Maintainers: `./scripts/publish-joinquest-mcp.sh` (requires npm login + `@joinqu
 | Tool | Purpose |
 |------|---------|
 | `joinquest_integration_get_agent_playbook` | **Start here** — end-to-end agent workflow (phases 1–8) |
-| `joinquest_integration_get_integration_guide` | Full integration guide (markdown) |
-| `joinquest_integration_get_discovery_prompt` | Agent interview script |
+| `joinquest_integration_get_integration_guide` | Full integration guide (markdown) — includes **§8 recommended local tests** for game repos |
+| `joinquest_integration_get_discovery_prompt` | Open-ended discovery prompt + follow-up guide |
 | `joinquest_integration_get_catalog_tag_taxonomy` | Valid tag IDs |
 | `joinquest_integration_list_my_games` | Owner's games + visibility |
 | `joinquest_integration_register_game` | Register a new game (confirm fields with developer first) |
 | `joinquest_integration_get_game_checks` | Checklist + metadata |
-| `joinquest_integration_run_game_checks` | Run manifest / provision / JWT suite |
+| `joinquest_integration_run_game_checks` | Run manifest / provision / JWT suite (19 required checks; see integration guide §11) |
 | `joinquest_integration_update_game_metadata` | Save catalog copy + tags |
 | `joinquest_integration_get_game_credentials` | serviceToken + webhook secret |
 | `joinquest_integration_get_example_provision_payload` | Sample provision JSON |

@@ -5,16 +5,28 @@ package developer
 func DiscoveryPrompt() string {
 	return `# Discover your game
 
-Ask the developer these questions before drafting catalog copy or suggesting a seatTemplate.
+Start with one open-ended prompt — do not lead with a checklist.
 
-1. **One-liner** — What do players do together in one sentence?
-2. **Player count** — Typical group size? Min/max? Fixed teams or variable?
-3. **Structure** — Head-to-head duel, free-for-all, teams, or roles (e.g. clue-giver + guessers)?
-4. **Social mode** — Competitive, cooperative, or party/social?
-5. **Session length** — Quick rounds (~5 min) or longer sessions?
-6. **Vibe** — How should the catalog card feel (casual, brainy, chaotic, tactical)?
+**Opening (ask first):**
 
-After answers, draft:
+> Tell me about the game you're thinking of — as much or as little as you have. What's the idea, how do people play together, who it's for, anything you're excited about or unsure about.
+
+**Then clarify only what's missing:**
+
+Read what they shared and identify gaps. You need enough to draft catalog copy and a seatTemplate plan. Ask follow-ups conversationally — one or two at a time, not a wall of questions. If they already answered something, do not re-ask it.
+
+**Confirm what you think you know:** If you can infer an answer but aren't fully sure, check it with the developer instead of guessing or asking from scratch. For example: "It sounds like this is mostly a 2-player game — would you say that's fair?" Same for structure, vibe, session length, and the rest.
+
+| Topic | Why it matters | Only ask if unclear |
+|-------|----------------|---------------------|
+| Player count | seatTemplate / game-modes | min/max, fixed or variable |
+| Structure | seatTemplate | duel, free-for-all, teams, or roles |
+| Social mode | tags + tone | competitive, cooperative, or party |
+| Session length | tags + copy | quick rounds vs longer sessions |
+| Vibe / audience | catalog voice | casual, brainy, chaotic, tactical, etc. |
+| API URL | registration | public HTTPS hosting plan (not localhost) |
+
+**Draft (show for approval, do not save yet):**
 - shortDescription (~120 chars, JoinQuest tone)
 - longDescription (2–4 paragraphs for the detail page)
 - howToPlay (3–6 bullet steps)

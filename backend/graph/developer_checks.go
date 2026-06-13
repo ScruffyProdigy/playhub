@@ -53,7 +53,7 @@ func (r *Resolver) persistGameChecks(ctx context.Context, game *store.Game) ([]*
 		return nil, err
 	}
 	if provisionOutcome.MatchID != "" && provisionOutcome.SeatKey != "" {
-		all = append(all, runner.RunJWTChecks(ctx, game, authService.Signer(), provisionOutcome.MatchID, provisionOutcome.SeatKey)...)
+		all = append(all, runner.RunJWTChecks(ctx, game, authService.Signer(), provisionOutcome.MatchID, provisionOutcome.SeatKey, provisionOutcome.SecondSeatKey)...)
 	} else {
 		all = append(all, integrationchecks.JWTSkippedNoProvision()...)
 	}

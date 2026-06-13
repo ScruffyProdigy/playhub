@@ -60,6 +60,11 @@ jobs:
       run: |
         cd frontend
         npm run test:run -- src/
+
+    - name: Verify required integration check parity
+      run: |
+        cd frontend
+        npm run test:integration-checks
     
     - name: Run unit tests with coverage
       run: |

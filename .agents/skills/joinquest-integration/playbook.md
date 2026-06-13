@@ -1,6 +1,7 @@
 # JoinQuest agent integration playbook
 
-> **Note:** The backend embeds a copy at `backend/internal/developer/agent_playbook.md` for the `developerAgentPlaybook` GraphQL query and MCP. Edit this file first, then sync the embed copy before release. The bundled agent skill at `.agents/skills/joinquest-integration/playbook.md` should match.
+> **Embedded copy:** Do not edit here. Canonical source: `docs/developer-agent-playbook.md`. Run `./scripts/sync-developer-docs.sh` after editing.
+
 
 End-to-end workflow for AI agents helping a developer integrate a multiplayer game with JoinQuest — from first conversation through public catalog release.
 
@@ -16,7 +17,7 @@ End-to-end workflow for AI agents helping a developer integrate a multiplayer ga
 
 ## Agent rules (always)
 
-1. **Interview before implementing.** Understand the game before writing API code or catalog copy.
+1. **Interview before implementing.** Start open-ended — let the developer describe their game, then ask clarifying questions for what's still unclear. Confirm reasonable inferences instead of guessing or re-asking from scratch.
 2. **Human gates.** Never call `joinquest_integration_register_game`, `joinquest_integration_update_game_metadata`, or `joinquest_integration_request_public_release` without explicit developer approval of the draft values.
 3. **Public HTTPS only.** JoinQuest cannot reach `localhost` — use staging, Render, Fly, ngrok, etc.
 4. **One phase at a time.** Finish the current phase (or get explicit skip) before moving on.
@@ -29,15 +30,26 @@ End-to-end workflow for AI agents helping a developer integrate a multiplayer ga
 
 **Goal:** Understand what the developer is building so you can draft catalog copy and seatTemplate guidance.
 
-**Ask:**
+**Start open-ended:**
 
-1. **One-liner** — What do players do together in one sentence?
-2. **Player count** — Typical group size? Min/max? Fixed teams or variable?
-3. **Structure** — Head-to-head duel, free-for-all, teams, or roles (e.g. clue-giver + guessers)?
-4. **Social mode** — Competitive, cooperative, or party/social?
-5. **Session length** — Quick rounds (~5 min) or longer sessions?
-6. **Vibe** — How should the catalog card feel (casual, brainy, chaotic, tactical)?
-7. **API URL** — Where will the game API be hosted publicly? (Must be HTTPS.)
+Invite the developer to describe the game in their own words — no checklist yet. For example:
+
+> Tell me about the game you're thinking of — as much or as little as you have. What's the idea, how do people play together, who it's for, anything you're excited about or unsure about.
+
+**Then clarify only what's missing:**
+
+Read their description and identify gaps. You need enough to draft registration copy and a seatTemplate plan. Ask follow-ups conversationally — one or two at a time, not a wall of questions. If they already answered something in their opening description, **do not re-ask it**.
+
+**Confirm what you think you know:** If you can infer an answer but aren't fully sure, check it with the developer instead of guessing or asking from scratch. For example: "It sounds like this is mostly a 2-player game — would you say that's fair?" Same for structure, vibe, session length, and the rest.
+
+| Topic | Why it matters | Only ask if unclear |
+|-------|----------------|---------------------|
+| Player count | seatTemplate / game-modes | min/max, fixed or variable |
+| Structure | seatTemplate | duel, free-for-all, teams, or roles |
+| Social mode | tags + tone | competitive, cooperative, or party |
+| Session length | tags + copy | quick rounds vs longer sessions |
+| Vibe / audience | catalog voice | casual, brainy, chaotic, tactical, etc. |
+| API URL | registration | public HTTPS hosting plan (not localhost) |
 
 **Draft (show to developer, do not save yet):**
 
@@ -51,7 +63,7 @@ End-to-end workflow for AI agents helping a developer integrate a multiplayer ga
 
 **Voice:** Plain, player-first. “Find your group. Play together.” — not “enter matchmaking” or JWT jargon.
 
-**Done when:** Developer confirms the drafts are directionally correct (edits OK).
+**Done when:** Developer confirms the drafts are directionally correct (edits OK). You have enough to register the game and suggest a seatTemplate.
 
 ---
 
@@ -126,9 +138,11 @@ In Agent mode, ask the agent to call `joinquest_integration_list_my_games`. If a
 
 **JWT:** Verify `iss`, `aud` (your API base URL), `matchId`, `seatKey`, `sub`. Publish JWKS at `{lobbyIssuer}/.well-known/jwks.json`.
 
-Use Phase 1 seatTemplate plan. Full details: integration guide §3–§7.
+Use Phase 1 seatTemplate plan. Full details: integration guide §3–§8.
 
-**Done when:** Endpoints exist on a **public HTTPS** URL and basic manual curl tests pass.
+**Local tests:** Add game-repo tests mirroring integration guide §8 (manifest, provision, JWT, JWKS rotation). Use `demo-game-rps` as reference. Run `npm test` before remote JoinQuest checks.
+
+**Done when:** Endpoints exist on a **public HTTPS** URL, local tests pass, and basic manual curl tests pass.
 
 ---
 
@@ -169,16 +183,18 @@ Use Phase 1 seatTemplate plan. Full details: integration guide §3–§7.
 
 **MCP:** `joinquest_integration_run_game_checks` with `gameId`.
 
-**Required checks (must be PASS for public release):**
+**Required checks (19 — must be PASS for public release):**
 
-- `manifest.reach_api`, `manifest.status`, `manifest.game_modes`, `manifest.sync_freshness`
-- `provision.happy_path`, `provision.auth`, `provision.launch_urls`
-- JWT checks where applicable
+- **Manifest:** `manifest.reach_api`, `manifest.status`, `manifest.launch_urls_on_provision`, `manifest.game_modes`, `manifest.sync_freshness`
+- **Provision:** `provision.happy_path`, `provision.idempotent_repush`, `provision.auth`, `provision.missing_auth`, `provision.launch_urls`, `provision.launch_url_no_jwt`
+- **JWT:** `jwt.jwks`, `jwt.claim_happy_path`, `jwt.wrong_audience`, `jwt.unknown_match`, `jwt.wrong_issuer`, `jwt.expired`, `jwt.invalid_token`, `jwt.wrong_seat`
+
+**Optional (recommended, not required for release):** `provision.banlist` — skipped unless the game bans test user `a0000000-0000-4000-8000-000000000099`.
 
 **On failure:**
 
 1. Read `message` and `detail` from the check result.
-2. Load integration guide §10 index → relevant section.
+2. Load integration guide §11 checklist index → relevant section; add local tests per §8 in the game repo.
 3. Fix the **game API**, deploy, re-run checks.
 
 Common fixes:
@@ -186,13 +202,23 @@ Common fixes:
 | Check | Fix |
 |-------|-----|
 | `manifest.reach_api` | API must be public HTTPS; `/healthz` returns 200 |
+| `manifest.launch_urls_on_provision` | Set `launchUrlsOnProvision: true` on `GET /api/v1/status` |
 | `manifest.game_modes` | Valid `seatTemplate` JSON per mode |
-| `provision.auth` | Accept dashboard `serviceToken` on Authorization header |
+| `provision.auth` | Accept dashboard `serviceToken` on `Authorization: Bearer …` |
+| `provision.missing_auth` | Reject provision with no (or wrong) `Authorization` header |
+| `provision.idempotent_repush` | Re-posting the same `externalMatchId` must succeed |
 | `provision.launch_urls` | Return `launchUrls` for every seated player |
-| `provision.banlist` | Return 403 + `bannedLobbyUserIds` array |
-| `jwt.*` | JWKS URL, claim endpoint, reject wrong aud/iss |
+| `provision.launch_url_no_jwt` | Do not embed JWTs in launch URL bases |
+| `provision.banlist` | Return 403 + `bannedLobbyUserIds` array (optional check) |
+| `jwt.jwks` | Verify tokens via `{iss}/.well-known/jwks.json` |
+| `jwt.claim_happy_path` | `POST …/claim` accepts valid seat JWT |
+| `jwt.wrong_audience` | Reject tokens whose `aud` ≠ your API base URL |
+| `jwt.unknown_match` | Claim on unknown or URL-mismatched match → 404 |
+| `jwt.wrong_issuer` | Reject tokens whose `iss` ≠ provision `lobbyId` |
+| `jwt.expired` / `jwt.invalid_token` | Reject expired or malformed tokens → 401 |
+| `jwt.wrong_seat` | Reject tokens for another player's reserved seat |
 
-**Done when:** Required checks are green (re-run to confirm).
+**Done when:** All 19 required checks are green (re-run to confirm).
 
 ---
 
@@ -270,9 +296,9 @@ Friends join via the developer's room link. Game stays off the public catalog un
 ## Phase checklist (copy for status updates)
 
 ```text
-[ ] Phase 1 — Discover game (drafts approved)
+[ ] Phase 1 — Discover game (developer described idea; drafts approved)
 [ ] Phase 2 — MCP connected
-[ ] Phase 3 — Game API implemented (public HTTPS)
+[ ] Phase 3 — Game API + local tests (public HTTPS; integration guide §8)
 [ ] Phase 4 — Registered on JoinQuest (private_testing)
 [ ] Phase 5 — Integration checks passing
 [ ] Phase 6 — Catalog metadata saved

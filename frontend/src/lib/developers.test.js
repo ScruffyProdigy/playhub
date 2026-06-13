@@ -1,11 +1,30 @@
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
+  REQUIRED_INTEGRATION_CHECKS,
   canRequestPublicRelease,
   integrationNextSteps,
   parseDeveloperRoute,
   suggestSlugFromName,
   visibilityLabel,
 } from './developers'
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
+
+function parseGoRequiredChecks(source) {
+  const match = source.match(/requiredPassChecks = \[\]string\{([\s\S]*?)\}/)
+  if (!match) throw new Error('requiredPassChecks block not found')
+  return [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1])
+}
+
+describe('REQUIRED_INTEGRATION_CHECKS', () => {
+  it('matches backend requiredPassChecks', () => {
+    const goSource = readFileSync(join(repoRoot, 'backend/internal/store/developer.go'), 'utf8')
+    expect(REQUIRED_INTEGRATION_CHECKS).toEqual(parseGoRequiredChecks(goSource))
+  })
+})
 
 describe('parseDeveloperRoute', () => {
   it('parses landing', () => {
@@ -58,11 +77,23 @@ describe('canRequestPublicRelease', () => {
   const passChecks = [
     'manifest.reach_api',
     'manifest.status',
+    'manifest.launch_urls_on_provision',
     'manifest.game_modes',
     'manifest.sync_freshness',
     'provision.happy_path',
+    'provision.idempotent_repush',
     'provision.auth',
+    'provision.missing_auth',
     'provision.launch_urls',
+    'provision.launch_url_no_jwt',
+    'jwt.jwks',
+    'jwt.claim_happy_path',
+    'jwt.wrong_audience',
+    'jwt.unknown_match',
+    'jwt.wrong_issuer',
+    'jwt.expired',
+    'jwt.invalid_token',
+    'jwt.wrong_seat',
   ].map((checkId) => ({ checkId, status: 'PASS' }))
 
   it('requires metadata and passing checks', () => {

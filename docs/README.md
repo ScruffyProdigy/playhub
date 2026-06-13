@@ -22,7 +22,7 @@ Documentation for **JoinQuest** — the platform that connects players to third-
 - **[Rooms & tables](rooms-and-tables.md)** — Private rooms, forming tables, invite/QR, queue exclusion
 - **[Spirit animal avatars](spirit-animal-avatars.md)** — Shipped: starter avatars + tarot-guided “Find my spirit animal” flow; optional `avatarKey` on profile update
 - **[Game-minted launch URLs](game-minted-launch-urls.md)** — Games return launch URL bases on provision; Lobby attaches JWT
-- **[Developer self-service](developer-self-service.md)** — Shipped (Phase A): register games, integration dashboard, private testing; Phase B: public release, MCP
+- **[Developer self-service](developer-self-service.md)** — Register games, integration dashboard (19 checks), private testing, public release, MCP
 - **[Developer AI setup roadmap](developer-ai-setup-roadmap.md)** — MCP npm, dashboard copy buttons, unified skill+MCP install
 - **[Player experience roadmap](player-experience-roadmap.md)** — Planned: queue wait estimates, bottleneck CTAs, richer game cards
 - **[Lobby ↔ Game Handoff](lobby-protocol-handoff.md)** — Provision, JWT, and integration rationale

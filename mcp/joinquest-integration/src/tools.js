@@ -59,7 +59,8 @@ export function registerJoinQuestIntegrationTools(server, config) {
   server.registerTool(
     'joinquest_integration_get_discovery_prompt',
     {
-      description: 'Returns the agent discovery interview script for understanding a game before drafting catalog copy or seatTemplate guidance.',
+      description:
+        'Returns the agent discovery interview script: start open-ended, then ask clarifying questions for catalog copy and seatTemplate guidance.',
       inputSchema: z.object({}),
     },
     async () => {

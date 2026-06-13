@@ -29,10 +29,11 @@ type ModeManifest struct {
 
 // StatusResponse is returned by GET /api/v1/status.
 type StatusResponse struct {
-	Game       string `json:"game"`
-	Version    string `json:"version"`
-	AppEnv     string `json:"appEnv"`
-	Standalone bool   `json:"standalone"`
+	Game                  string `json:"game"`
+	Version               string `json:"version"`
+	AppEnv                string `json:"appEnv"`
+	Standalone            bool   `json:"standalone"`
+	LaunchUrlsOnProvision bool   `json:"launchUrlsOnProvision"`
 }
 
 // Manifest is the cached game-modes payload plus sync metadata.

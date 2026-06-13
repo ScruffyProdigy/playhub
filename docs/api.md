@@ -26,7 +26,7 @@ Platform goals and integration overview: [`vision.md`](./vision.md). Game handof
 - **Developer self-service (Phase A)**: `registerMyGame`, `myGames`, `myGame`, `myGameCredentials`, `runMyGameChecks`, `developerIntegrationGuide`; public `games` / `gameBySlug` filter to `visibility = public` — [developer-self-service.md](./developer-self-service.md)
 
 ### 🚧 In Development
-- **Developer self-service (Phase B)**: real provision/JWT checks, `updateMyGameMetadata`, `catalogTagTaxonomy`, `requestPublicRelease`, `reviewGameRelease`, full [developer-integration-guide.md](./developer-integration-guide.md), JoinQuest integration MCP
+- **Developer self-service (Phase B)**: provision/JWT integration checks (19 required), `updateMyGameMetadata`, `catalogTagTaxonomy`, `requestPublicRelease`, `reviewGameRelease`, [developer-integration-guide.md](./developer-integration-guide.md), JoinQuest integration MCP — see [developer-self-service.md](./developer-self-service.md)
 - **Player-facing goods**: purchase/trade flows
 - **Rate limiting**
 
@@ -281,7 +281,7 @@ query {
 Sign-in required. Saves a draft game, attempts API connect (`healthz` + `game-modes`), and promotes to `private_testing` on success. Returns `serviceToken` and `webhookSecret`.
 
 #### `myGames` / `myGame` / `runMyGameChecks` ✅
-Owner-scoped dashboard queries and on-demand manifest checklist. Provision and JWT checks return `skipped` until Phase B.
+Owner-scoped dashboard queries and on-demand integration checklist (19 required checks for public release: manifest, provision, JWT). Optional: `provision.banlist`.
 
 ### Catalog (admin)
 

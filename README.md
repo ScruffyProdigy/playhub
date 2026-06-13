@@ -36,11 +36,11 @@ Browse the catalog, sign in, join mode queues, and launch into registered third-
 - **Database Integration**: PostgreSQL setup with connection management
 - **Database Migrations**: Complete migration system with CLI and programmatic support
 - **Linting & Code Quality**: ESLint configuration with proper test environment setup
-- **Developer self-service (Phase A)**: Register games, dashboard, private testing, integration checklist — see [developer-self-service](docs/developer-self-service.md)
+- **Developer self-service**: Register games, dashboard, private testing, 19-check integration suite, public release review, integration MCP — see [developer-self-service](docs/developer-self-service.md) · [mcp/joinquest-integration/README.md](mcp/joinquest-integration/README.md)
 
 ### 🚧 In Development
 - **Digital trading**: Player-facing purchase and trade flows
-- **Developer self-service Phase B**: Provision/JWT checks, public release review, integration MCP — see [mcp/joinquest-integration/README.md](mcp/joinquest-integration/README.md)
+- **Developer self-service follow-ups**: Scheduled integration re-checks, JWKS rotation remote check
 
 ### 📋 Planned
 - **Payment Processing**: Integration with payment providers

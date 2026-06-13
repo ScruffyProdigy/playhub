@@ -165,11 +165,23 @@ const REVOKE_DEVELOPER_API_KEY = `
 export const REQUIRED_INTEGRATION_CHECKS = [
   'manifest.reach_api',
   'manifest.status',
+  'manifest.launch_urls_on_provision',
   'manifest.game_modes',
   'manifest.sync_freshness',
   'provision.happy_path',
+  'provision.idempotent_repush',
   'provision.auth',
+  'provision.missing_auth',
   'provision.launch_urls',
+  'provision.launch_url_no_jwt',
+  'jwt.jwks',
+  'jwt.claim_happy_path',
+  'jwt.wrong_audience',
+  'jwt.unknown_match',
+  'jwt.wrong_issuer',
+  'jwt.expired',
+  'jwt.invalid_token',
+  'jwt.wrong_seat',
 ]
 
 export const CHECK_FIX_HINTS = {
@@ -177,22 +189,34 @@ export const CHECK_FIX_HINTS = {
     'JoinQuest must reach your public HTTPS API. Check the URL is live and not localhost.',
   'manifest.status':
     'GET /api/v1/status should return game info and launchUrlsOnProvision: true.',
+  'manifest.launch_urls_on_provision':
+    'GET /api/v1/status must include launchUrlsOnProvision: true.',
   'manifest.game_modes':
     'GET /api/v1/game-modes needs valid seatTemplate JSON for each mode.',
   'manifest.sync_freshness':
     'Re-sync your manifest — run checks again after deploying API changes.',
   'provision.happy_path':
     'POST /api/v1/matches should return launch URLs for each seated player.',
+  'provision.idempotent_repush':
+    'Re-posting the same externalMatchId should succeed (idempotent provision).',
   'provision.auth':
     'Accept the service token on Authorization: Bearer … when provisioning matches.',
+  'provision.missing_auth':
+    'Reject provision requests with no Authorization header.',
   'provision.banlist':
     'Return HTTP 403 with bannedLobbyUserIds when a player is banned.',
   'provision.launch_urls':
     'Every seated player needs a launchUrls entry (or a launchUrlTemplate).',
+  'provision.launch_url_no_jwt':
+    'Launch URL bases must not include a JWT — JoinQuest adds token= later.',
   'jwt.jwks': 'Publish JWKS at {lobby}/.well-known/jwks.json.',
   'jwt.claim_happy_path': 'POST /api/v1/matches/{id}/claim must accept Lobby seat JWTs.',
   'jwt.wrong_audience': 'Reject JWTs whose aud does not match your API base URL.',
-  'jwt.unknown_match': 'Return 404 when the external match id is unknown.',
+  'jwt.unknown_match': 'Return 404 when the claim URL match id is unknown or mismatched.',
+  'jwt.wrong_issuer': 'Reject JWTs whose iss does not match the match lobbyId.',
+  'jwt.expired': 'Reject expired seat tokens with 401/403.',
+  'jwt.invalid_token': 'Reject malformed tokens with 401/403.',
+  'jwt.wrong_seat': 'Reject tokens that claim another player\'s reserved seat.',
 }
 
 /** Parse developer routes from pathname. */

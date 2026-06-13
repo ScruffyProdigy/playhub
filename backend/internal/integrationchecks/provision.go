@@ -31,9 +31,10 @@ type ProvisionConfig struct {
 
 // ProvisionCheckOutcome includes JWT follow-up context from a successful happy path.
 type ProvisionCheckOutcome struct {
-	Results  []Result
-	MatchID  string
-	SeatKey  string
+	Results       []Result
+	MatchID       string
+	SeatKey       string
+	SecondSeatKey string
 }
 
 // RunProvisionChecks exercises provision, auth, banlist shape, and launch URLs.
@@ -65,8 +66,12 @@ func (r *Runner) RunProvisionChecks(
 	matchID := checkMatchIDPrefix + uuid.NewString()
 	assignment := syntheticAssignment(mode, seats, matchID, []string{checkUserOne, checkUserTwo})
 	firstSeatKey := assignment.Seats[0].SeatKey
+	secondSeatKey := ""
+	if len(assignment.Seats) > 1 {
+		secondSeatKey = assignment.Seats[1].SeatKey
+	}
 
-	results := make([]Result, 0, 4)
+	results := make([]Result, 0, 8)
 
 	// Happy path
 	happyReq := gameclient.ProvisionRequest{
@@ -85,8 +90,11 @@ func (r *Runner) RunProvisionChecks(
 		})
 		results = append(results,
 			skipped("provision.auth", "Fix the happy-path provision first."),
+			skipped("provision.missing_auth", "Fix the happy-path provision first."),
 			skipped("provision.banlist", "Fix the happy-path provision first."),
 			skipped("provision.launch_urls", "Fix the happy-path provision first."),
+			skipped("provision.launch_url_no_jwt", "Fix the happy-path provision first."),
+			skipped("provision.idempotent_repush", "Fix the happy-path provision first."),
 		)
 		return ProvisionCheckOutcome{Results: results}
 	}
@@ -96,6 +104,50 @@ func (r *Runner) RunProvisionChecks(
 		Status:  StatusPass,
 		Message: "We provisioned a synthetic test match successfully.",
 	})
+
+	// Idempotent re-push with the same externalMatchId.
+	if _, err := provisioner.ProvisionMatch(ctx, happyReq); err != nil {
+		results = append(results, Result{
+			CheckID: "provision.idempotent_repush",
+			Status:  StatusFail,
+			Message: fmt.Sprintf("Re-provisioning the same match id should succeed (idempotent): %s", friendlyProvisionError(err)),
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "provision.idempotent_repush",
+			Status:  StatusPass,
+			Message: "Re-provisioning the same externalMatchId succeeded.",
+		})
+	}
+
+	// Launch URLs
+	if len(result.LaunchURLs) >= len(assignment.Seats) || result.LaunchURLTemplate != "" {
+		results = append(results, Result{
+			CheckID: "provision.launch_urls",
+			Status:  StatusPass,
+			Message: "Provision returned launch URL bases for seated players.",
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "provision.launch_urls",
+			Status:  StatusFail,
+			Message: fmt.Sprintf("Provision succeeded but launchUrls only covered %d of %d seats.", len(result.LaunchURLs), len(assignment.Seats)),
+		})
+	}
+
+	if launchURLsContainJWT(result.LaunchURLs, result.LaunchURLTemplate) {
+		results = append(results, Result{
+			CheckID: "provision.launch_url_no_jwt",
+			Status:  StatusFail,
+			Message: "Launch URL bases must not include a JWT — JoinQuest attaches token= when linking players.",
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "provision.launch_url_no_jwt",
+			Status:  StatusPass,
+			Message: "Launch URL bases do not embed a seat JWT.",
+		})
+	}
 
 	// Auth — wrong token should not succeed
 	badAuthReq := happyReq
@@ -117,6 +169,23 @@ func (r *Runner) RunProvisionChecks(
 			CheckID: "provision.auth",
 			Status:  StatusPass,
 			Message: "Your server rejected our invalid service token.",
+		})
+	}
+
+	// Auth — missing Authorization when service token is required
+	noAuthReq := happyReq
+	noAuthReq.ServiceToken = ""
+	if _, err := provisioner.ProvisionMatch(ctx, noAuthReq); err == nil {
+		results = append(results, Result{
+			CheckID: "provision.missing_auth",
+			Status:  StatusFail,
+			Message: "Your server accepted a provision request with no Authorization header.",
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "provision.missing_auth",
+			Status:  StatusPass,
+			Message: "Your server rejected a provision request with no Authorization header.",
 		})
 	}
 
@@ -154,26 +223,21 @@ func (r *Runner) RunProvisionChecks(
 		})
 	}
 
-	// Launch URLs
-	if len(result.LaunchURLs) >= len(assignment.Seats) || result.LaunchURLTemplate != "" {
-		results = append(results, Result{
-			CheckID: "provision.launch_urls",
-			Status:  StatusPass,
-			Message: "Provision returned launch URL bases for seated players.",
-		})
-	} else {
-		results = append(results, Result{
-			CheckID: "provision.launch_urls",
-			Status:  StatusFail,
-			Message: fmt.Sprintf("Provision succeeded but launchUrls only covered %d of %d seats.", len(result.LaunchURLs), len(assignment.Seats)),
-		})
-	}
+	return ProvisionCheckOutcome{Results: results, MatchID: matchID, SeatKey: firstSeatKey, SecondSeatKey: secondSeatKey}
+}
 
-	return ProvisionCheckOutcome{Results: results, MatchID: matchID, SeatKey: firstSeatKey}
+func launchURLsContainJWT(urls map[string]string, template string) bool {
+	for _, raw := range urls {
+		if strings.Contains(strings.ToLower(raw), "token=") || strings.Contains(raw, "eyJ") {
+			return true
+		}
+	}
+	t := strings.ToLower(template)
+	return strings.Contains(t, "token=") || strings.Contains(template, "eyJ")
 }
 
 // RunJWTChecks exercises claim endpoints using a provisioned synthetic match.
-func (r *Runner) RunJWTChecks(ctx context.Context, game *store.Game, signer *auth.Signer, provisionMatchID string, seatKey string) []Result {
+func (r *Runner) RunJWTChecks(ctx context.Context, game *store.Game, signer *auth.Signer, provisionMatchID, seatKey, secondSeatKey string) []Result {
 	if game == nil || game.APIBaseURL == nil {
 		return jwtSkippedAll("Connect your API before JWT checks.")
 	}
@@ -187,7 +251,7 @@ func (r *Runner) RunJWTChecks(ctx context.Context, game *store.Game, signer *aut
 	apiBase := strings.TrimRight(strings.TrimSpace(*game.APIBaseURL), "/")
 	audience := apiBase
 
-	results := make([]Result, 0, 4)
+	results := make([]Result, 0, 8)
 
 	jwksURL := strings.TrimRight(auth.LobbyIssuer(), "/") + "/.well-known/jwks.json"
 	if err := r.checkJWKSReachable(ctx, jwksURL); err != nil {
@@ -270,6 +334,79 @@ func (r *Runner) RunJWTChecks(ctx context.Context, game *store.Game, signer *aut
 			Status:  StatusFail,
 			Message: fmt.Sprintf("Unknown match should return 404, got HTTP %d.", status),
 		})
+	}
+
+	wrongIssToken, err := signer.SignSeatTokenWithIssuer(userID, "https://joinquest-check-wrong-issuer.example", audience, provisionMatchID, seatKey, "", time.Hour)
+	if err == nil {
+		status, _ = r.postClaim(ctx, claimURL, wrongIssToken)
+		if status == 401 || status == 403 {
+			results = append(results, Result{
+				CheckID: "jwt.wrong_issuer",
+				Status:  StatusPass,
+				Message: "Your game rejected a token with the wrong issuer.",
+			})
+		} else {
+			results = append(results, Result{
+				CheckID: "jwt.wrong_issuer",
+				Status:  StatusFail,
+				Message: fmt.Sprintf("Your game should reject wrong iss with 401/403, got HTTP %d.", status),
+			})
+		}
+	}
+
+	expiredToken, err := signer.SignSeatToken(userID, audience, provisionMatchID, seatKey, "", -time.Hour)
+	if err == nil {
+		status, _ = r.postClaim(ctx, claimURL, expiredToken)
+		if status == 401 || status == 403 {
+			results = append(results, Result{
+				CheckID: "jwt.expired",
+				Status:  StatusPass,
+				Message: "Your game rejected an expired seat token.",
+			})
+		} else {
+			results = append(results, Result{
+				CheckID: "jwt.expired",
+				Status:  StatusFail,
+				Message: fmt.Sprintf("Expired token should be rejected with 401/403, got HTTP %d.", status),
+			})
+		}
+	}
+
+	status, _ = r.postClaim(ctx, claimURL, "not.a.valid.jwt")
+	if status == 401 || status == 403 {
+		results = append(results, Result{
+			CheckID: "jwt.invalid_token",
+			Status:  StatusPass,
+			Message: "Your game rejected a malformed seat token.",
+		})
+	} else {
+		results = append(results, Result{
+			CheckID: "jwt.invalid_token",
+			Status:  StatusFail,
+			Message: fmt.Sprintf("Malformed token should be rejected with 401/403, got HTTP %d.", status),
+		})
+	}
+
+	if secondSeatKey != "" && secondSeatKey != seatKey {
+		wrongSeatToken, err := signer.SignSeatToken(userID, audience, provisionMatchID, secondSeatKey, "", time.Hour)
+		if err == nil {
+			status, _ = r.postClaim(ctx, claimURL, wrongSeatToken)
+			if status == 401 || status == 403 {
+				results = append(results, Result{
+					CheckID: "jwt.wrong_seat",
+					Status:  StatusPass,
+					Message: "Your game rejected a token for another player's reserved seat.",
+				})
+			} else {
+				results = append(results, Result{
+					CheckID: "jwt.wrong_seat",
+					Status:  StatusFail,
+					Message: fmt.Sprintf("Token for another seat should be rejected with 401/403, got HTTP %d.", status),
+				})
+			}
+		}
+	} else {
+		results = append(results, skipped("jwt.wrong_seat", "No second seat in test mode."))
 	}
 
 	return results
@@ -378,6 +515,10 @@ func jwtSkippedAll(msg string) []Result {
 		skipped("jwt.claim_happy_path", msg),
 		skipped("jwt.wrong_audience", msg),
 		skipped("jwt.unknown_match", msg),
+		skipped("jwt.wrong_issuer", msg),
+		skipped("jwt.expired", msg),
+		skipped("jwt.invalid_token", msg),
+		skipped("jwt.wrong_seat", msg),
 	}
 }
 
@@ -385,6 +526,10 @@ func jwtSkippedRest(msg string) []Result {
 	return []Result{
 		skipped("jwt.wrong_audience", msg),
 		skipped("jwt.unknown_match", msg),
+		skipped("jwt.wrong_issuer", msg),
+		skipped("jwt.expired", msg),
+		skipped("jwt.invalid_token", msg),
+		skipped("jwt.wrong_seat", msg),
 	}
 }
 

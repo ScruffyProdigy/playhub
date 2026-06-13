@@ -1,6 +1,6 @@
 # JoinQuest developer integration guide
 
-> **Note:** The backend embeds a copy at `backend/internal/developer/integration_guide.md` for the `developerIntegrationGuide` GraphQL query. Edit this file first, then sync the embed copy before release.
+> **Canonical source:** Edit here, then run `./scripts/sync-developer-docs.sh` to update the backend embed (`backend/internal/developer/integration_guide.md`) served via GraphQL/MCP.
 
 Single source of truth for humans, dashboard copy, and MCP agents (`joinquest_integration_get_integration_guide`).
 
@@ -12,16 +12,28 @@ Single source of truth for humans, dashboard copy, and MCP agents (`joinquest_in
 
 ## 0. Discover your game (agents + developers)
 
-Before writing API code or catalog copy, make sure you (or your agent) understand what you're building. Use this script in conversation — agents should **ask**, listen, then **draft** metadata and manifest suggestions for developer approval.
+Before writing API code or catalog copy, make sure you (or your agent) understand what you're building. Start open-ended, listen, then ask clarifying questions only for what's still unclear. Draft metadata and manifest suggestions for developer approval.
 
-### Discovery questions
+### Start open-ended
 
-1. **One-liner** — What do players do together in one sentence?
-2. **Player count** — Typical group size? Min/max? Fixed teams or variable?
-3. **Structure** — Head-to-head duel, free-for-all, teams, or roles (e.g. clue-giver + guessers)?
-4. **Social mode** — Competitive, cooperative, or party/social (low stakes, lots of laughs)?
-5. **Session length** — Quick rounds (~5 min) or longer sessions?
-6. **Vibe** — How should the catalog card *feel* (casual, brainy, chaotic, tactical)?
+Invite the developer to describe the game in their own words — no checklist yet:
+
+> Tell me about the game you're thinking of — as much or as little as you have. What's the idea, how do people play together, who it's for, anything you're excited about or unsure about.
+
+### Clarify only what's missing
+
+Read their description and identify gaps. Ask follow-ups conversationally — one or two at a time. If they already answered something, do not re-ask it.
+
+**Confirm what you think you know:** If you can infer an answer but aren't fully sure, check it with the developer instead of guessing or asking from scratch. For example: "It sounds like this is mostly a 2-player game — would you say that's fair?"
+
+| Topic | Why it matters | Only ask if unclear |
+|-------|----------------|---------------------|
+| Player count | seatTemplate / game-modes | min/max, fixed or variable |
+| Structure | seatTemplate | duel, free-for-all, teams, or roles |
+| Social mode | tags + tone | competitive, cooperative, or party |
+| Session length | tags + copy | quick rounds vs longer sessions |
+| Vibe / audience | catalog voice | casual, brainy, chaotic, tactical, etc. |
+| API URL | registration | public HTTPS hosting plan (not localhost) |
 
 ### From answers → manifest + tags
 
@@ -143,7 +155,7 @@ Lobby mints seat JWTs (`iss`, `aud` = your API base URL, `matchId`, `seatKey`, `
 
 - Publish JWKS at `{lobbyIssuer}/.well-known/jwks.json`
 - **Claim:** `POST {apiBaseUrl}/api/v1/matches/{externalMatchId}/claim` with `Authorization: Bearer {jwt}`
-- Reject wrong `aud`, wrong `iss`, unknown match (`404`), bad token (`401`)
+- Reject wrong `aud`, wrong `iss`, expired tokens, wrong reserved `seatKey`, unknown or mismatched match (`404`), malformed token (`401`/`403`)
 
 ---
 
@@ -151,11 +163,34 @@ Lobby mints seat JWTs (`iss`, `aud` = your API base URL, `matchId`, `seatKey`, `
 
 Required. Lobby attaches `token=<jwt>` to each URL base you return. See [game-minted-launch-urls.md](./game-minted-launch-urls.md).
 
+**Do not** embed a JWT in `launchUrls` or `launchUrlTemplate` — JoinQuest adds `token=` when linking players.
+
 ---
 
-## 8. Testing with friends
+## 8. Recommended local tests (game repo)
 
-When manifest checks pass:
+JoinQuest runs remote checks via the developer dashboard or MCP `joinquest_integration_run_game_checks`. **Also add fast unit/integration tests in your game repo** so agents and CI catch regressions before deploy.
+
+Use the reference game [`demo-game-rps`](https://github.com/scruffyprodigy/demo-game-rps) (sibling repo) as a template. Suggested coverage:
+
+| Area | What to test | Reference (RPSLR) |
+|------|----------------|-------------------|
+| **Manifest** | `launchUrlsOnProvision: true`; valid `seatTemplate`; expanded `seatKey` list | `app.test.ts`, `gameModes.test.ts` |
+| **Provision** | Happy path + `launchUrls` per seat; idempotent re-push; reject missing/invalid `Authorization` | `app.test.ts`, `provision.test.ts` |
+| **Launch URLs** | Per-player URLs; no `token=` in bases | `launchUrls.test.ts` |
+| **JWT claim** | Valid token; wrong `aud`/`iss`; expired; malformed; URL `:ref` ≠ token `matchId`; wrong reserved seat | `app.test.ts`, `jwksRotation.test.ts` |
+| **JWKS rotation** | Verify tokens signed with either key while both are in JWKS; reject retired key | `jwksRotation.test.ts` |
+| **Banlist** | `403` + `bannedLobbyUserIds` when roster includes banned user | `app.test.ts` |
+| **Lifecycle** | `reportMatchResult` GraphQL call; return URL builder | `lobbyClient.test.ts`, `lobbyReturn.test.ts` |
+| **Realtime** | WS subscribe receives state after REST mutation | `ws.test.ts` |
+
+Agents: after implementing endpoints, add or extend tests mirroring these rows, then run `npm test` in the game API before asking the developer to run JoinQuest checks.
+
+---
+
+## 9. Testing with friends
+
+When integration checks pass:
 
 1. Open your developer dashboard → **Create test table**
 2. Invite friends via your room link
@@ -163,7 +198,7 @@ When manifest checks pass:
 
 ---
 
-## 9. Public release
+## 10. Public release
 
 When integration checks are green and catalog metadata is complete (`shortDescription`, `longDescription`, at least one tag):
 
@@ -173,19 +208,27 @@ When integration checks are green and catalog metadata is complete (`shortDescri
 
 ---
 
-## 10. Checklist ID index
+## 11. Checklist ID index
 
 | Check ID | Section |
 |----------|---------|
 | `manifest.reach_api` | §3 Quick start |
 | `manifest.status` | §3 Quick start |
+| `manifest.launch_urls_on_provision` | §3 Quick start |
 | `manifest.game_modes` | §4 Seat manifest |
 | `manifest.sync_freshness` | §3 Quick start |
 | `provision.happy_path` | §5 Provision |
+| `provision.idempotent_repush` | §5 Provision |
 | `provision.auth` | [#provision-auth](#provision-auth) |
+| `provision.missing_auth` | §5 Provision |
 | `provision.banlist` | [#provision-403-banned](#provision-403-banned) |
 | `provision.launch_urls` | [#provision-launch-urls](#provision-launch-urls) |
+| `provision.launch_url_no_jwt` | §7 Launch URLs |
 | `jwt.jwks` | §6 JWT |
 | `jwt.claim_happy_path` | §6 JWT |
 | `jwt.wrong_audience` | §6 JWT |
 | `jwt.unknown_match` | §6 JWT |
+| `jwt.wrong_issuer` | §6 JWT |
+| `jwt.expired` | §6 JWT |
+| `jwt.invalid_token` | §6 JWT |
+| `jwt.wrong_seat` | §6 JWT |

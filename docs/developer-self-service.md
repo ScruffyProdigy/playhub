@@ -1,7 +1,7 @@
 # Developer self-service — game registration & integration
 
-**Status:** Phase A shipped (registration, dashboard, private testing)  
-**Next:** Phase B in progress — integration checks, catalog metadata + agent discovery, public release, MCP  
+**Status:** Phase A shipped · Phase B largely shipped (integration checks, MCP, agent discovery)  
+**Next:** public release review polish, scheduled re-checks, JWKS rotation remote check  
 **Related:** [developer-integration-guide.md](./developer-integration-guide.md) · [game-minted launch URLs](./game-minted-launch-urls.md) ✅ · [player experience roadmap](./player-experience-roadmap.md)
 
 Today, adding a game means backfilling the database or calling admin-only `registerGame`. That works for us, but it blocks the goal of **any web developer** plugging in their game. This spec is the v1 path from homepage curiosity → registered game → working integration → friends testing → public release.
@@ -186,6 +186,7 @@ Each row: **status** (pass / fail / not run), **last checked**, **plain-language
 |-------|------|-------------------------|
 | Reach API | `GET {apiBaseUrl}/healthz` → `ok` | “We couldn't reach your server. Check the URL and that it's HTTPS and publicly reachable (not localhost).” |
 | Status | `GET /api/v1/status` | “Your game didn't return a status payload. See integration guide § Status.” |
+| Launch URLs on provision | `launchUrlsOnProvision: true` in status | “Set `launchUrlsOnProvision: true` on `/api/v1/status` when your game mints per-player launch URLs.” |
 | Game modes | `GET /api/v1/game-modes` valid `seatTemplate` | “Your seat manifest has an error: …” |
 | Sync freshness | Manifest hash / ETag | “Your cached manifest is stale — …” |
 
@@ -193,10 +194,13 @@ Each row: **status** (pass / fail / not run), **last checked**, **plain-language
 
 | Check | Pass | Fail message (example) |
 |-------|------|-------------------------|
-| Happy path | `POST /api/v1/matches` 200, idempotent re-push | “Provision failed: {status} — …” |
+| Happy path | `POST /api/v1/matches` 200/201 with `launchUrls` | “Provision failed: {status} — …” |
+| Idempotent re-push | Same `externalMatchId` succeeds again | “Re-provisioning the same match should succeed (idempotent).” |
 | Auth | Bearer `serviceToken` accepted | “Your server rejected our service token. Compare with dashboard credential.” |
+| Missing auth | No `Authorization` header → 401/403 | “Provision without auth should be rejected when a service token is configured.” |
 | Banlist | `403` + `bannedLobbyUserIds` shape | “When banning a test user, return 403 with `bannedLobbyUserIds` array — we got …” |
 | Launch URLs | Response includes per-player `launchUrls` (required when opted in; catalog fallback if omitted) | “Provision succeeded but didn't return launch URLs for all seats.” |
+| No JWT in launch URLs | `launchUrls` / template must not contain a JWT | “Do not embed JWTs in launch URLs — JoinQuest adds `token=` when linking players.” |
 
 #### 3. JWT verification
 
@@ -206,6 +210,10 @@ Each row: **status** (pass / fail / not run), **last checked**, **plain-language
 | Claim happy path | Test token → `POST …/claim` 200 | “Claim failed: …” |
 | Wrong audience | Token with bad `aud` rejected | “Your game accepted a token with the wrong audience — `aud` must be your API base URL.” |
 | Unknown match | Claim on bogus match → 404 | “Unknown match should return 404, got …” |
+| Wrong issuer | Token `iss` ≠ provision `lobbyId` → 401 | “Token issuer must match the match's provisioned `lobbyId`.” |
+| Expired token | Past `exp` → 401 | “Expired seat tokens must be rejected.” |
+| Invalid token | Malformed JWT → 401 | “Malformed tokens must be rejected.” |
+| Wrong seat | Token for another reserved seat → 401/403 | “A user cannot claim a seat reserved for someone else.” |
 
 **Implementation note:** Run checks server-side on demand and on a schedule (e.g. every few hours for `private_testing` / `public` games). Store last result JSON on `game_integration_checks` or similar.
 
@@ -236,16 +244,13 @@ Discovery (agent ↔ developer)
 
 ### Discovery script
 
-Agents call `developerDiscoveryPrompt` (or read integration guide §0) and ask:
+Agents call `developerDiscoveryPrompt` (or read integration guide §0).
 
-1. One-liner — what do players do together?  
-2. Player count — typical group size, min/max, teams vs FFA?  
-3. Structure — duel, teams, roles/composition?  
-4. Social mode — competitive, co-op, or party?  
-5. Session length — quick rounds vs longer?  
-6. Vibe — casual, brainy, chaotic, tactical?
+**Start open-ended** — invite the developer to describe their game in their own words (idea, how people play together, audience, open questions). **Do not lead with a numbered checklist.**
 
-From answers, the agent drafts:
+**Then clarify only what's missing** — player count, structure (duel/teams/roles), social mode, session length, vibe, API URL. Ask one or two follow-ups at a time; skip anything they already covered. If you can infer an answer but aren't fully sure, confirm it: e.g. "It sounds like this is mostly a 2-player game — would you say that's fair?"
+
+From the conversation, the agent drafts:
 
 | Output | Constraints |
 |--------|-------------|
@@ -310,12 +315,12 @@ Goal: agent runs the **same probes** as the dashboard without the developer in t
 |------|---------|
 | `joinquest_integration_get_agent_playbook` | Returns end-to-end agent workflow (discovery → release) |
 | `joinquest_integration_get_integration_guide` | Returns markdown guide (single source of truth) |
-| `joinquest_integration_get_discovery_prompt` | Returns discovery interview script (guide §0) |
+| `joinquest_integration_get_discovery_prompt` | Open-ended discovery prompt + follow-up guide (guide §0) |
 | `joinquest_integration_get_catalog_tag_taxonomy` | Valid tag IDs + labels |
 | `joinquest_integration_list_my_games` | Owner's games + states |
 | `joinquest_integration_register_game` | Register a new game (after developer confirms fields) |
 | `joinquest_integration_get_game_checks` | Latest checklist results + errors |
-| `joinquest_integration_run_game_checks` | Run manifest / provision / JWT suite |
+| `joinquest_integration_run_game_checks` | Run manifest / provision / JWT suite (19 required checks) |
 | `joinquest_integration_update_game_metadata` | Save catalog copy + tags (after dev approval) |
 | `joinquest_integration_get_game_credentials` | serviceToken, webhook URL (masked) |
 | `joinquest_integration_get_example_provision_payload` | Sample assignment for copy-paste |
@@ -369,23 +374,29 @@ Registration, private testing, and the developer dashboard:
 - Homepage CTA + `/developers` landing  
 - Sign-in-gated registration form + draft / connect API  
 - `owner_user_id`, visibility states, `myGames` query  
-- Developer dashboard with checklist (manifest live; provision/JWT stubbed until Phase B)  
+- Developer dashboard with full integration checklist (manifest, provision, JWT)  
 - Homepage “Your games” strip for owners  
 - Private testing: room tables, not public catalog  
-- Post-register welcome + integration guide stub  
+- Post-register welcome + [integration guide](./developer-integration-guide.md)  
 - **Test table** CTA (`createPrivateTable`)  
 
 **Dependency:** [game-minted launch URLs](./game-minted-launch-urls.md) — shipped; handoff requires provision `launchUrls`.
 
 **Optional polish:** game icons + catalog tags (see [player experience roadmap](./player-experience-roadmap.md)).
 
-### Phase B — Go public + agents (in progress)
+### Phase B — Go public + agents ✅ Largely shipped
 
-- Real provision + JWT integration checks (replace stubs)  
+- Real provision + JWT integration checks (19 required for public release)  
 - **Agent-assisted catalog metadata** — discovery script, voice guide, tag taxonomy, `updateMyGameMetadata`  
 - Request public release + admin review queue (`requestPublicRelease`, `reviewGameRelease`)  
 - JoinQuest integration MCP + [developer-integration-guide.md](./developer-integration-guide.md)  
-- Scheduled re-checks + email on spec-breaking manifest changes (follow-up)  
+- Recommended local tests for game repos (integration guide §8; reference: `demo-game-rps`)
+
+**Still open (Phase B follow-ups):**
+
+- Scheduled re-checks + email on spec-breaking manifest changes  
+- Remote `jwt.rotation_overlap` check (needs Lobby dual-key JWKS during rotation)  
+- Optional `provision.banlist` remote check (games must opt in by banning test user)
 
 ### Phase C — PDF (optional / defer)
 

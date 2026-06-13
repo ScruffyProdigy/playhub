@@ -14,6 +14,18 @@ const defaultSeatTokenTTL = 2 * time.Hour
 // SignSeatToken issues a short-lived JWT for launching into a third-party game.
 // Claims: iss, aud, sub, jti, matchId, seatKey, name (optional), nbf, iat, exp.
 func (s *Signer) SignSeatToken(userID uuid.UUID, audience, externalMatchID, seatKey, displayName string, ttl time.Duration) (string, error) {
+	return s.signSeatToken(userID, LobbyIssuer(), audience, externalMatchID, seatKey, displayName, ttl)
+}
+
+// SignSeatTokenWithIssuer signs a seat token using a custom iss claim (integration checks).
+func (s *Signer) SignSeatTokenWithIssuer(userID uuid.UUID, issuer, audience, externalMatchID, seatKey, displayName string, ttl time.Duration) (string, error) {
+	if strings.TrimSpace(issuer) == "" {
+		return "", fmt.Errorf("auth: issuer is required")
+	}
+	return s.signSeatToken(userID, strings.TrimSpace(issuer), audience, externalMatchID, seatKey, displayName, ttl)
+}
+
+func (s *Signer) signSeatToken(userID uuid.UUID, issuer, audience, externalMatchID, seatKey, displayName string, ttl time.Duration) (string, error) {
 	audience = normalizeAudience(audience)
 	if audience == "" {
 		return "", fmt.Errorf("auth: audience is required")
@@ -21,13 +33,13 @@ func (s *Signer) SignSeatToken(userID uuid.UUID, audience, externalMatchID, seat
 	if externalMatchID == "" || seatKey == "" {
 		return "", fmt.Errorf("auth: match id and seat key are required")
 	}
-	if ttl <= 0 {
+	if ttl == 0 {
 		ttl = defaultSeatTokenTTL
 	}
 
 	now := time.Now()
 	claims := jwt.MapClaims{
-		"iss":     LobbyIssuer(),
+		"iss":     issuer,
 		"aud":     audience,
 		"sub":     userID.String(),
 		"jti":     uuid.NewString(),
