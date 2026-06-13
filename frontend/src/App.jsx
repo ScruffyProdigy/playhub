@@ -4,7 +4,6 @@ import AuthPanel from './components/auth/AuthPanel'
 import IntentBanner from './components/games/IntentBanner'
 import GameLobby from './components/games/GameLobby'
 import GameDetailPage from './components/games/GameDetailPage'
-import CreateRoomPanel from './components/rooms/CreateRoomPanel'
 import { ActiveRoomProvider, useActiveRoom } from './components/rooms/ActiveRoomProvider'
 import AppDock from './components/rooms/AppDock'
 import RoomPanel from './components/rooms/RoomPanel'
@@ -21,8 +20,7 @@ import { parseDeveloperRoute } from './lib/developers'
 import DeveloperDashboard from './components/developers/DeveloperDashboard'
 import DeveloperLandingPage from './components/developers/DeveloperLandingPage'
 import DeveloperWelcomePage from './components/developers/DeveloperWelcomePage'
-import YourGamesStrip from './components/developers/YourGamesStrip'
-import DeveloperHomeCTA from './components/developers/DeveloperHomeCTA'
+import DeveloperHomeBlock from './components/developers/DeveloperHomeBlock'
 import { useEffect } from 'react'
 import './App.css'
 
@@ -53,10 +51,8 @@ function CatalogPage() {
         <p className="tagline">{APP_TAGLINE}</p>
       </header>
 
-      <DeveloperHomeCTA />
       <AuthPanel />
-      <YourGamesStrip />
-      {!authLoading && user ? <CreateRoomPanel /> : null}
+      <DeveloperHomeBlock />
       <GameLobby
         activeIntent={activeIntent}
         activeTableSeat={activeTableSeat}

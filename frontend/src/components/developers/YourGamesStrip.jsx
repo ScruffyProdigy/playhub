@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchMyGames, developerDashboardPath, visibilityLabel } from '../../lib/developers'
 import { navigateTo } from '../../lib/usePathname'
 
-export default function YourGamesStrip() {
+export default function YourGamesStrip({ embedded = false }) {
   const [games, setGames] = useState([])
   const [status, setStatus] = useState('idle')
 
@@ -31,8 +31,8 @@ export default function YourGamesStrip() {
     return null
   }
 
-  return (
-    <section className="your-games-strip panel-card" aria-labelledby="your-games-heading">
+  const content = (
+    <>
       <h2 id="your-games-heading">Your games</h2>
       <ul className="your-games-list">
         {games.map((game) => (
@@ -48,6 +48,16 @@ export default function YourGamesStrip() {
           </li>
         ))}
       </ul>
+    </>
+  )
+
+  if (embedded) {
+    return <div className="your-games-strip your-games-strip--embedded">{content}</div>
+  }
+
+  return (
+    <section className="your-games-strip panel-card" aria-labelledby="your-games-heading">
+      {content}
     </section>
   )
 }

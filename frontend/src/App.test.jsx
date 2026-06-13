@@ -29,8 +29,8 @@ describe('App Component', () => {
     expect(screen.getByText('player@example.com')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Available games' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Room' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Create room' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /get started for developers/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Create room' })).not.toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Rock Paper Scissors Lizard Robot' })).toBeInTheDocument()
   })
 

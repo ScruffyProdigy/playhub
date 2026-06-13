@@ -67,6 +67,18 @@ describe('UserSessionCard', () => {
     expect(screen.getByRole('button', { name: 'Save display' })).toBeInTheDocument()
   })
 
+  it('hides profile actions when showProfileActions is false', async () => {
+    render(
+      <AuthProvider>
+        <UserSessionCard user={user} showProfileActions={false} />
+      </AuthProvider>,
+    )
+
+    expect(await screen.findByText('Welcome back')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Change display' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Find my spirit animal' })).not.toBeInTheDocument()
+  })
+
   it('logs out and clears the session', async () => {
     renderSessionCard()
     await screen.findByText('Welcome back')

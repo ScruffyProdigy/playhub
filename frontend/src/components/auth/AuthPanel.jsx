@@ -10,18 +10,19 @@ function SessionLoading() {
   )
 }
 
-export default function AuthPanel() {
+export default function AuthPanel({ variant = 'default' }) {
   const { user, loading, error, sessionUnavailable, refreshSession } = useAuth()
+  const isDeveloper = variant === 'developer'
 
   if (loading) {
     return <SessionLoading />
   }
 
   if (user) {
-    return <UserSessionCard user={user} />
+    return <UserSessionCard user={user} compact={isDeveloper} showProfileActions={!isDeveloper} />
   }
 
-  return (
+  const loginPanel = (
     <>
       {error ? <p className="status-message status-message-error">{error}</p> : null}
       {sessionUnavailable ? (
@@ -33,4 +34,10 @@ export default function AuthPanel() {
       )}
     </>
   )
+
+  if (isDeveloper) {
+    return <section className="panel-card auth-panel auth-panel--developer">{loginPanel}</section>
+  }
+
+  return loginPanel
 }

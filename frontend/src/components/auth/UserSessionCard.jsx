@@ -7,7 +7,7 @@ import PlayerProfileEditor from '../avatars/PlayerProfileEditor'
 import SpiritAnimalFlow from '../avatars/SpiritAnimalFlow'
 import PlayerAvatar from '../avatars/PlayerAvatar'
 
-export default function UserSessionCard({ user }) {
+export default function UserSessionCard({ user, compact = false, showProfileActions = true }) {
   const { clearSession } = useAuth()
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
@@ -17,6 +17,9 @@ export default function UserSessionCard({ user }) {
   const [journeyEligibility, setJourneyEligibility] = useState(null)
 
   useEffect(() => {
+    if (!showProfileActions) {
+      return undefined
+    }
     let cancelled = false
     void fetchSpiritAnimalJourneyEligibility()
       .then((eligibility) => {
@@ -32,7 +35,7 @@ export default function UserSessionCard({ user }) {
     return () => {
       cancelled = true
     }
-  }, [user?.id])
+  }, [user?.id, showProfileActions])
 
   const canBeginSpiritAnimal = journeyEligibility?.canBegin === true
   const eligibilityPending = journeyEligibility === null
@@ -71,7 +74,10 @@ export default function UserSessionCard({ user }) {
   }
 
   return (
-    <section className="panel-card user-card" aria-labelledby="welcome-heading">
+    <section
+      className={`panel-card user-card${compact ? ' user-card--compact' : ''}`}
+      aria-labelledby="welcome-heading"
+    >
       <div className="user-card__header">
         <PlayerAvatar user={user} size="md" />
         <div>
@@ -97,7 +103,7 @@ export default function UserSessionCard({ user }) {
             setSpiritFlowOpen(true)
           } : undefined}
         />
-      ) : (
+      ) : showProfileActions ? (
         <>
           <button
             type="button"
@@ -123,7 +129,7 @@ export default function UserSessionCard({ user }) {
             </p>
           )}
         </>
-      )}
+      ) : null}
 
       <button type="button" onClick={handleLogout} disabled={status === 'loading'}>
         {status === 'loading' ? 'Logging out…' : 'Log out'}

@@ -6,6 +6,8 @@ import RegisterGameForm from './RegisterGameForm'
 export default function DeveloperLandingPage() {
   return (
     <main className="app-shell developer-shell">
+      <AuthPanel variant="developer" />
+
       <header className="app-header">
         <p className="developer-back">
           <a className="auth-link" href="/">
@@ -34,8 +36,6 @@ export default function DeveloperLandingPage() {
           and integrate your game from your editor.
         </p>
       </section>
-
-      <AuthPanel />
 
       <DeveloperMcpWizard />
 
