@@ -25,6 +25,9 @@ import DeveloperDashboard from './components/developers/DeveloperDashboard'
 import DeveloperLandingPage from './components/developers/DeveloperLandingPage'
 import DeveloperWelcomePage from './components/developers/DeveloperWelcomePage'
 import DeveloperHomeBlock from './components/developers/DeveloperHomeBlock'
+import AppFooter from './components/legal/AppFooter'
+import TermsPage from './components/legal/TermsPage'
+import PrivacyPage from './components/legal/PrivacyPage'
 import { useEffect } from 'react'
 import './App.css'
 
@@ -64,6 +67,8 @@ function CatalogPage() {
         onQueueJoined={notifyQueueJoined}
         onTableChange={refresh}
       />
+
+      <AppFooter />
     </main>
   )
 }
@@ -155,13 +160,21 @@ function DeveloperShell() {
   const pathname = usePathname()
   const route = parseDeveloperRoute(pathname)
 
+  let page
   if (route?.kind === 'welcome') {
-    return <DeveloperWelcomePage gameId={route.gameId} />
+    page = <DeveloperWelcomePage gameId={route.gameId} />
+  } else if (route?.kind === 'dashboard') {
+    page = <DeveloperDashboard gameId={route.gameId} />
+  } else {
+    page = <DeveloperLandingPage />
   }
-  if (route?.kind === 'dashboard') {
-    return <DeveloperDashboard gameId={route.gameId} />
-  }
-  return <DeveloperLandingPage />
+
+  return (
+    <>
+      {page}
+      <AppFooter />
+    </>
+  )
 }
 
 function MainShell() {
@@ -191,6 +204,10 @@ function App() {
         <CompleteSignInPage />
       ) : pathname.startsWith('/auth/link') ? (
         <LinkEmailPage />
+      ) : pathname.startsWith('/terms') ? (
+        <TermsPage />
+      ) : pathname.startsWith('/privacy') ? (
+        <PrivacyPage />
       ) : pathname.startsWith('/account') ? (
         <AccountPage />
       ) : pathname.startsWith('/return') ? (

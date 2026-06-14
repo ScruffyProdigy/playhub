@@ -7,6 +7,15 @@ import { mockAuthenticatedSession, mockUnauthenticatedSession } from './test/set
 describe('App Component', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/')
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...window.location,
+        pathname: '/',
+        search: '',
+        assign: vi.fn(),
+      },
+    })
   })
 
   it('renders branding and login when signed out', async () => {
@@ -80,5 +89,49 @@ describe('App Component', () => {
 
     expect(await screen.findByText(/Could not sign in with that provider/i)).toBeInTheDocument()
     expect(screen.queryByText('Signing you in')).not.toBeInTheDocument()
+  })
+
+  it('shows legal links in the site footer', async () => {
+    mockUnauthenticatedSession()
+    render(<App />)
+
+    expect(screen.getByRole('link', { name: 'Terms of Service' })).toHaveAttribute('href', '/terms')
+    expect(screen.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy')
+  })
+
+  it('renders the terms of service page', async () => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...window.location,
+        pathname: '/terms',
+        search: '',
+        assign: vi.fn(),
+      },
+    })
+    window.history.replaceState({}, '', '/terms')
+    mockUnauthenticatedSession()
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Terms of Service' })).toBeInTheDocument()
+    expect(screen.getByText(/early-stage product/i)).toBeInTheDocument()
+  })
+
+  it('renders the privacy policy page', async () => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...window.location,
+        pathname: '/privacy',
+        search: '',
+        assign: vi.fn(),
+      },
+    })
+    window.history.replaceState({}, '', '/privacy')
+    mockUnauthenticatedSession()
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Privacy Policy' })).toBeInTheDocument()
+    expect(screen.getByText(/do not sell your personal information/i)).toBeInTheDocument()
   })
 })

@@ -6,6 +6,7 @@ import { gameDetailDescription, gameHeroUrl, gameTagChips } from '../../lib/game
 import { fetchGameBySlug } from '../../lib/games'
 import GameModesPanel from './GameModesPanel'
 import GameShareButton from './GameShareButton'
+import AppFooter from '../legal/AppFooter'
 
 function GameDetailToolbar({ game, onBack = navigateBackToCatalog }) {
   return (
@@ -215,6 +216,8 @@ export default function GameDetailPage({
           </section>
         ) : null}
       </div>
+
+      <AppFooter />
     </main>
   )
 }
