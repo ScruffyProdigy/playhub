@@ -171,7 +171,14 @@ Required. Lobby attaches `token=<jwt>` to each URL base you return. See [game-mi
 
 JoinQuest runs remote checks via the developer dashboard or MCP `joinquest_integration_run_game_checks`. **Also add fast unit/integration tests in your game repo** so agents and CI catch regressions before deploy.
 
-Use the reference game [`demo-game-rps`](https://github.com/scruffyprodigy/demo-game-rps) (sibling repo) as a template. Suggested coverage:
+See **[reference-games.md](./reference-games.md)** for live demos and GitHub repos. Primary template for tests:
+
+| Repo | Play live |
+|------|-----------|
+| [ScruffyProdigy/rpslr](https://github.com/ScruffyProdigy/rpslr) | [rpsls-duel.win](https://rpsls-duel.win) |
+| [ScruffyProdigy/wordhunt](https://github.com/ScruffyProdigy/wordhunt) | [word-hunt-arena.win](https://word-hunt-arena.win) |
+
+Suggested coverage (rpslr file names shown):
 
 | Area | What to test | Reference (RPSLR) |
 |------|----------------|-------------------|

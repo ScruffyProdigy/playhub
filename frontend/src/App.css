@@ -3214,3 +3214,38 @@
     color: #535bf2;
   }
 }
+
+.developer-reference-games__list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.developer-reference-games__item {
+  margin: 0;
+  padding: 0.85rem 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.developer-reference-games__item:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.developer-reference-games__title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.developer-reference-games__links {
+  margin: 0.5rem 0 0;
+  font-size: 0.92rem;
+}
+
+@media (prefers-color-scheme: light) {
+  .developer-reference-games__item {
+    border-top-color: rgba(0, 0, 0, 0.08);
+  }
+}

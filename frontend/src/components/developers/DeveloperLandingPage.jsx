@@ -2,6 +2,7 @@ import { useState } from 'react'
 import AuthPanel from '../auth/AuthPanel'
 import { APP_NAME } from '../../lib/brand'
 import DeveloperMcpWizard from './DeveloperMcpWizard'
+import ReferenceGamesPanel from './ReferenceGamesPanel'
 import RegisterGameForm from './RegisterGameForm'
 
 export default function DeveloperLandingPage() {
@@ -34,6 +35,8 @@ export default function DeveloperLandingPage() {
           we&apos;ve had a quick look). You&apos;re not committing to anything.
         </p>
       </section>
+
+      <ReferenceGamesPanel />
 
       {route === null ? (
         <section className="developer-route-picker" aria-labelledby="developer-route-heading">

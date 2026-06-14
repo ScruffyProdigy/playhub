@@ -3,9 +3,10 @@ name: joinquest-integration
 description: >-
   Walks a developer through integrating a multiplayer game with JoinQuest — open-ended
   game discovery, registration fields, MCP setup, game API implementation (healthz, provision,
-  JWT), integration checks, catalog metadata, test tables, and public release. Use when
-  the user mentions JoinQuest, joinquest.cc, lobby integration, matchmaking, game
-  registration, hosting a game on JoinQuest, or integrating with the JoinQuest MCP server.
+  JWT), integration checks, catalog metadata, test tables, public release, and building the
+  playable game client after the handshake. Use when the user mentions JoinQuest, joinquest.cc,
+  lobby integration, matchmaking, game registration, hosting a game on JoinQuest, or integrating
+  with the JoinQuest MCP server.
 ---
 
 # JoinQuest integration
@@ -17,7 +18,8 @@ You are helping a developer integrate their **multiplayer game** with [JoinQuest
 - Load **playbook.md** (bundled) or MCP `joinquest_integration_get_agent_playbook`.
 - If JoinQuest MCP is configured, use MCP tools for all dashboard operations. If not, guide Phase 2 setup first (`mcp-setup.md`).
 - For API/provision/JWT details, call MCP `joinquest_integration_get_integration_guide` — do not guess wire formats.
-- After implementing the game API, add **local tests** per integration guide §8 (see `demo-game-rps` reference). Run `npm test` before remote checks.
+- After implementing the game API, add **local tests** per integration guide §8 ([rpslr](https://github.com/ScruffyProdigy/rpslr) reference). Run `npm test` before remote checks.
+- After checks pass, continue in the **game repo** for client/gameplay (Phase 9) — integration is not the finish line.
 
 ## Hard rules
 
@@ -36,8 +38,9 @@ You are helping a developer integrate their **multiplayer game** with [JoinQuest
 | 4 | Register on JoinQuest | Game registered via MCP or dashboard (`PRIVATE_TESTING` or draft) |
 | 5 | Run checks | Required manifest + provision checks PASS |
 | 6 | Save metadata | Human approved → `joinquest_integration_update_game_metadata` |
-| 7 | Test with friends | Developer confirms test table / playtest |
+| 7 | Test with friends | Developer confirms test table / playtest — game is fun, not just wired |
 | 8 | Public release | Human confirmed → `joinquest_integration_request_public_release` |
+| 9 | Build playable game | Client + core loop at launch URLs; see playbook Phase 9 + [reference games](https://github.com/ScruffyProdigy/playhub/blob/main/docs/reference-games.md) |
 
 ## MCP tool sequence (typical)
 

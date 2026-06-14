@@ -137,9 +137,9 @@ In Agent mode, ask the agent to call `joinquest_integration_list_my_games`. If a
 
 **JWT:** Verify `iss`, `aud` (your API base URL), `matchId`, `seatKey`, `sub`. Publish JWKS at `{lobbyIssuer}/.well-known/jwks.json`.
 
-Use Phase 1 seatTemplate plan. Full details: integration guide §3–§8.
+Use Phase 1 seatTemplate plan. Full details: integration guide §3–§8. Pick a **reference game** ([reference-games.md](./reference-games.md)) for API layout and client boot patterns — duel → [rpslr](https://github.com/ScruffyProdigy/rpslr); party/multi-seat → [wordhunt](https://github.com/ScruffyProdigy/wordhunt).
 
-**Local tests:** Add game-repo tests mirroring integration guide §8 (manifest, provision, JWT, JWKS rotation). Use `demo-game-rps` as reference. Run `npm test` before remote JoinQuest checks.
+**Local tests:** Add game-repo tests mirroring integration guide §8 (manifest, provision, JWT, JWKS rotation). Use [rpslr](https://github.com/ScruffyProdigy/rpslr) as the primary test template. Run `npm test` before remote JoinQuest checks.
 
 **Done when:** Endpoints exist on a **public HTTPS** URL, local tests pass, and basic manual curl tests pass.
 
@@ -253,7 +253,7 @@ Common fixes:
 
 Friends join via the developer's room link. Game stays off the public catalog until release.
 
-**Agent role:** Confirm checks are green; encourage a playtest before release.
+**Agent role:** Confirm checks are green; encourage a playtest; if the client is still a stub, continue **Phase 9** until the session is actually fun to play.
 
 **Done when:** Developer confirms a successful test session (or explicitly skips).
 
@@ -279,6 +279,38 @@ Friends join via the developer's room link. Game stays off the public catalog un
 
 ---
 
+## Phase 9 — Build the playable game (beyond the handshake)
+
+**Goal:** Players get an **immersive, fun session** at the launch URLs — not just a stub that passes checks.
+
+JoinQuest integration (Phases 3–5) proves the **wire contract**. Phase 9 is everything that makes people want to come back: rules, feel, clarity, pacing, and polish in **your game repo** (client + any game-specific server logic).
+
+**When to start:** As soon as the API skeleton exists (Phase 3), sketch the client in parallel. After checks are green (Phase 5), shift focus here before asking for public release.
+
+**Reference games** — read or clone the closest match ([reference-games.md](./reference-games.md)):
+
+| If the game is… | Start with | Why |
+|-----------------|------------|-----|
+| 1v1, quick rounds, first integration | [rpslr](https://github.com/ScruffyProdigy/rpslr) | Minimal duel API + client + tests |
+| Party / multi-seat, richer UI | [wordhunt](https://github.com/ScruffyProdigy/wordhunt) | Path launch URLs, sync, party flow |
+
+Play live first when you can: [rpsls-duel.win](https://rpsls-duel.win), [word-hunt-arena.win](https://word-hunt-arena.win).
+
+**Agent role (stay in the game repo):**
+
+1. **Boot from JoinQuest** — client reads `token` (and match/seat from URL); claim or validate seat JWT; show who you’re playing with.
+2. **Core loop** — implement the rules and interactions from Phase 1; keep sessions short enough for “one more round.”
+3. **Multiplayer feel** — realtime or turn sync; clear whose turn; graceful disconnect; win/lose/draw states.
+4. **Return path** — “Back to JoinQuest” using the same patterns as reference games (`lobbyReturn`, match result callbacks per integration guide §8).
+5. **Playtest loop** — developer runs a test table (Phase 7); fix confusion and bugs; **update catalog copy** if the built game differs from Phase 1 drafts before Phase 6/8.
+6. **Polish when asked** — sound, animation, copy tweaks — after the loop works; don’t block integration on polish.
+
+**Do not** stop helping after checks pass. **Do** separate JoinQuest dashboard ops (MCP) from game implementation (game repo). If the developer pivots to gameplay, follow their lead while keeping launch URLs and handoff working.
+
+**Done when:** Developer confirms friends enjoyed a real session (Phase 7) and the experience matches the catalog promise (or metadata was updated to match).
+
+---
+
 ## MCP tool quick reference
 
 | Phase | Tools |
@@ -289,6 +321,7 @@ Friends join via the developer's room link. Game stays off the public catalog un
 | Checks | `joinquest_integration_run_game_checks` |
 | Metadata | `joinquest_integration_update_game_metadata` |
 | Release | `joinquest_integration_request_public_release` |
+| Build game | Reference repos — [reference-games.md](./reference-games.md); no MCP substitute for gameplay code |
 
 ---
 
@@ -301,6 +334,7 @@ Friends join via the developer's room link. Game stays off the public catalog un
 [ ] Phase 4 — Registered on JoinQuest (private_testing)
 [ ] Phase 5 — Integration checks passing
 [ ] Phase 6 — Catalog metadata saved
-[ ] Phase 7 — Test table played
+[ ] Phase 7 — Test table played (fun, not just green checks)
 [ ] Phase 8 — Public release requested
+[ ] Phase 9 — Playable game client (immersive loop; metadata matches reality)
 ```
