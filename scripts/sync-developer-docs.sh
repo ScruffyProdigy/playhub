@@ -32,4 +32,11 @@ embed_body "$PLAYBOOK_SRC" "docs/developer-agent-playbook.md" \
   > "$ROOT/.agents/skills/joinquest-integration/playbook.md"
 echo "Synced docs/developer-agent-playbook.md -> .agents/skills/joinquest-integration/playbook.md"
 
+PLUGIN_SKILL="$ROOT/plugins/joinquest/skills/joinquest-integration"
+mkdir -p "$PLUGIN_SKILL"
+cp "$ROOT/.agents/skills/joinquest-integration/SKILL.md" "$PLUGIN_SKILL/"
+cp "$ROOT/.agents/skills/joinquest-integration/mcp-setup.md" "$PLUGIN_SKILL/"
+cp "$ROOT/.agents/skills/joinquest-integration/playbook.md" "$PLUGIN_SKILL/"
+echo "Synced agent skill -> plugins/joinquest/skills/joinquest-integration/"
+
 echo "Done."

@@ -422,6 +422,28 @@ export const INSTALL_DEV_SCRIPT_URL =
   'https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-dev.sh'
 export const INSTALL_DEV_SCRIPT_GITHUB =
   'https://github.com/scruffyprodigy/playhub/blob/main/scripts/install-joinquest-dev.sh'
+export const INSTALL_CURSOR_PLUGIN_SCRIPT_URL =
+  'https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-cursor-plugin.sh'
+export const INSTALL_CURSOR_PLUGIN_SCRIPT_GITHUB =
+  'https://github.com/scruffyprodigy/playhub/blob/main/scripts/install-joinquest-cursor-plugin.sh'
+export const INSTALL_CLAUDE_PLUGIN_SCRIPT_URL =
+  'https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-claude-plugin.sh'
+export const INSTALL_CLAUDE_PLUGIN_SCRIPT_GITHUB =
+  'https://github.com/scruffyprodigy/playhub/blob/main/scripts/install-joinquest-claude-plugin.sh'
+export const CURSOR_PLUGIN_GITHUB =
+  'https://github.com/scruffyprodigy/playhub/tree/main/plugins/joinquest'
+
+export function buildInstallCursorPluginCommand({ apiKey }) {
+  const key = apiKey || 'lq_dev_PASTE_YOUR_KEY'
+  return `export JOINQUEST_API_KEY=${key}
+curl -fsSL ${INSTALL_CURSOR_PLUGIN_SCRIPT_URL} | sh`
+}
+
+export function buildInstallClaudePluginCommand({ apiKey }) {
+  const key = apiKey || 'lq_dev_PASTE_YOUR_KEY'
+  return `export JOINQUEST_API_KEY=${key}
+curl -fsSL ${INSTALL_CLAUDE_PLUGIN_SCRIPT_URL} | sh`
+}
 
 export function buildInstallDevCommand({ apiKey, client = 'cursor' }) {
   const flag =
@@ -456,13 +478,13 @@ export function buildInstallDevInspectCommand({ apiKey, client = 'cursor' }) {
   if (client === 'skill-only') {
     return `curl -fsSL ${INSTALL_DEV_SCRIPT_URL} -o install-joinquest-dev.sh
 less install-joinquest-dev.sh
-bash install-joinquest-dev.sh ${flag}`
+# bash install-joinquest-dev.sh ${flag}  # uncomment when you're ready to run`
   }
   const key = apiKey || 'lq_dev_PASTE_YOUR_KEY'
   return `curl -fsSL ${INSTALL_DEV_SCRIPT_URL} -o install-joinquest-dev.sh
 less install-joinquest-dev.sh
 export JOINQUEST_API_KEY=${key}
-bash install-joinquest-dev.sh ${flag}`
+# bash install-joinquest-dev.sh ${flag}  # uncomment when you're ready to run`
 }
 
 export function buildClaudeMcpAddCommand({ apiKey }) {

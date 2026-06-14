@@ -1,0 +1,11 @@
+{
+  "name": "joinquest-integration",
+  "description": "JoinQuest agent skill and MCP — integrate multiplayer games with joinquest.cc",
+  "version": "1.0.0",
+  "author": {
+    "name": "JoinQuest"
+  },
+  "homepage": "https://joinquest.cc/developers",
+  "repository": "https://github.com/scruffyprodigy/playhub",
+  "keywords": ["joinquest", "mcp", "game-development", "multiplayer", "lobby"]
+}

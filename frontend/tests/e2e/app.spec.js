@@ -29,7 +29,7 @@ test.describe.skip('App E2E Tests', () => {
 
   test('renders all expected content', async ({ page }) => {
     // Check that all main content is visible
-    await expect(page.getByText('JoinQuest')).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'JoinQuest' })).toBeVisible()
     await expect(page.getByText('Find your group. Play together.')).toBeVisible()
   })
 
@@ -44,7 +44,7 @@ test.describe.skip('App E2E Tests', () => {
 
   test('maintains content during page interactions', async ({ page }) => {
     // Check that content remains stable
-    await expect(page.getByText('JoinQuest')).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'JoinQuest' })).toBeVisible()
     await expect(page.getByText('Find your group. Play together.')).toBeVisible()
     
     // Simulate some page interactions (hover, scroll, etc.)
@@ -52,7 +52,7 @@ test.describe.skip('App E2E Tests', () => {
     await page.mouse.move(100, 100)
     
     // Content should still be visible
-    await expect(page.getByText('JoinQuest')).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'JoinQuest' })).toBeVisible()
     await expect(page.getByText('Find your group. Play together.')).toBeVisible()
   })
 })
@@ -80,7 +80,7 @@ test.describe('App Accessibility E2E Tests', () => {
     await page.keyboard.press('Tab')
     
     // Content should still be visible
-    await expect(page.getByText('JoinQuest')).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'JoinQuest' })).toBeVisible()
     await expect(page.getByText('Find your group. Play together.')).toBeVisible()
   })
 })

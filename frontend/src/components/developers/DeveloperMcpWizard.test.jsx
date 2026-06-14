@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import DeveloperMcpWizard from './DeveloperMcpWizard'
 import {
   buildClaudeMcpAddCommand,
+  buildInstallClaudePluginCommand,
+  buildInstallCursorPluginCommand,
   buildInstallDevCommand,
   buildMcpServerConfig,
   createDeveloperApiKey,
@@ -29,6 +31,14 @@ vi.mock('../../lib/developers', () => ({
   buildClaudeMcpAddCommand: vi.fn(
     ({ apiKey }) => `claude mcp add --env JOINQUEST_API_KEY=${apiKey} ...`,
   ),
+  buildInstallCursorPluginCommand: vi.fn(
+    ({ apiKey }) =>
+      `export JOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'}\ncurl -fsSL .../install-joinquest-cursor-plugin.sh | sh`,
+  ),
+  buildInstallClaudePluginCommand: vi.fn(
+    ({ apiKey }) =>
+      `export JOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'}\ncurl -fsSL .../install-joinquest-claude-plugin.sh | sh`,
+  ),
   buildInstallDevCommand: vi.fn(
     ({ apiKey, client }) =>
       client === 'skill-only'
@@ -39,6 +49,9 @@ vi.mock('../../lib/developers', () => ({
     ({ apiKey }) => `curl -fsSL ... -o install-joinquest-dev.sh\nless install-joinquest-dev.sh`,
   ),
   INSTALL_DEV_SCRIPT_GITHUB: 'https://github.com/example/install-joinquest-dev.sh',
+  INSTALL_CURSOR_PLUGIN_SCRIPT_GITHUB: 'https://github.com/example/install-joinquest-cursor-plugin.sh',
+  INSTALL_CLAUDE_PLUGIN_SCRIPT_GITHUB: 'https://github.com/example/install-joinquest-claude-plugin.sh',
+  CURSOR_PLUGIN_GITHUB: 'https://github.com/example/plugins/joinquest',
 }))
 
 describe('DeveloperMcpWizard', () => {
@@ -73,21 +86,31 @@ describe('DeveloperMcpWizard', () => {
     expect(buildMcpServerConfig).toHaveBeenCalledWith(
       expect.objectContaining({ apiKey: 'lq_dev_test_secret', clientId: 'cursor' }),
     )
-    expect(buildInstallDevCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ apiKey: 'lq_dev_test_secret', client: 'cursor' }),
+    expect(buildInstallCursorPluginCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: 'lq_dev_test_secret' }),
     )
-    expect(screen.getByRole('button', { name: /copy install command/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /copy plugin install command/i })).toBeInTheDocument()
   })
 
-  it('fills install command when an existing key is pasted', async () => {
+  it('fills plugin install command when an existing key is pasted', async () => {
     const user = userEvent.setup()
     render(<DeveloperMcpWizard defaultExpanded />)
 
     await user.type(screen.getByLabelText(/your api key/i), 'lq_dev_saved_key_abc')
 
-    expect(buildInstallDevCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ apiKey: 'lq_dev_saved_key_abc', client: 'cursor' }),
+    expect(buildInstallCursorPluginCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: 'lq_dev_saved_key_abc' }),
     )
-    expect(screen.getByText(/export JOINQUEST_API_KEY=lq_dev_saved_key_abc/)).toBeInTheDocument()
+    expect(screen.getByText(/install-joinquest-cursor-plugin\.sh/)).toBeInTheDocument()
+  })
+
+  it('shows Claude Code plugin install after switching tabs', async () => {
+    const user = userEvent.setup()
+    render(<DeveloperMcpWizard defaultExpanded />)
+
+    await user.click(screen.getByRole('tab', { name: 'Claude Code' }))
+
+    expect(buildInstallClaudePluginCommand).toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /copy plugin install command/i })).toBeInTheDocument()
   })
 })

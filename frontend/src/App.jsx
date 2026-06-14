@@ -14,6 +14,7 @@ import RoomSheet from './components/rooms/RoomSheet'
 import { AuthProvider, useAuth } from './components/auth/AuthProvider'
 import { useActiveIntent } from './components/games/useActiveIntent'
 import { APP_NAME, APP_TAGLINE } from './lib/brand'
+import AppTitle from './components/brand/AppTitle'
 import { parseRoomInviteCode } from './lib/rooms'
 import { parseGameSlug } from './lib/games'
 import { MOBILE_ROOM_QUERY, useMediaQuery } from './lib/useMediaQuery'
@@ -50,7 +51,7 @@ function CatalogPage() {
       ) : null}
 
       <header className="app-header">
-        <h1>{APP_NAME}</h1>
+        <AppTitle />
         <p className="tagline">{APP_TAGLINE}</p>
       </header>
 

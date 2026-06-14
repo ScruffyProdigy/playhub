@@ -13,7 +13,7 @@ describe('App Component', () => {
     mockUnauthenticatedSession()
     render(<App />)
 
-    expect(screen.getByText('JoinQuest')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'JoinQuest' })).toBeInTheDocument()
     expect(screen.getByText('Find your group. Play together.')).toBeInTheDocument()
 
     await waitFor(() => {

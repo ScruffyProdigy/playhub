@@ -21,7 +21,7 @@ describe('App Environment Integration', () => {
     render(<App />)
     
     // The app should render without crashing
-    expect(screen.getByText('JoinQuest')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'JoinQuest' })).toBeInTheDocument()
     expect(screen.getByText('Find your group. Play together.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /get started for developers/i })).toHaveAttribute(
       'href',
@@ -40,7 +40,7 @@ describe('App Environment Integration', () => {
     
     // App should still render
     render(<App />)
-    expect(screen.getByText('JoinQuest')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'JoinQuest' })).toBeInTheDocument()
   })
 
   it('can access environment variables in component', () => {

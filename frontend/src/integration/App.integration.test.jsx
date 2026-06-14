@@ -14,7 +14,7 @@ describe('App Integration Tests', () => {
       mockUnauthenticatedSession()
       render(<App />)
 
-      expect(screen.getByRole('heading', { name: 'JoinQuest' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 1, name: 'JoinQuest' })).toBeInTheDocument()
       expect(screen.getByText('Find your group. Play together.')).toBeInTheDocument()
 
       await waitFor(() => {

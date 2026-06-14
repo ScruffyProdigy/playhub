@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import AuthPanel from '../auth/AuthPanel'
 import { APP_NAME } from '../../lib/brand'
 import DeveloperMcpWizard from './DeveloperMcpWizard'
 import RegisterGameForm from './RegisterGameForm'
 
 export default function DeveloperLandingPage() {
+  const [route, setRoute] = useState(null)
+
   return (
     <main className="app-shell developer-shell">
       <AuthPanel variant="developer" />
@@ -19,7 +22,7 @@ export default function DeveloperLandingPage() {
 
       <section className="panel-card developer-intro">
         <p className="panel-copy">
-          JoinQuest handles the boring stuff — player accounts, rooms, tables, matchmaking, finding
+          {APP_NAME} handles the boring stuff — player accounts, rooms, tables, matchmaking, finding
           players — so you can focus on building the game.
         </p>
         <p className="panel-copy">
@@ -27,22 +30,60 @@ export default function DeveloperLandingPage() {
           game can run. That&apos;s it.
         </p>
         <p className="panel-copy">
-          Register below to get started. You&apos;re not committing to anything, and your game
-          won&apos;t show up for other players until <em>you</em> say it&apos;s ready (and we&apos;ve
-          had a quick look).
-        </p>
-        <p className="panel-copy">
-          Using Cursor or Claude? Sign in below, connect your assistant, and it can register
-          and integrate your game from your editor.
+          Your game won&apos;t show up for other players until <em>you</em> say it&apos;s ready (and
+          we&apos;ve had a quick look). You&apos;re not committing to anything.
         </p>
       </section>
 
-      <DeveloperMcpWizard />
+      {route === null ? (
+        <section className="developer-route-picker" aria-labelledby="developer-route-heading">
+          <h2 id="developer-route-heading">How do you want to get started?</h2>
+          <p className="panel-copy developer-route-picker__lead">
+            Pick one path — most developers use an AI assistant in Cursor or Claude.
+          </p>
+          <div className="developer-route-picker__options">
+            <button
+              type="button"
+              className="developer-route-card developer-route-card--recommended"
+              onClick={() => setRoute('ai')}
+            >
+              <span className="developer-route-card__badge">Recommended</span>
+              <h3 className="developer-route-card__title">Connect an AI assistant</h3>
+              <p className="developer-route-card__copy">
+                Your agent can register the game, run integration checks, and save metadata from your
+                editor — no browser cookies required.
+              </p>
+            </button>
+            <button
+              type="button"
+              className="developer-route-card"
+              onClick={() => setRoute('manual')}
+            >
+              <h3 className="developer-route-card__title">Register in the browser</h3>
+              <p className="developer-route-card__copy">
+                Fill out the registration form yourself if you prefer not to use an AI assistant.
+              </p>
+            </button>
+          </div>
+        </section>
+      ) : (
+        <>
+          <p className="developer-route-back">
+            <button type="button" className="auth-link-button" onClick={() => setRoute(null)}>
+              ← Choose a different path
+            </button>
+          </p>
 
-      <section className="panel-card" aria-labelledby="register-game-heading">
-        <h2 id="register-game-heading">Register your game</h2>
-        <RegisterGameForm />
-      </section>
+          {route === 'ai' ? (
+            <DeveloperMcpWizard alwaysExpanded />
+          ) : (
+            <section className="panel-card" aria-labelledby="register-game-heading">
+              <h2 id="register-game-heading">Register your game</h2>
+              <RegisterGameForm />
+            </section>
+          )}
+        </>
+      )}
     </main>
   )
 }

@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   buildClaudeMcpAddCommand,
+  buildInstallClaudePluginCommand,
+  buildInstallCursorPluginCommand,
   buildInstallDevCommand,
   buildInstallDevInspectCommand,
   buildMcpServerConfig,
   createDeveloperApiKey,
   fetchMyDeveloperApiKeys,
+  INSTALL_CLAUDE_PLUGIN_SCRIPT_GITHUB,
+  INSTALL_CURSOR_PLUGIN_SCRIPT_GITHUB,
   INSTALL_DEV_SCRIPT_GITHUB,
+  CURSOR_PLUGIN_GITHUB,
 } from '../../lib/developers'
 
 const CLIENTS = [
@@ -14,12 +19,14 @@ const CLIENTS = [
     id: 'cursor',
     label: 'Cursor',
     installClient: 'cursor',
+    usesPlugin: true,
     configPath: '~/.cursor/mcp.json or .cursor/mcp.json',
   },
   {
     id: 'claude-code',
     label: 'Claude Code',
     installClient: 'claude',
+    usesPlugin: true,
     configPath: '.mcp.json (created automatically by claude mcp add)',
   },
   {
@@ -90,8 +97,8 @@ function ClientTabs({ clientId, onChange }) {
   )
 }
 
-export default function DeveloperMcpWizard({ defaultExpanded = false }) {
-  const [expanded, setExpanded] = useState(defaultExpanded)
+export default function DeveloperMcpWizard({ defaultExpanded = false, alwaysExpanded = false }) {
+  const [expanded, setExpanded] = useState(defaultExpanded || alwaysExpanded)
   const [clientId, setClientId] = useState('cursor')
   const [apiKeys, setApiKeys] = useState([])
   const [apiKeyValue, setApiKeyValue] = useState('')
@@ -146,6 +153,30 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
     [activeKey, client.installClient],
   )
 
+  const installCursorPluginCommand = useMemo(
+    () =>
+      buildInstallCursorPluginCommand({
+        apiKey: activeKey ?? undefined,
+      }),
+    [activeKey],
+  )
+
+  const installClaudePluginCommand = useMemo(
+    () =>
+      buildInstallClaudePluginCommand({
+        apiKey: activeKey ?? undefined,
+      }),
+    [activeKey],
+  )
+
+  const installPluginCommand =
+    clientId === 'claude-code' ? installClaudePluginCommand : installCursorPluginCommand
+  const installPluginScriptGithub =
+    clientId === 'claude-code'
+      ? INSTALL_CLAUDE_PLUGIN_SCRIPT_GITHUB
+      : INSTALL_CURSOR_PLUGIN_SCRIPT_GITHUB
+  const usesPlugin = client.usesPlugin === true
+
   const installInspectCommand = useMemo(
     () =>
       buildInstallDevInspectCommand({
@@ -184,16 +215,18 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
     <section className="panel-card developer-mcp" aria-labelledby="mcp-heading">
       <div className="developer-mcp__header">
         <h2 id="mcp-heading">Connect an AI assistant</h2>
-        <button
-          type="button"
-          className="button-secondary developer-mcp__toggle"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-        >
-          {expanded ? 'Hide' : 'Show setup'}
-        </button>
+        {!alwaysExpanded ? (
+          <button
+            type="button"
+            className="button-secondary developer-mcp__toggle"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+          >
+            {expanded ? 'Hide' : 'Show setup'}
+          </button>
+        ) : null}
       </div>
-      {!expanded ? (
+      {!(alwaysExpanded || expanded) ? (
         <p className="panel-copy">
           Using Cursor or Claude? Hook up JoinQuest so your agent can run checks and save metadata
           — no browser cookies required.
@@ -205,8 +238,16 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
           </div>
 
           <p className="panel-copy">
-            Three quick steps for <strong>{client.label}</strong>. Run the install command from your
-            game repo — we&apos;ll add the agent skill and connect MCP.
+            Three quick steps for <strong>{client.label}</strong>.
+            {usesPlugin ? (
+              <>
+                {' '}
+                Install the JoinQuest {client.label} plugin — skill and MCP together, no game-repo
+                changes required.
+              </>
+            ) : (
+              <> Run the install command from your game repo — we&apos;ll add the agent skill and connect MCP.</>
+            )}
           </p>
 
           <div className="developer-mcp__keys">
@@ -216,11 +257,13 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
               generate a new one — either way, step 2 fills in the install command for you.
             </p>
             {apiKeys.length > 0 ? (
-              <p className="panel-copy">
-                You already have a key (<code>{apiKeys[0].keyPrefix}…</code>
-                {apiKeys[0].lastUsedAt ? ', used recently' : ', not used yet'}). Paste it if you
-                saved it, or generate a new one.
-              </p>
+              <div className="developer-mcp__info" role="note">
+                <p>
+                  You already have a key (<code>{apiKeys[0].keyPrefix}…</code>
+                  {apiKeys[0].lastUsedAt ? ', used recently' : ', not used yet'}). Paste it if you
+                  saved it, or generate a new one.
+                </p>
+              </div>
             ) : null}
             <div className="developer-form__field developer-mcp__key-field">
               <label htmlFor="developer-mcp-api-key">Your API key</label>
@@ -270,71 +313,159 @@ export default function DeveloperMcpWizard({ defaultExpanded = false }) {
           </div>
 
           <div className="developer-mcp__install">
-            <h3>2. Install the skill and MCP</h3>
-            <p className="panel-copy">
-              From your <strong>game repo root</strong>, run the command below.
-              {activeKey ? (
-                <> Your key is already in the first line — copy and run as-is.</>
-              ) : (
-                <>
-                  {' '}
-                  Paste or generate your key in step 1 first — we&apos;ll fill in{' '}
-                  <code>JOINQUEST_API_KEY</code> for you.
-                </>
-              )}
-            </p>
-            <pre className="developer-mcp__config">{installDevCommand}</pre>
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={() => void handleCopy(installDevCommand, 'install-main')}
-            >
-              {copied === 'install-main' ? 'Copied' : 'Copy install command'}
-            </button>
-            <p className="panel-copy developer-mcp__what-it-does">What the script does:</p>
-            <ul className="developer-mcp__explainer">
-              <li>
-                Adds <code>.agents/skills/joinquest-integration/</code> — step-by-step instructions
-                for your agent.
-              </li>
-              {clientId === 'cursor' ? (
-                <li>
-                  With <code>--cursor</code>, wires MCP into <code>.cursor/mcp.json</code>.
-                </li>
-              ) : null}
-              {clientId === 'claude-code' ? (
-                <li>
-                  With <code>--claude</code>, runs <code>claude mcp add</code> for this project
-                  (needs Claude Code installed).
-                </li>
-              ) : null}
-              {clientId === 'claude-desktop' ? (
-                <li>
-                  With <code>--claude-desktop</code>, merges MCP into Claude Desktop&apos;s config
-                  (macOS, Windows, or Linux).
-                </li>
-              ) : null}
-              <li>
-                MCP runs via <code>npx @joinquest/mcp-integration</code> when your agent needs it.
-              </li>
-            </ul>
-            <p className="panel-copy">
-              <a className="auth-link" href={INSTALL_DEV_SCRIPT_GITHUB} target="_blank" rel="noreferrer">
-                Read the script on GitHub
-              </a>{' '}
-              before you run it, if you like.
-            </p>
-            <details className="developer-mcp__details">
-              <summary>Want to download and review first?</summary>
-              <pre className="developer-mcp__config">{installInspectCommand}</pre>
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={() => void handleCopy(installInspectCommand, 'inspect')}
-              >
-                {copied === 'inspect' ? 'Copied' : 'Copy review-first commands'}
-              </button>
-            </details>
+            <h3>
+              {usesPlugin ? `2. Install the ${client.label} plugin` : '2. Install the skill and MCP'}
+            </h3>
+            {usesPlugin ? (
+              <>
+                <p className="panel-copy">
+                  Run this once on your machine — it installs skill + MCP for {client.label}.
+                  {activeKey ? (
+                    <> Your key is already in the first line — copy and run as-is.</>
+                  ) : (
+                    <>
+                      {' '}
+                      Paste or generate your key in step 1 first — we&apos;ll fill in{' '}
+                      <code>JOINQUEST_API_KEY</code> for you.
+                    </>
+                  )}
+                </p>
+                <pre className="developer-mcp__config">{installPluginCommand}</pre>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => void handleCopy(installPluginCommand, 'install-plugin')}
+                >
+                  {copied === 'install-plugin' ? 'Copied' : 'Copy plugin install command'}
+                </button>
+                <p className="panel-copy developer-mcp__what-it-does">What the plugin includes:</p>
+                <ul className="developer-mcp__explainer">
+                  <li>
+                    <strong>joinquest-integration</strong> agent skill — phased playbook for
+                    discovery, API, checks, and release.
+                  </li>
+                  <li>
+                    MCP server via <code>npx @joinquest/mcp-integration</code> (calls joinquest.cc
+                    when tools run).
+                  </li>
+                </ul>
+                <p className="panel-copy">
+                  <a className="auth-link" href={CURSOR_PLUGIN_GITHUB} target="_blank" rel="noreferrer">
+                    View plugin source on GitHub
+                  </a>{' '}
+                  ·{' '}
+                  <a
+                    className="auth-link"
+                    href={installPluginScriptGithub}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Read the install script
+                  </a>
+                </p>
+                <details className="developer-mcp__details">
+                  <summary>Alternative: curl install into your game repo</summary>
+                  <p className="panel-copy">
+                    Adds <code>.agents/skills/joinquest-integration/</code> to your project
+                    {clientId === 'cursor' ? (
+                      <> and wires MCP into <code>.cursor/mcp.json</code></>
+                    ) : (
+                      <> and runs <code>claude mcp add</code> for this project</>
+                    )}
+                    .
+                  </p>
+                  <pre className="developer-mcp__config">{installDevCommand}</pre>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => void handleCopy(installDevCommand, 'install-main')}
+                  >
+                    {copied === 'install-main' ? 'Copied' : 'Copy game-repo install command'}
+                  </button>
+                  <details className="developer-mcp__details">
+                    <summary>Want to download and review first?</summary>
+                    <p className="panel-copy">
+                      The run step is commented out in the block below — uncomment it after
+                      you&apos;ve reviewed the script.
+                    </p>
+                    <pre className="developer-mcp__config">{installInspectCommand}</pre>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={() => void handleCopy(installInspectCommand, 'inspect')}
+                    >
+                      {copied === 'inspect' ? 'Copied' : 'Copy review-first commands'}
+                    </button>
+                  </details>
+                </details>
+              </>
+            ) : (
+              <>
+                <p className="panel-copy">
+                  From your <strong>game repo root</strong>, run the command below.
+                  {activeKey ? (
+                    <> Your key is already in the first line — copy and run as-is.</>
+                  ) : (
+                    <>
+                      {' '}
+                      Paste or generate your key in step 1 first — we&apos;ll fill in{' '}
+                      <code>JOINQUEST_API_KEY</code> for you.
+                    </>
+                  )}
+                </p>
+                <pre className="developer-mcp__config">{installDevCommand}</pre>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => void handleCopy(installDevCommand, 'install-main')}
+                >
+                  {copied === 'install-main' ? 'Copied' : 'Copy install command'}
+                </button>
+                <p className="panel-copy developer-mcp__what-it-does">What the script does:</p>
+                <ul className="developer-mcp__explainer">
+                  <li>
+                    Adds <code>.agents/skills/joinquest-integration/</code> — step-by-step instructions
+                    for your agent.
+                  </li>
+                  {clientId === 'claude-code' ? (
+                    <li>
+                      With <code>--claude</code>, runs <code>claude mcp add</code> for this project
+                      (needs Claude Code installed).
+                    </li>
+                  ) : null}
+                  {clientId === 'claude-desktop' ? (
+                    <li>
+                      With <code>--claude-desktop</code>, merges MCP into Claude Desktop&apos;s config
+                      (macOS, Windows, or Linux).
+                    </li>
+                  ) : null}
+                  <li>
+                    MCP runs via <code>npx @joinquest/mcp-integration</code> when your agent needs it.
+                  </li>
+                </ul>
+                <p className="panel-copy">
+                  <a className="auth-link" href={INSTALL_DEV_SCRIPT_GITHUB} target="_blank" rel="noreferrer">
+                    Read the script on GitHub
+                  </a>{' '}
+                  before you run it, if you like.
+                </p>
+                <details className="developer-mcp__details">
+                  <summary>Want to download and review first?</summary>
+                  <p className="panel-copy">
+                    The run step is commented out in the block below — uncomment it after you&apos;ve
+                    reviewed the script.
+                  </p>
+                  <pre className="developer-mcp__config">{installInspectCommand}</pre>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => void handleCopy(installInspectCommand, 'inspect')}
+                  >
+                    {copied === 'inspect' ? 'Copied' : 'Copy review-first commands'}
+                  </button>
+                </details>
+              </>
+            )}
             <details className="developer-mcp__details">
               <summary>Offline or pinned install</summary>
               <p className="panel-copy">Optional — if you don&apos;t want to use npx each time:</p>
