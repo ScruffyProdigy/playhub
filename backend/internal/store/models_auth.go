@@ -14,6 +14,7 @@ type User struct {
 	AvatarURL    *string
 	AvatarKey    *string
 	AvatarSource *string
+	IsGuest      bool
 	CreatedAt    time.Time
 }
 

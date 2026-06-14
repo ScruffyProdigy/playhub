@@ -78,6 +78,20 @@ func ClearSessionCookie(w http.ResponseWriter, cfg CookieConfig) {
 	})
 }
 
+// SessionJWTMiddleware attaches user context from the session cookie without database lookups.
+func SessionJWTMiddleware(signer *Signer, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		if token := TokenFromRequest(r); token != "" {
+			if userID, err := signer.VerifyUserToken(token); err == nil {
+				ctx = WithUserID(ctx, userID.String())
+				ctx = WithSessionToken(ctx, token)
+			}
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 // Middleware authenticates requests and attaches user context.
 func Middleware(signer *Signer, apiKeys DeveloperAPIKeyVerifier, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

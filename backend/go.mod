@@ -11,6 +11,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.20.0
 	github.com/vektah/gqlparser/v2 v2.5.30
+	golang.org/x/oauth2 v0.30.0
 )
 
 require (

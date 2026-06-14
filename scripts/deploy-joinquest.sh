@@ -13,6 +13,8 @@ cd "$ROOT"
 . "$ROOT/scripts/lib/lobby-auth-peppers.sh"
 # shellcheck source=lib/lobby-openai.sh
 . "$ROOT/scripts/lib/lobby-openai.sh"
+# shellcheck source=lib/lobby-oauth.sh
+. "$ROOT/scripts/lib/lobby-oauth.sh"
 
 NAMESPACE="joinquest"
 CONTEXT="${KUBE_CONTEXT:-}"
@@ -86,6 +88,7 @@ apply_lobby_smtp_secret
 apply_lobby_auth_peppers_secret
 apply_lobby_game_service_secret
 apply_lobby_openai_secret
+apply_lobby_oauth_secret
 
 echo "Waiting for Postgres..."
 kubectl wait --for=condition=ready --timeout=300s pod -l app=pg -n "$NAMESPACE"

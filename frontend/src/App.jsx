@@ -1,4 +1,7 @@
 import CompleteSignInPage from './components/auth/CompleteSignInPage'
+import LinkEmailPage from './components/auth/LinkEmailPage'
+import OAuthCompletePage from './components/auth/OAuthCompletePage'
+import AccountPage from './components/auth/AccountPage'
 import ReturnPage from './components/auth/ReturnPage'
 import AuthPanel from './components/auth/AuthPanel'
 import IntentBanner from './components/games/IntentBanner'
@@ -181,8 +184,14 @@ function App() {
 
   return (
     <AuthProvider>
-      {pathname.startsWith('/auth/complete') ? (
+      {pathname.startsWith('/auth/oauth/complete') ? (
+        <OAuthCompletePage />
+      ) : pathname.startsWith('/auth/complete') ? (
         <CompleteSignInPage />
+      ) : pathname.startsWith('/auth/link') ? (
+        <LinkEmailPage />
+      ) : pathname.startsWith('/account') ? (
+        <AccountPage />
       ) : pathname.startsWith('/return') ? (
         <ReturnPage />
       ) : developerRoute ? (

@@ -122,6 +122,26 @@ func (s *Store) GetLatestValidMagicLinkByEmail(ctx context.Context, email string
 	return scanMagicLink(row)
 }
 
+// GetValidMagicLinkByTokenHash returns an unused link without marking it used.
+func (s *Store) GetValidMagicLinkByTokenHash(ctx context.Context, tokenHash string, now time.Time) (*MagicLink, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT `+magicLinkColumns+`
+		FROM magic_links
+		WHERE token_hash = $1
+		  AND used_at IS NULL
+		  AND expires_at > $2
+		  AND failed_attempts < $3
+	`, strings.TrimSpace(tokenHash), now, MaxLoginCodeAttempts)
+	link, err := scanMagicLink(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return link, nil
+}
+
 // ConsumeMagicLinkByTokenHash atomically marks a link used (URL token path).
 func (s *Store) ConsumeMagicLinkByTokenHash(ctx context.Context, tokenHash string, now time.Time) (*MagicLink, error) {
 	row := s.db.QueryRowContext(ctx, `

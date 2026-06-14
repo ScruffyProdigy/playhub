@@ -60,6 +60,13 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	Account struct {
+		Emails            func(childComplexity int) int
+		Identities        func(childComplexity int) int
+		SignInMethodCount func(childComplexity int) int
+		User              func(childComplexity int) int
+	}
+
 	ActiveIntent struct {
 		FormingGaps          func(childComplexity int) int
 		GameID               func(childComplexity int) int
@@ -99,6 +106,12 @@ type ComplexityRoot struct {
 		Game        func(childComplexity int) int
 		ID          func(childComplexity int) int
 		Name        func(childComplexity int) int
+	}
+
+	EmailLinkPreview struct {
+		Email                  func(childComplexity int) int
+		MergeSourceDisplayName func(childComplexity int) int
+		WillMergeAccounts      func(childComplexity int) int
 	}
 
 	Entitlement struct {
@@ -190,9 +203,12 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		BeginSpiritAnimalReading     func(childComplexity int, forceRestart *bool) int
+		CompleteLinkEmailWithCode    func(childComplexity int, email string, code string, confirmMerge *bool) int
+		CompleteLinkEmailWithLink    func(childComplexity int, token string, confirmMerge *bool) int
 		CompleteSignInWithCode       func(childComplexity int, email string, code string) int
 		CompleteSignInWithLink       func(childComplexity int, token string) int
 		CreateDeveloperAPIKey        func(childComplexity int, name *string) int
+		CreateGuestSession           func(childComplexity int) int
 		CreatePrivateTable           func(childComplexity int, gameID string, modeID string) int
 		CreateRoom                   func(childComplexity int) int
 		CreateTable                  func(childComplexity int, roomID string, gameID string, modeID string) int
@@ -209,8 +225,11 @@ type ComplexityRoot struct {
 		RegenerateSpiritAnimalImages func(childComplexity int) int
 		RegisterGame                 func(childComplexity int, input model.RegisterGameInput) int
 		RegisterMyGame               func(childComplexity int, input model.RegisterMyGameInput) int
+		RemoveLinkedEmail            func(childComplexity int, emailID string) int
+		RemoveLinkedIdentity         func(childComplexity int, identityID string) int
 		ReportMatchResult            func(childComplexity int, matchID string, status model.MatchResultStatus, winnerLobbyUserIds []string, metadata map[string]any) int
 		ReportPlayerFinished         func(childComplexity int, matchID string, lobbyUserID string, reason model.PlayerFinishReason, placement *int, metadata map[string]any) int
+		RequestLinkEmail             func(childComplexity int, email string) int
 		RequestPublicRelease         func(childComplexity int, gameID string) int
 		RequestSignIn                func(childComplexity int, email string) int
 		ReviewGameRelease            func(childComplexity int, gameID string, approve bool, reason *string) int
@@ -219,6 +238,7 @@ type ComplexityRoot struct {
 		RunMyGameChecks              func(childComplexity int, gameID string) int
 		SelectSpiritAnimalTotem      func(childComplexity int, totemName string) int
 		SendRoomMessage              func(childComplexity int, roomID string, body string) int
+		SetPrimaryEmail              func(childComplexity int, emailID string) int
 		SitAtTable                   func(childComplexity int, tableID string, seatKey string) int
 		StartTable                   func(childComplexity int, tableID string) int
 		StartTableBackfill           func(childComplexity int, tableID string, queueID string) int
@@ -260,12 +280,14 @@ type ComplexityRoot struct {
 		DeveloperAgentPlaybook           func(childComplexity int) int
 		DeveloperDiscoveryPrompt         func(childComplexity int) int
 		DeveloperIntegrationGuide        func(childComplexity int) int
+		EnabledOAuthProviders            func(childComplexity int) int
 		Game                             func(childComplexity int, id string) int
 		GameBySlug                       func(childComplexity int, slug string) int
 		Games                            func(childComplexity int, limit *int, offset *int) int
 		Goods                            func(childComplexity int, gameID *string) int
 		Healthz                          func(childComplexity int) int
 		Me                               func(childComplexity int) int
+		MyAccount                        func(childComplexity int) int
 		MyActiveIntent                   func(childComplexity int) int
 		MyDeveloperAPIKeys               func(childComplexity int) int
 		MyGame                           func(childComplexity int, id string) int
@@ -279,6 +301,7 @@ type ComplexityRoot struct {
 		MyTableSeat                      func(childComplexity int) int
 		PendingGameReviews               func(childComplexity int) int
 		Player                           func(childComplexity int, id string) int
+		PreviewLinkEmail                 func(childComplexity int, email string) int
 		ReturnDestination                func(childComplexity int, matchID *string) int
 		Room                             func(childComplexity int, inviteCode string) int
 		Session                          func(childComplexity int, id string) int
@@ -477,8 +500,25 @@ type ComplexityRoot struct {
 		CreatedAt    func(childComplexity int) int
 		DisplayName  func(childComplexity int) int
 		Email        func(childComplexity int) int
+		Emails       func(childComplexity int) int
 		ID           func(childComplexity int) int
+		Identities   func(childComplexity int) int
 		IsAdmin      func(childComplexity int) int
+		IsGuest      func(childComplexity int) int
+	}
+
+	UserEmail struct {
+		Email      func(childComplexity int) int
+		ID         func(childComplexity int) int
+		IsPrimary  func(childComplexity int) int
+		VerifiedAt func(childComplexity int) int
+	}
+
+	UserIdentity struct {
+		Email      func(childComplexity int) int
+		ID         func(childComplexity int) int
+		Provider   func(childComplexity int) int
+		VerifiedAt func(childComplexity int) int
 	}
 }
 
@@ -506,6 +546,13 @@ type MutationResolver interface {
 	LeaveActiveGame(ctx context.Context) (bool, error)
 	GrantGood(ctx context.Context, userID string, goodID string, quantity *int) (bool, error)
 	RevokeGood(ctx context.Context, userID string, goodID string, quantity *int) (bool, error)
+	CreateGuestSession(ctx context.Context) (*model.User, error)
+	RequestLinkEmail(ctx context.Context, email string) (bool, error)
+	CompleteLinkEmailWithCode(ctx context.Context, email string, code string, confirmMerge *bool) (*model.User, error)
+	CompleteLinkEmailWithLink(ctx context.Context, token string, confirmMerge *bool) (*model.User, error)
+	RemoveLinkedEmail(ctx context.Context, emailID string) (*model.User, error)
+	SetPrimaryEmail(ctx context.Context, emailID string) (*model.User, error)
+	RemoveLinkedIdentity(ctx context.Context, identityID string) (*model.User, error)
 	RequestSignIn(ctx context.Context, email string) (bool, error)
 	CompleteSignInWithLink(ctx context.Context, token string) (*model.User, error)
 	CompleteSignInWithCode(ctx context.Context, email string, code string) (*model.User, error)
@@ -554,6 +601,9 @@ type QueryResolver interface {
 	MyQueueStatus(ctx context.Context, queueID string) (*model.JoinResult, error)
 	MyActiveIntent(ctx context.Context) (*model.ActiveIntent, error)
 	Player(ctx context.Context, id string) (*model.PublicPlayer, error)
+	MyAccount(ctx context.Context) (*model.Account, error)
+	PreviewLinkEmail(ctx context.Context, email string) (*model.EmailLinkPreview, error)
+	EnabledOAuthProviders(ctx context.Context) ([]model.AuthProvider, error)
 	Me(ctx context.Context) (*model.User, error)
 	SubscriptionAuth(ctx context.Context) (*string, error)
 	StarterAvatars(ctx context.Context) ([]*model.StarterAvatar, error)
@@ -616,6 +666,9 @@ type TableSeatSlotResolver interface {
 }
 type UserResolver interface {
 	IsAdmin(ctx context.Context, obj *model.User) (bool, error)
+
+	Emails(ctx context.Context, obj *model.User) ([]*model.UserEmail, error)
+	Identities(ctx context.Context, obj *model.User) ([]*model.UserIdentity, error)
 }
 
 type executableSchema struct {
@@ -636,6 +689,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Account.emails":
+		if e.complexity.Account.Emails == nil {
+			break
+		}
+
+		return e.complexity.Account.Emails(childComplexity), true
+	case "Account.identities":
+		if e.complexity.Account.Identities == nil {
+			break
+		}
+
+		return e.complexity.Account.Identities(childComplexity), true
+	case "Account.signInMethodCount":
+		if e.complexity.Account.SignInMethodCount == nil {
+			break
+		}
+
+		return e.complexity.Account.SignInMethodCount(childComplexity), true
+	case "Account.user":
+		if e.complexity.Account.User == nil {
+			break
+		}
+
+		return e.complexity.Account.User(childComplexity), true
 
 	case "ActiveIntent.formingGaps":
 		if e.complexity.ActiveIntent.FormingGaps == nil {
@@ -797,6 +875,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.DigitalGood.Name(childComplexity), true
+
+	case "EmailLinkPreview.email":
+		if e.complexity.EmailLinkPreview.Email == nil {
+			break
+		}
+
+		return e.complexity.EmailLinkPreview.Email(childComplexity), true
+	case "EmailLinkPreview.mergeSourceDisplayName":
+		if e.complexity.EmailLinkPreview.MergeSourceDisplayName == nil {
+			break
+		}
+
+		return e.complexity.EmailLinkPreview.MergeSourceDisplayName(childComplexity), true
+	case "EmailLinkPreview.willMergeAccounts":
+		if e.complexity.EmailLinkPreview.WillMergeAccounts == nil {
+			break
+		}
+
+		return e.complexity.EmailLinkPreview.WillMergeAccounts(childComplexity), true
 
 	case "Entitlement.good":
 		if e.complexity.Entitlement.Good == nil {
@@ -1200,6 +1297,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.BeginSpiritAnimalReading(childComplexity, args["forceRestart"].(*bool)), true
+	case "Mutation.completeLinkEmailWithCode":
+		if e.complexity.Mutation.CompleteLinkEmailWithCode == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_completeLinkEmailWithCode_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CompleteLinkEmailWithCode(childComplexity, args["email"].(string), args["code"].(string), args["confirmMerge"].(*bool)), true
+	case "Mutation.completeLinkEmailWithLink":
+		if e.complexity.Mutation.CompleteLinkEmailWithLink == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_completeLinkEmailWithLink_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CompleteLinkEmailWithLink(childComplexity, args["token"].(string), args["confirmMerge"].(*bool)), true
 	case "Mutation.completeSignInWithCode":
 		if e.complexity.Mutation.CompleteSignInWithCode == nil {
 			break
@@ -1233,6 +1352,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.CreateDeveloperAPIKey(childComplexity, args["name"].(*string)), true
+	case "Mutation.createGuestSession":
+		if e.complexity.Mutation.CreateGuestSession == nil {
+			break
+		}
+
+		return e.complexity.Mutation.CreateGuestSession(childComplexity), true
 	case "Mutation.createPrivateTable":
 		if e.complexity.Mutation.CreatePrivateTable == nil {
 			break
@@ -1384,6 +1509,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RegisterMyGame(childComplexity, args["input"].(model.RegisterMyGameInput)), true
+	case "Mutation.removeLinkedEmail":
+		if e.complexity.Mutation.RemoveLinkedEmail == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_removeLinkedEmail_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RemoveLinkedEmail(childComplexity, args["emailId"].(string)), true
+	case "Mutation.removeLinkedIdentity":
+		if e.complexity.Mutation.RemoveLinkedIdentity == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_removeLinkedIdentity_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RemoveLinkedIdentity(childComplexity, args["identityId"].(string)), true
 	case "Mutation.reportMatchResult":
 		if e.complexity.Mutation.ReportMatchResult == nil {
 			break
@@ -1406,6 +1553,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.ReportPlayerFinished(childComplexity, args["matchId"].(string), args["lobbyUserId"].(string), args["reason"].(model.PlayerFinishReason), args["placement"].(*int), args["metadata"].(map[string]any)), true
+	case "Mutation.requestLinkEmail":
+		if e.complexity.Mutation.RequestLinkEmail == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_requestLinkEmail_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RequestLinkEmail(childComplexity, args["email"].(string)), true
 	case "Mutation.requestPublicRelease":
 		if e.complexity.Mutation.RequestPublicRelease == nil {
 			break
@@ -1494,6 +1652,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.SendRoomMessage(childComplexity, args["roomId"].(string), args["body"].(string)), true
+	case "Mutation.setPrimaryEmail":
+		if e.complexity.Mutation.SetPrimaryEmail == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setPrimaryEmail_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetPrimaryEmail(childComplexity, args["emailId"].(string)), true
 	case "Mutation.sitAtTable":
 		if e.complexity.Mutation.SitAtTable == nil {
 			break
@@ -1702,6 +1871,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.DeveloperIntegrationGuide(childComplexity), true
+	case "Query.enabledOAuthProviders":
+		if e.complexity.Query.EnabledOAuthProviders == nil {
+			break
+		}
+
+		return e.complexity.Query.EnabledOAuthProviders(childComplexity), true
 	case "Query.game":
 		if e.complexity.Query.Game == nil {
 			break
@@ -1758,6 +1933,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Me(childComplexity), true
+	case "Query.myAccount":
+		if e.complexity.Query.MyAccount == nil {
+			break
+		}
+
+		return e.complexity.Query.MyAccount(childComplexity), true
 	case "Query.myActiveIntent":
 		if e.complexity.Query.MyActiveIntent == nil {
 			break
@@ -1861,6 +2042,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Player(childComplexity, args["id"].(string)), true
+	case "Query.previewLinkEmail":
+		if e.complexity.Query.PreviewLinkEmail == nil {
+			break
+		}
+
+		args, err := ec.field_Query_previewLinkEmail_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PreviewLinkEmail(childComplexity, args["email"].(string)), true
 	case "Query.returnDestination":
 		if e.complexity.Query.ReturnDestination == nil {
 			break
@@ -2715,18 +2907,86 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.User.Email(childComplexity), true
+	case "User.emails":
+		if e.complexity.User.Emails == nil {
+			break
+		}
+
+		return e.complexity.User.Emails(childComplexity), true
 	case "User.id":
 		if e.complexity.User.ID == nil {
 			break
 		}
 
 		return e.complexity.User.ID(childComplexity), true
+	case "User.identities":
+		if e.complexity.User.Identities == nil {
+			break
+		}
+
+		return e.complexity.User.Identities(childComplexity), true
 	case "User.isAdmin":
 		if e.complexity.User.IsAdmin == nil {
 			break
 		}
 
 		return e.complexity.User.IsAdmin(childComplexity), true
+	case "User.isGuest":
+		if e.complexity.User.IsGuest == nil {
+			break
+		}
+
+		return e.complexity.User.IsGuest(childComplexity), true
+
+	case "UserEmail.email":
+		if e.complexity.UserEmail.Email == nil {
+			break
+		}
+
+		return e.complexity.UserEmail.Email(childComplexity), true
+	case "UserEmail.id":
+		if e.complexity.UserEmail.ID == nil {
+			break
+		}
+
+		return e.complexity.UserEmail.ID(childComplexity), true
+	case "UserEmail.isPrimary":
+		if e.complexity.UserEmail.IsPrimary == nil {
+			break
+		}
+
+		return e.complexity.UserEmail.IsPrimary(childComplexity), true
+	case "UserEmail.verifiedAt":
+		if e.complexity.UserEmail.VerifiedAt == nil {
+			break
+		}
+
+		return e.complexity.UserEmail.VerifiedAt(childComplexity), true
+
+	case "UserIdentity.email":
+		if e.complexity.UserIdentity.Email == nil {
+			break
+		}
+
+		return e.complexity.UserIdentity.Email(childComplexity), true
+	case "UserIdentity.id":
+		if e.complexity.UserIdentity.ID == nil {
+			break
+		}
+
+		return e.complexity.UserIdentity.ID(childComplexity), true
+	case "UserIdentity.provider":
+		if e.complexity.UserIdentity.Provider == nil {
+			break
+		}
+
+		return e.complexity.UserIdentity.Provider(childComplexity), true
+	case "UserIdentity.verifiedAt":
+		if e.complexity.UserIdentity.VerifiedAt == nil {
+			break
+		}
+
+		return e.complexity.UserIdentity.VerifiedAt(childComplexity), true
 
 	}
 	return 0, false
@@ -2855,6 +3115,62 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
+	{Name: "../schema/account.graphqls", Input: `extend type User {
+  isGuest: Boolean!
+  emails: [UserEmail!]!
+  identities: [UserIdentity!]!
+}
+
+type UserEmail {
+  id: ID!
+  email: String!
+  isPrimary: Boolean!
+  verifiedAt: Time!
+}
+
+enum AuthProvider {
+  GOOGLE
+  DISCORD
+  APPLE
+  FACEBOOK
+}
+
+type UserIdentity {
+  id: ID!
+  provider: AuthProvider!
+  email: String
+  verifiedAt: Time!
+}
+
+type Account {
+  user: User!
+  emails: [UserEmail!]!
+  identities: [UserIdentity!]!
+  signInMethodCount: Int!
+}
+
+type EmailLinkPreview {
+  email: String!
+  willMergeAccounts: Boolean!
+  mergeSourceDisplayName: String
+}
+
+extend type Query {
+  myAccount: Account
+  previewLinkEmail(email: String!): EmailLinkPreview!
+  enabledOAuthProviders: [AuthProvider!]!
+}
+
+extend type Mutation {
+  createGuestSession: User!
+  requestLinkEmail(email: String!): Boolean!
+  completeLinkEmailWithCode(email: String!, code: String!, confirmMerge: Boolean = false): User!
+  completeLinkEmailWithLink(token: ID!, confirmMerge: Boolean = false): User!
+  removeLinkedEmail(emailId: ID!): User!
+  setPrimaryEmail(emailId: ID!): User!
+  removeLinkedIdentity(identityId: ID!): User!
+}
+`, BuiltIn: false},
 	{Name: "../schema/auth.graphqls", Input: `extend type Query {
   me: User
   # Bearer token for GraphQL websocket connection_init (httpOnly cookie is not always sent on WS upgrade).
@@ -3503,6 +3819,43 @@ func (ec *executionContext) field_Mutation_beginSpiritAnimalReading_args(ctx con
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_completeLinkEmailWithCode_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "email", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["email"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "code", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["code"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "confirmMerge", ec.unmarshalOBoolean2ᚖbool)
+	if err != nil {
+		return nil, err
+	}
+	args["confirmMerge"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_completeLinkEmailWithLink_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "token", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["token"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "confirmMerge", ec.unmarshalOBoolean2ᚖbool)
+	if err != nil {
+		return nil, err
+	}
+	args["confirmMerge"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_completeSignInWithCode_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -3697,6 +4050,28 @@ func (ec *executionContext) field_Mutation_registerMyGame_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_removeLinkedEmail_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "emailId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["emailId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_removeLinkedIdentity_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "identityId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["identityId"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_reportMatchResult_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -3751,6 +4126,17 @@ func (ec *executionContext) field_Mutation_reportPlayerFinished_args(ctx context
 		return nil, err
 	}
 	args["metadata"] = arg4
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_requestLinkEmail_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "email", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["email"] = arg0
 	return args, nil
 }
 
@@ -3864,6 +4250,17 @@ func (ec *executionContext) field_Mutation_sendRoomMessage_args(ctx context.Cont
 		return nil, err
 	}
 	args["body"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setPrimaryEmail_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "emailId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["emailId"] = arg0
 	return args, nil
 }
 
@@ -4063,6 +4460,17 @@ func (ec *executionContext) field_Query_player_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_previewLinkEmail_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "email", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["email"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_returnDestination_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -4207,6 +4615,166 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Account_user(ctx context.Context, field graphql.CollectedField, obj *model.Account) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Account_user,
+		func(ctx context.Context) (any, error) {
+			return obj.User, nil
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Account_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Account",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Account_emails(ctx context.Context, field graphql.CollectedField, obj *model.Account) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Account_emails,
+		func(ctx context.Context) (any, error) {
+			return obj.Emails, nil
+		},
+		nil,
+		ec.marshalNUserEmail2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUserEmailᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Account_emails(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Account",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_UserEmail_id(ctx, field)
+			case "email":
+				return ec.fieldContext_UserEmail_email(ctx, field)
+			case "isPrimary":
+				return ec.fieldContext_UserEmail_isPrimary(ctx, field)
+			case "verifiedAt":
+				return ec.fieldContext_UserEmail_verifiedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UserEmail", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Account_identities(ctx context.Context, field graphql.CollectedField, obj *model.Account) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Account_identities,
+		func(ctx context.Context) (any, error) {
+			return obj.Identities, nil
+		},
+		nil,
+		ec.marshalNUserIdentity2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUserIdentityᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Account_identities(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Account",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_UserIdentity_id(ctx, field)
+			case "provider":
+				return ec.fieldContext_UserIdentity_provider(ctx, field)
+			case "email":
+				return ec.fieldContext_UserIdentity_email(ctx, field)
+			case "verifiedAt":
+				return ec.fieldContext_UserIdentity_verifiedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UserIdentity", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Account_signInMethodCount(ctx context.Context, field graphql.CollectedField, obj *model.Account) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Account_signInMethodCount,
+		func(ctx context.Context) (any, error) {
+			return obj.SignInMethodCount, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Account_signInMethodCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Account",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _ActiveIntent_queueId(ctx context.Context, field graphql.CollectedField, obj *model.ActiveIntent) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
@@ -5031,6 +5599,93 @@ func (ec *executionContext) fieldContext_DigitalGood_game(_ context.Context, fie
 				return ec.fieldContext_Game_integrationChecks(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Game", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _EmailLinkPreview_email(ctx context.Context, field graphql.CollectedField, obj *model.EmailLinkPreview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_EmailLinkPreview_email,
+		func(ctx context.Context) (any, error) {
+			return obj.Email, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_EmailLinkPreview_email(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "EmailLinkPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _EmailLinkPreview_willMergeAccounts(ctx context.Context, field graphql.CollectedField, obj *model.EmailLinkPreview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_EmailLinkPreview_willMergeAccounts,
+		func(ctx context.Context) (any, error) {
+			return obj.WillMergeAccounts, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_EmailLinkPreview_willMergeAccounts(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "EmailLinkPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _EmailLinkPreview_mergeSourceDisplayName(ctx context.Context, field graphql.CollectedField, obj *model.EmailLinkPreview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_EmailLinkPreview_mergeSourceDisplayName,
+		func(ctx context.Context) (any, error) {
+			return obj.MergeSourceDisplayName, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_EmailLinkPreview_mergeSourceDisplayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "EmailLinkPreview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -7174,6 +7829,425 @@ func (ec *executionContext) fieldContext_Mutation_revokeGood(ctx context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_createGuestSession(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_createGuestSession,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Mutation().CreateGuestSession(ctx)
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createGuestSession(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_requestLinkEmail(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_requestLinkEmail,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().RequestLinkEmail(ctx, fc.Args["email"].(string))
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_requestLinkEmail(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_requestLinkEmail_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_completeLinkEmailWithCode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_completeLinkEmailWithCode,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().CompleteLinkEmailWithCode(ctx, fc.Args["email"].(string), fc.Args["code"].(string), fc.Args["confirmMerge"].(*bool))
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_completeLinkEmailWithCode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_completeLinkEmailWithCode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_completeLinkEmailWithLink(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_completeLinkEmailWithLink,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().CompleteLinkEmailWithLink(ctx, fc.Args["token"].(string), fc.Args["confirmMerge"].(*bool))
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_completeLinkEmailWithLink(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_completeLinkEmailWithLink_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_removeLinkedEmail(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_removeLinkedEmail,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().RemoveLinkedEmail(ctx, fc.Args["emailId"].(string))
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_removeLinkedEmail(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_removeLinkedEmail_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setPrimaryEmail(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_setPrimaryEmail,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().SetPrimaryEmail(ctx, fc.Args["emailId"].(string))
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setPrimaryEmail(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setPrimaryEmail_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_removeLinkedIdentity(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_removeLinkedIdentity,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().RemoveLinkedIdentity(ctx, fc.Args["identityId"].(string))
+		},
+		nil,
+		ec.marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUser,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_removeLinkedIdentity(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "displayName":
+				return ec.fieldContext_User_displayName(ctx, field)
+			case "avatarUrl":
+				return ec.fieldContext_User_avatarUrl(ctx, field)
+			case "avatarKey":
+				return ec.fieldContext_User_avatarKey(ctx, field)
+			case "avatarSource":
+				return ec.fieldContext_User_avatarSource(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "isAdmin":
+				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_removeLinkedIdentity_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_requestSignIn(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -7256,6 +8330,12 @@ func (ec *executionContext) fieldContext_Mutation_completeSignInWithLink(ctx con
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -7315,6 +8395,12 @@ func (ec *executionContext) fieldContext_Mutation_completeSignInWithCode(ctx con
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -7403,6 +8489,12 @@ func (ec *executionContext) fieldContext_Mutation_updatePlayerProfile(ctx contex
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -8530,6 +9622,12 @@ func (ec *executionContext) fieldContext_Mutation_selectSpiritAnimalTotem(ctx co
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -10153,6 +11251,123 @@ func (ec *executionContext) fieldContext_Query_player(ctx context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_myAccount(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_myAccount,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().MyAccount(ctx)
+		},
+		nil,
+		ec.marshalOAccount2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAccount,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_myAccount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "user":
+				return ec.fieldContext_Account_user(ctx, field)
+			case "emails":
+				return ec.fieldContext_Account_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_Account_identities(ctx, field)
+			case "signInMethodCount":
+				return ec.fieldContext_Account_signInMethodCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Account", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_previewLinkEmail(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_previewLinkEmail,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().PreviewLinkEmail(ctx, fc.Args["email"].(string))
+		},
+		nil,
+		ec.marshalNEmailLinkPreview2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐEmailLinkPreview,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_previewLinkEmail(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "email":
+				return ec.fieldContext_EmailLinkPreview_email(ctx, field)
+			case "willMergeAccounts":
+				return ec.fieldContext_EmailLinkPreview_willMergeAccounts(ctx, field)
+			case "mergeSourceDisplayName":
+				return ec.fieldContext_EmailLinkPreview_mergeSourceDisplayName(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type EmailLinkPreview", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_previewLinkEmail_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_enabledOAuthProviders(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_enabledOAuthProviders,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().EnabledOAuthProviders(ctx)
+		},
+		nil,
+		ec.marshalNAuthProvider2ᚕgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAuthProviderᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_enabledOAuthProviders(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type AuthProvider does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_me(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -10193,6 +11408,12 @@ func (ec *executionContext) fieldContext_Query_me(_ context.Context, field graph
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -12020,6 +13241,12 @@ func (ec *executionContext) fieldContext_Room_host(_ context.Context, field grap
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -12067,6 +13294,12 @@ func (ec *executionContext) fieldContext_Room_members(_ context.Context, field g
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -12249,6 +13482,12 @@ func (ec *executionContext) fieldContext_RoomMessage_author(_ context.Context, f
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -12522,6 +13761,12 @@ func (ec *executionContext) fieldContext_Session_players(_ context.Context, fiel
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -14663,6 +15908,12 @@ func (ec *executionContext) fieldContext_Table_king(_ context.Context, field gra
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -15098,6 +16349,12 @@ func (ec *executionContext) fieldContext_TableSeat_user(_ context.Context, field
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -15290,6 +16547,12 @@ func (ec *executionContext) fieldContext_TableSeatSlot_user(_ context.Context, f
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "isAdmin":
 				return ec.fieldContext_User_isAdmin(ctx, field)
+			case "isGuest":
+				return ec.fieldContext_User_isGuest(ctx, field)
+			case "emails":
+				return ec.fieldContext_User_emails(ctx, field)
+			case "identities":
+				return ec.fieldContext_User_identities(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -15524,6 +16787,345 @@ func (ec *executionContext) fieldContext_User_isAdmin(_ context.Context, field g
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_isGuest(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_User_isGuest,
+		func(ctx context.Context) (any, error) {
+			return obj.IsGuest, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_User_isGuest(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_emails(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_User_emails,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.User().Emails(ctx, obj)
+		},
+		nil,
+		ec.marshalNUserEmail2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUserEmailᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_User_emails(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_UserEmail_id(ctx, field)
+			case "email":
+				return ec.fieldContext_UserEmail_email(ctx, field)
+			case "isPrimary":
+				return ec.fieldContext_UserEmail_isPrimary(ctx, field)
+			case "verifiedAt":
+				return ec.fieldContext_UserEmail_verifiedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UserEmail", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_identities(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_User_identities,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.User().Identities(ctx, obj)
+		},
+		nil,
+		ec.marshalNUserIdentity2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUserIdentityᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_User_identities(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_UserIdentity_id(ctx, field)
+			case "provider":
+				return ec.fieldContext_UserIdentity_provider(ctx, field)
+			case "email":
+				return ec.fieldContext_UserIdentity_email(ctx, field)
+			case "verifiedAt":
+				return ec.fieldContext_UserIdentity_verifiedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UserIdentity", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserEmail_id(ctx context.Context, field graphql.CollectedField, obj *model.UserEmail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserEmail_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserEmail_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserEmail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserEmail_email(ctx context.Context, field graphql.CollectedField, obj *model.UserEmail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserEmail_email,
+		func(ctx context.Context) (any, error) {
+			return obj.Email, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserEmail_email(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserEmail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserEmail_isPrimary(ctx context.Context, field graphql.CollectedField, obj *model.UserEmail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserEmail_isPrimary,
+		func(ctx context.Context) (any, error) {
+			return obj.IsPrimary, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserEmail_isPrimary(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserEmail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserEmail_verifiedAt(ctx context.Context, field graphql.CollectedField, obj *model.UserEmail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserEmail_verifiedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.VerifiedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserEmail_verifiedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserEmail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserIdentity_id(ctx context.Context, field graphql.CollectedField, obj *model.UserIdentity) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserIdentity_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserIdentity_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserIdentity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserIdentity_provider(ctx context.Context, field graphql.CollectedField, obj *model.UserIdentity) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserIdentity_provider,
+		func(ctx context.Context) (any, error) {
+			return obj.Provider, nil
+		},
+		nil,
+		ec.marshalNAuthProvider2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAuthProvider,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserIdentity_provider(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserIdentity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type AuthProvider does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserIdentity_email(ctx context.Context, field graphql.CollectedField, obj *model.UserIdentity) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserIdentity_email,
+		func(ctx context.Context) (any, error) {
+			return obj.Email, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserIdentity_email(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserIdentity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserIdentity_verifiedAt(ctx context.Context, field graphql.CollectedField, obj *model.UserIdentity) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserIdentity_verifiedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.VerifiedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserIdentity_verifiedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserIdentity",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
 		},
 	}
 	return fc, nil
@@ -17244,6 +18846,60 @@ func (ec *executionContext) unmarshalInputUpdateMyGameMetadataInput(ctx context.
 
 // region    **************************** object.gotpl ****************************
 
+var accountImplementors = []string{"Account"}
+
+func (ec *executionContext) _Account(ctx context.Context, sel ast.SelectionSet, obj *model.Account) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, accountImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Account")
+		case "user":
+			out.Values[i] = ec._Account_user(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "emails":
+			out.Values[i] = ec._Account_emails(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "identities":
+			out.Values[i] = ec._Account_identities(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "signInMethodCount":
+			out.Values[i] = ec._Account_signInMethodCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var activeIntentImplementors = []string{"ActiveIntent"}
 
 func (ec *executionContext) _ActiveIntent(ctx context.Context, sel ast.SelectionSet, obj *model.ActiveIntent) graphql.Marshaler {
@@ -17522,6 +19178,52 @@ func (ec *executionContext) _DigitalGood(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = ec._DigitalGood_description(ctx, field, obj)
 		case "game":
 			out.Values[i] = ec._DigitalGood_game(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var emailLinkPreviewImplementors = []string{"EmailLinkPreview"}
+
+func (ec *executionContext) _EmailLinkPreview(ctx context.Context, sel ast.SelectionSet, obj *model.EmailLinkPreview) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, emailLinkPreviewImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("EmailLinkPreview")
+		case "email":
+			out.Values[i] = ec._EmailLinkPreview_email(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "willMergeAccounts":
+			out.Values[i] = ec._EmailLinkPreview_willMergeAccounts(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "mergeSourceDisplayName":
+			out.Values[i] = ec._EmailLinkPreview_mergeSourceDisplayName(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -18328,6 +20030,55 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "createGuestSession":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createGuestSession(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requestLinkEmail":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_requestLinkEmail(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "completeLinkEmailWithCode":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_completeLinkEmailWithCode(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "completeLinkEmailWithLink":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_completeLinkEmailWithLink(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "removeLinkedEmail":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_removeLinkedEmail(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "setPrimaryEmail":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setPrimaryEmail(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "removeLinkedIdentity":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_removeLinkedIdentity(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "requestSignIn":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_requestSignIn(ctx, field)
@@ -19052,6 +20803,69 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_player(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "myAccount":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_myAccount(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "previewLinkEmail":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_previewLinkEmail(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "enabledOAuthProviders":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_enabledOAuthProviders(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -21362,6 +23176,188 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "isGuest":
+			out.Values[i] = ec._User_isGuest(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "emails":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_emails(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "identities":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_identities(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var userEmailImplementors = []string{"UserEmail"}
+
+func (ec *executionContext) _UserEmail(ctx context.Context, sel ast.SelectionSet, obj *model.UserEmail) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userEmailImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UserEmail")
+		case "id":
+			out.Values[i] = ec._UserEmail_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "email":
+			out.Values[i] = ec._UserEmail_email(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "isPrimary":
+			out.Values[i] = ec._UserEmail_isPrimary(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "verifiedAt":
+			out.Values[i] = ec._UserEmail_verifiedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var userIdentityImplementors = []string{"UserIdentity"}
+
+func (ec *executionContext) _UserIdentity(ctx context.Context, sel ast.SelectionSet, obj *model.UserIdentity) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userIdentityImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UserIdentity")
+		case "id":
+			out.Values[i] = ec._UserIdentity_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "provider":
+			out.Values[i] = ec._UserIdentity_provider(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "email":
+			out.Values[i] = ec._UserIdentity_email(ctx, field, obj)
+		case "verifiedAt":
+			out.Values[i] = ec._UserIdentity_verifiedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -21720,6 +23716,75 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
+func (ec *executionContext) unmarshalNAuthProvider2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAuthProvider(ctx context.Context, v any) (model.AuthProvider, error) {
+	var res model.AuthProvider
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNAuthProvider2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAuthProvider(ctx context.Context, sel ast.SelectionSet, v model.AuthProvider) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNAuthProvider2ᚕgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAuthProviderᚄ(ctx context.Context, v any) ([]model.AuthProvider, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]model.AuthProvider, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNAuthProvider2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAuthProvider(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNAuthProvider2ᚕgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAuthProviderᚄ(ctx context.Context, sel ast.SelectionSet, v []model.AuthProvider) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNAuthProvider2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAuthProvider(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v any) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -21910,6 +23975,20 @@ func (ec *executionContext) marshalNDigitalGood2ᚖgithubᚗcomᚋscruffyprodigy
 		return graphql.Null
 	}
 	return ec._DigitalGood(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNEmailLinkPreview2githubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐEmailLinkPreview(ctx context.Context, sel ast.SelectionSet, v model.EmailLinkPreview) graphql.Marshaler {
+	return ec._EmailLinkPreview(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNEmailLinkPreview2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐEmailLinkPreview(ctx context.Context, sel ast.SelectionSet, v *model.EmailLinkPreview) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._EmailLinkPreview(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNEntitlement2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐEntitlementᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Entitlement) graphql.Marshaler {
@@ -23255,6 +25334,114 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋscruffyprodigyᚋplay
 	return ec._User(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNUserEmail2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUserEmailᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.UserEmail) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNUserEmail2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUserEmail(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNUserEmail2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUserEmail(ctx context.Context, sel ast.SelectionSet, v *model.UserEmail) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._UserEmail(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNUserIdentity2ᚕᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUserIdentityᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.UserIdentity) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNUserIdentity2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUserIdentity(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNUserIdentity2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐUserIdentity(ctx context.Context, sel ast.SelectionSet, v *model.UserIdentity) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._UserIdentity(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
 	return ec.___Directive(ctx, sel, &v)
 }
@@ -23506,6 +25693,13 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalOAccount2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐAccount(ctx context.Context, sel ast.SelectionSet, v *model.Account) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Account(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOActiveIntent2ᚖgithubᚗcomᚋscruffyprodigyᚋplayhubᚋgraphᚋmodelᚐActiveIntent(ctx context.Context, sel ast.SelectionSet, v *model.ActiveIntent) graphql.Marshaler {

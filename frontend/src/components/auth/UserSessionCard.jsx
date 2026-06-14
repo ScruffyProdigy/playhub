@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { logout } from '../../lib/auth'
 import { needsProfileSetup } from '../../lib/avatars'
 import { fetchSpiritAnimalJourneyEligibility, formatSpiritAnimalJourneyCooldown } from '../../lib/spiritAnimal'
+import { ACCOUNT_LINK_LABEL, GUEST_BADGE, GUEST_SPIRIT_ANIMAL_HINT } from '../../lib/playerCopy'
 import { useAuth } from './AuthProvider'
 import PlayerProfileEditor from '../avatars/PlayerProfileEditor'
 import SpiritAnimalFlow from '../avatars/SpiritAnimalFlow'
@@ -15,6 +16,7 @@ export default function UserSessionCard({ user, compact = false, showProfileActi
   const [editorOpen, setEditorOpen] = useState(setupRequired)
   const [spiritFlowOpen, setSpiritFlowOpen] = useState(false)
   const [journeyEligibility, setJourneyEligibility] = useState(null)
+  const [guestSpiritHint, setGuestSpiritHint] = useState(false)
 
   useEffect(() => {
     if (!showProfileActions) {
@@ -70,6 +72,9 @@ export default function UserSessionCard({ user, compact = false, showProfileActi
 
   function handleSpiritComplete(updated) {
     handleSaved(updated)
+    if (updated?.isGuest) {
+      setGuestSpiritHint(true)
+    }
     void fetchSpiritAnimalJourneyEligibility().then(setJourneyEligibility).catch(() => {})
   }
 
@@ -82,7 +87,8 @@ export default function UserSessionCard({ user, compact = false, showProfileActi
         <PlayerAvatar user={user} size="md" />
         <div>
           <h2 id="welcome-heading">{setupRequired ? 'Set up your display' : 'Welcome back'}</h2>
-          <p className="user-email">{user.email}</p>
+          {user.isGuest ? <p className="user-guest-badge">{GUEST_BADGE}</p> : null}
+          {user.email ? <p className="user-email">{user.email}</p> : null}
           {!setupRequired && user.displayName ? <p className="user-name">{user.displayName}</p> : null}
         </div>
       </div>
@@ -105,6 +111,9 @@ export default function UserSessionCard({ user, compact = false, showProfileActi
         />
       ) : showProfileActions ? (
         <>
+          <a className="game-list-button game-list-button-secondary" href="/account">
+            {ACCOUNT_LINK_LABEL}
+          </a>
           <button
             type="button"
             className="game-list-button game-list-button-secondary"
@@ -129,6 +138,15 @@ export default function UserSessionCard({ user, compact = false, showProfileActi
             </p>
           )}
         </>
+      ) : null}
+
+      {guestSpiritHint ? (
+        <p className="account-page__guest-note">
+          {GUEST_SPIRIT_ANIMAL_HINT}{' '}
+          <a className="auth-link" href="/account">
+            {ACCOUNT_LINK_LABEL}
+          </a>
+        </p>
       ) : null}
 
       <button type="button" onClick={handleLogout} disabled={status === 'loading'}>

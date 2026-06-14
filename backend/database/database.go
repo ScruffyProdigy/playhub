@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/scruffyprodigy/playhub/internal/migrate"
 	_ "github.com/lib/pq"
@@ -29,6 +30,11 @@ func Init() error {
 	if err := DB.Ping(); err != nil {
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
+
+	DB.SetMaxOpenConns(25)
+	DB.SetMaxIdleConns(5)
+	DB.SetConnMaxLifetime(5 * time.Minute)
+	DB.SetConnMaxIdleTime(30 * time.Second)
 
 	log.Println("Database connection established successfully")
 	return nil

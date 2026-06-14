@@ -2,6 +2,27 @@
 
 export const APP_TAGLINE = 'Find your group. Play together.'
 
+export const SIGN_IN_HEADING = 'Get in the game'
+export const JUMP_IN = 'Jump in'
+export const JUMP_IN_HINT = 'Play now, make your account later.'
+export const SIGN_IN_DIVIDER = 'Or'
+export const SIGN_IN_DIVIDER_LABEL = 'Or sign in with email or social'
+export const ACCOUNT_LINK_LABEL = 'Account settings'
+export const GUEST_BADGE = 'Guest'
+export const GUEST_SPIRIT_ANIMAL_HINT =
+  'Nice find. Link an email in Account settings if you want this avatar on your next visit.'
+export const GUEST_ACCOUNT_PROMPT =
+  'You’re playing as a guest. Add an email in Account settings to keep your progress across visits.'
+
+export function formatMergeWarning(sourceDisplayName, currentDisplayName) {
+  const source = sourceDisplayName?.trim() || 'another account'
+  const current = currentDisplayName?.trim() || 'your current account'
+  return `This email belongs to ${source}. Linking it will move that account’s progress into ${current} and deactivate the other account.`
+}
+
+export const MERGE_CONFIRM = 'Yes, merge accounts'
+export const MERGE_CANCEL = 'Cancel'
+
 export const LOOK_FOR_GROUP = 'Look for group'
 export const LOOKING_FOR_GROUP = 'Looking…'
 export const STOP_LOOKING = 'Stop looking'

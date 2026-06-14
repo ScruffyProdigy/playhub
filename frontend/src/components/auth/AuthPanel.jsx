@@ -1,4 +1,4 @@
-import LoginForm from './LoginForm'
+import SignInPanel from './SignInPanel'
 import UserSessionCard from './UserSessionCard'
 import { useAuth } from './AuthProvider'
 
@@ -30,7 +30,7 @@ export default function AuthPanel({ variant = 'default' }) {
           Try again
         </button>
       ) : (
-        <LoginForm />
+        <SignInPanel />
       )}
     </>
   )

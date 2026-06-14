@@ -33,14 +33,16 @@ func NormalizeDisplayName(raw string) (string, error) {
 
 func scanUser(row interface{ Scan(dest ...any) error }) (*User, error) {
 	var u User
+	var email sql.NullString
 	if err := row.Scan(
 		&u.ID,
-		&u.Email,
+		&email,
 		&u.Username,
 		&u.DisplayName,
 		&u.AvatarURL,
 		&u.AvatarKey,
 		&u.AvatarSource,
+		&u.IsGuest,
 		&u.CreatedAt,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -48,10 +50,13 @@ func scanUser(row interface{ Scan(dest ...any) error }) (*User, error) {
 		}
 		return nil, err
 	}
+	if email.Valid {
+		u.Email = email.String
+	}
 	return &u, nil
 }
 
-const userColumns = `id, email, username, display_name, avatar_url, avatar_key, avatar_source, created_at`
+const userColumns = `id, email, username, display_name, avatar_url, avatar_key, avatar_source, is_guest, created_at`
 
 // ProvisionalDisplayNameSuffix marks auto-generated display names until the user picks one.
 const ProvisionalDisplayNameSuffix = " (new)"
@@ -75,12 +80,12 @@ func (s *Store) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
 }
 
 func (s *Store) GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	row := s.db.QueryRowContext(ctx, `
-		SELECT `+userColumns+`
-		FROM users
-		WHERE email = $1 AND is_active = true
-	`, strings.ToLower(strings.TrimSpace(email)))
-	return scanUser(row)
+	normalized := strings.ToLower(strings.TrimSpace(email))
+	userID, err := s.ResolveUserIDByEmail(ctx, normalized)
+	if err != nil {
+		return nil, err
+	}
+	return s.GetUserByID(ctx, userID)
 }
 
 func (s *Store) CreateUser(ctx context.Context, params CreateUserParams) (*User, error) {
@@ -97,11 +102,18 @@ func (s *Store) CreateUser(ctx context.Context, params CreateUserParams) (*User,
 	}
 
 	row := s.db.QueryRowContext(ctx, `
-		INSERT INTO users (email, username, display_name)
-		VALUES ($1, $2, $3)
+		INSERT INTO users (email, username, display_name, is_guest)
+		VALUES ($1, $2, $3, false)
 		RETURNING `+userColumns+`
 	`, email, username, displayName)
-	return scanUser(row)
+	user, err := scanUser(row)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := s.AddVerifiedUserEmail(ctx, user.ID, email, true); err != nil && !errors.Is(err, ErrEmailAlreadyLinked) {
+		return nil, err
+	}
+	return s.GetUserByID(ctx, user.ID)
 }
 
 func (s *Store) UpdateUserLastLogin(ctx context.Context, id uuid.UUID) error {

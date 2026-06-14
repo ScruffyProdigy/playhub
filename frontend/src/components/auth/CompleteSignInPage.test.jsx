@@ -7,7 +7,7 @@ vi.mock('../../lib/auth', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    completeSignInWithLinkOnce: vi.fn(),
+    completeAuthLinkOnce: vi.fn(),
   }
 })
 
@@ -16,7 +16,7 @@ describe('CompleteSignInPage', () => {
   const replaceState = vi.fn()
 
   beforeEach(() => {
-    vi.mocked(auth.completeSignInWithLinkOnce).mockReset()
+    vi.mocked(auth.completeAuthLinkOnce).mockReset()
     assign.mockReset()
     replaceState.mockReset()
 
@@ -37,12 +37,12 @@ describe('CompleteSignInPage', () => {
 
     expect(await screen.findByText('Missing sign-in token. Request a new sign-in email.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to home' })).toBeInTheDocument()
-    expect(auth.completeSignInWithLinkOnce).not.toHaveBeenCalled()
+    expect(auth.completeAuthLinkOnce).not.toHaveBeenCalled()
   })
 
   it('shows an error when completing sign-in fails', async () => {
     window.location.search = '?token=expired-token'
-    vi.mocked(auth.completeSignInWithLinkOnce).mockRejectedValue(
+    vi.mocked(auth.completeAuthLinkOnce).mockRejectedValue(
       new Error('Invalid or expired sign-in link. Request a new sign-in email.'),
     )
 
@@ -55,7 +55,7 @@ describe('CompleteSignInPage', () => {
 
   it('redirects home after a successful sign-in', async () => {
     window.location.search = '?token=valid-token'
-    vi.mocked(auth.completeSignInWithLinkOnce).mockResolvedValue({
+    vi.mocked(auth.completeAuthLinkOnce).mockResolvedValue({
       id: 'user-1',
       email: 'player@example.com',
     })
@@ -63,7 +63,7 @@ describe('CompleteSignInPage', () => {
     render(<CompleteSignInPage />)
 
     await waitFor(() => {
-      expect(auth.completeSignInWithLinkOnce).toHaveBeenCalledWith('valid-token')
+      expect(auth.completeAuthLinkOnce).toHaveBeenCalledWith('valid-token')
       expect(replaceState).toHaveBeenCalledWith({}, '', '/')
       expect(assign).toHaveBeenCalledWith('/')
     })

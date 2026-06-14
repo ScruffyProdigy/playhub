@@ -1,0 +1,55 @@
+extend type User {
+  isGuest: Boolean!
+  emails: [UserEmail!]!
+  identities: [UserIdentity!]!
+}
+
+type UserEmail {
+  id: ID!
+  email: String!
+  isPrimary: Boolean!
+  verifiedAt: Time!
+}
+
+enum AuthProvider {
+  GOOGLE
+  DISCORD
+  APPLE
+  FACEBOOK
+}
+
+type UserIdentity {
+  id: ID!
+  provider: AuthProvider!
+  email: String
+  verifiedAt: Time!
+}
+
+type Account {
+  user: User!
+  emails: [UserEmail!]!
+  identities: [UserIdentity!]!
+  signInMethodCount: Int!
+}
+
+type EmailLinkPreview {
+  email: String!
+  willMergeAccounts: Boolean!
+  mergeSourceDisplayName: String
+}
+
+extend type Query {
+  myAccount: Account
+  previewLinkEmail(email: String!): EmailLinkPreview!
+  enabledOAuthProviders: [AuthProvider!]!
+}
+
+extend type Mutation {
+  createGuestSession: User!
+  requestLinkEmail(email: String!): Boolean!
+  completeLinkEmailWithCode(email: String!, code: String!, confirmMerge: Boolean = false): User!
+  completeLinkEmailWithLink(token: ID!, confirmMerge: Boolean = false): User!
+  removeLinkedEmail(emailId: ID!): User!
+  setPrimaryEmail(emailId: ID!): User!
+  removeLinkedIdentity(identityId: ID!): User!
+}

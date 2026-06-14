@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import LoginForm from '../auth/LoginForm'
+import SignInPanel from '../auth/SignInPanel'
 import { useAuth } from '../auth/AuthProvider'
 import { useActiveRoom } from './ActiveRoomProvider'
 import { sendRoomMessage } from '../../lib/rooms'
@@ -177,7 +177,7 @@ export default function RoomPanel({ compact = false }) {
       <div className="room-panel room-panel--guest">
         <h2 className="room-panel__title">Join room</h2>
         <p className="panel-copy">Sign in to enter the chat.</p>
-        <LoginForm />
+        <SignInPanel />
       </div>
     )
   }

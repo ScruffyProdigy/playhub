@@ -29,7 +29,7 @@ describe('AuthPanel', () => {
     renderAuthPanel()
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Get in the game' })).toBeInTheDocument()
     })
   })
 

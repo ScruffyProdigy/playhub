@@ -45,6 +45,10 @@ models:
     fields:
       isAdmin:
         resolver: true
+      emails:
+        resolver: true
+      identities:
+        resolver: true
   Room:
     fields:
       host:

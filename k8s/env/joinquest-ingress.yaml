@@ -50,6 +50,20 @@ spec:
                 name: lobby-backend
                 port:
                   number: 80
+          - path: /auth/oauth/complete
+            pathType: Exact
+            backend:
+              service:
+                name: lobby-frontend
+                port:
+                  number: 80
+          - path: /auth/oauth
+            pathType: Prefix
+            backend:
+              service:
+                name: lobby-backend
+                port:
+                  number: 80
           - path: /
             pathType: Prefix
             backend:

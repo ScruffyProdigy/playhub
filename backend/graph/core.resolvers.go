@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/scruffyprodigy/playhub/graph/generated"
 	"github.com/scruffyprodigy/playhub/graph/model"
+	"github.com/scruffyprodigy/playhub/internal/auth"
 	"github.com/scruffyprodigy/playhub/internal/pubsub"
 	"github.com/scruffyprodigy/playhub/internal/store"
 )
@@ -308,15 +309,26 @@ func (r *queryResolver) Goods(ctx context.Context, gameID *string) ([]*model.Dig
 
 // MyInventory is the resolver for the myInventory field.
 func (r *queryResolver) MyInventory(ctx context.Context, gameID *string) ([]*model.Entitlement, error) {
+	authService, err := r.requireAuth()
+	if err != nil {
+		return nil, err
+	}
 	st, err := r.requireStore()
 	if err != nil {
 		return nil, err
 	}
 
-	userID, err := requireAuthUserID(ctx)
+	user, err := authService.GetAuthenticatedUser(ctx)
 	if err != nil {
 		return nil, err
 	}
+	if user == nil {
+		return nil, fmt.Errorf("authentication required")
+	}
+	if user.IsGuest {
+		return nil, auth.ErrGuestAccountNotAllowed
+	}
+	userID := user.ID
 
 	var filterGameID *uuid.UUID
 	if gameID != nil {

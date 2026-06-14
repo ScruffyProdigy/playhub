@@ -13,6 +13,10 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
+      '/auth/oauth': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
   test: {

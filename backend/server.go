@@ -89,6 +89,7 @@ func main() {
 
 	mux.Handle("/.well-known/jwks.json", signer.JWKSHandler())
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
+	auth.RegisterOAuthRoutes(mux, authService, signer, dataStore)
 
 	handler := auth.CORSMiddleware(mux)
 

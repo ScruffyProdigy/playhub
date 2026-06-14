@@ -34,6 +34,8 @@ type Service struct {
 	store            *store.Store
 	signer           *Signer
 	mailer           email.Sender
+	oauthStateStore  OAuthStateStore
+	oauthCodeStore   OAuthCodeStore
 	cookie           CookieConfig
 	magicLinkTTL     time.Duration
 	sessionTTL       time.Duration
@@ -73,10 +75,22 @@ func NewServiceWithMailer(st *store.Store, signer *Signer, mailer email.Sender) 
 }
 
 func newService(st *store.Store, signer *Signer, mailer email.Sender) *Service {
+	oauthStateStore, err := NewOAuthStateStoreFromEnv()
+	if err != nil {
+		log.Printf("auth: oauth state store unavailable, using in-memory fallback: %v", err)
+		oauthStateStore = newMemoryOAuthStateStore()
+	}
+	oauthCodeStore, err := NewOAuthCodeStoreFromEnv()
+	if err != nil {
+		log.Printf("auth: oauth code store unavailable, using in-memory fallback: %v", err)
+		oauthCodeStore = newMemoryOAuthCodeStore()
+	}
 	return &Service{
 		store:            st,
 		signer:           signer,
 		mailer:           mailer,
+		oauthStateStore:  oauthStateStore,
+		oauthCodeStore:   oauthCodeStore,
 		cookie:           CookieConfigFromEnv(),
 		magicLinkTTL:     durationFromEnv("MAGIC_LINK_TTL", 15*time.Minute),
 		sessionTTL:       durationFromEnv("SESSION_TTL", 7*24*time.Hour),
@@ -188,6 +202,10 @@ func (s *Service) CompleteLoginCode(ctx context.Context, emailAddr, code string)
 }
 
 func (s *Service) finishLogin(ctx context.Context, link *store.MagicLink) (*store.User, string, error) {
+	if link.UserID != nil {
+		return nil, "", ErrInvalidMagicLink
+	}
+
 	user, err := s.findOrCreateUser(ctx, link.Email)
 	if err != nil {
 		return nil, "", err
@@ -265,6 +283,47 @@ func (s *Service) deliverLoginEmail(ctx context.Context, recipient, token, code 
 	}
 	log.Printf("auth: sent sign-in email to %s", recipient)
 	return nil
+}
+
+func (s *Service) deliverLinkEmail(ctx context.Context, recipient, token, code string) error {
+	link := s.linkEmailURL(token)
+	if link == "" {
+		return fmt.Errorf("%w: MAGIC_LINK_BASE_URL is not configured", ErrSignInEmailNotSent)
+	}
+	if err := s.mailer.SendMagicLink(ctx, email.MagicLinkEmail{
+		To:   recipient,
+		Link: link,
+		Code: code,
+		TTL:  s.magicLinkTTL,
+	}); err != nil {
+		log.Printf("auth: failed to send link email to %s: %v", recipient, err)
+		return fmt.Errorf("%w: %v", ErrSignInEmailNotSent, err)
+	}
+	log.Printf("auth: sent link verification email to %s", recipient)
+	return nil
+}
+
+func (s *Service) linkEmailURL(token string) string {
+	base := strings.Replace(s.magicLinkBaseURL, "/auth/complete", "/auth/link", 1)
+	if base == s.magicLinkBaseURL {
+		if strings.Contains(s.magicLinkBaseURL, "{token}") {
+			return strings.ReplaceAll(s.magicLinkBaseURL, "/auth/complete", "/auth/link")
+		}
+		if strings.Contains(base, "?") {
+			return strings.Replace(base, "/auth/complete", "/auth/link", 1) + token
+		}
+		return strings.TrimRight(strings.Replace(s.magicLinkBaseURL, "/auth/complete", "/auth/link", 1), "/") + "?token=" + token
+	}
+	if strings.Contains(base, "{token}") {
+		return strings.ReplaceAll(base, "{token}", token)
+	}
+	if strings.Contains(base, "%s") {
+		return fmt.Sprintf(base, token)
+	}
+	if strings.Contains(base, "?") {
+		return base + token
+	}
+	return strings.TrimRight(base, "/") + "?token=" + token
 }
 
 func (s *Service) magicLinkURL(token string) string {

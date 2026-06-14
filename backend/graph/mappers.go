@@ -2,6 +2,7 @@ package graph
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/scruffyprodigy/playhub/graph/model"
 	"github.com/scruffyprodigy/playhub/internal/integrationchecks"
@@ -14,16 +15,21 @@ func ToGraphQLUser(user *store.User) *model.User {
 	if user == nil {
 		return nil
 	}
-	email := user.Email
+	var emailPtr *string
+	if strings.TrimSpace(user.Email) != "" {
+		email := user.Email
+		emailPtr = &email
+	}
 	displayName := user.DisplayName
 	return &model.User{
 		ID:           user.ID.String(),
-		Email:        &email,
+		Email:        emailPtr,
 		DisplayName:  &displayName,
 		AvatarURL:    userAvatarURL(user),
 		AvatarKey:    user.AvatarKey,
 		AvatarSource: toGraphQLAvatarSource(user.AvatarSource),
 		CreatedAt:    user.CreatedAt,
+		IsGuest:      user.IsGuest,
 	}
 }
 

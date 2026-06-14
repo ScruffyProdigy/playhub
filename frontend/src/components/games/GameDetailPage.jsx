@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import LoginForm from '../auth/LoginForm'
+import SignInPanel from '../auth/SignInPanel'
 import { useAuth } from '../auth/AuthProvider'
 import { navigateBackToCatalog } from '../../lib/catalogNavigation'
 import { gameDetailDescription, gameHeroUrl, gameTagChips } from '../../lib/gameCard'
@@ -59,7 +59,7 @@ function GameDetailPlaySection({
     <section className="game-detail__play game-detail__sign-in">
       <h2 className="game-detail__section-title">Ready to play?</h2>
       <p className="panel-copy">Sign in to look for a group or create a private table.</p>
-      <LoginForm />
+      <SignInPanel />
     </section>
   )
 }

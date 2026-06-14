@@ -74,7 +74,17 @@ function createFetchMock(handlers) {
     const query = body.query ?? ''
     let data = {}
 
-    if (query.includes('requestSignIn')) {
+    if (query.includes('createGuestSession')) {
+      data = {
+        createGuestSession: handlers.me ?? {
+          id: 'guest-1',
+          email: null,
+          displayName: 'guest#123456',
+          isGuest: true,
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+      }
+    } else if (query.includes('requestSignIn')) {
       data = { requestSignIn: true }
     } else if (query.includes('completeSignInWithCode')) {
       data = { completeSignInWithCode: handlers.me ?? null }
@@ -163,6 +173,7 @@ export function mockAuthenticatedSession(
     avatarKey: 'compass',
     avatarUrl: '/avatars/compass.png',
     avatarSource: 'STARTER',
+    isGuest: false,
     createdAt: '2026-01-01T00:00:00Z',
   },
 ) {

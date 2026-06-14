@@ -23,3 +23,11 @@ func (s *Store) Ping(ctx context.Context) error {
 	}
 	return s.db.PingContext(ctx)
 }
+
+// DBStats returns connection pool statistics.
+func (s *Store) DBStats() sql.DBStats {
+	if s == nil || s.db == nil {
+		return sql.DBStats{}
+	}
+	return s.db.Stats()
+}

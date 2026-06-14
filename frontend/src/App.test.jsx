@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import App from './App'
+import { SIGN_IN_HEADING } from './lib/playerCopy'
 import { mockAuthenticatedSession, mockUnauthenticatedSession } from './test/setup'
 
 describe('App Component', () => {
@@ -16,7 +17,7 @@ describe('App Component', () => {
     expect(screen.getByText('Find your group. Play together.')).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: SIGN_IN_HEADING })).toBeInTheDocument()
     })
     expect(screen.queryByRole('heading', { name: 'Room' })).not.toBeInTheDocument()
   })
@@ -59,5 +60,25 @@ describe('App Component', () => {
     render(<App />)
 
     expect(await screen.findByText('Signing you in')).toBeInTheDocument()
+  })
+
+  it('renders the OAuth error page on /auth/oauth/complete', async () => {
+    window.history.replaceState({}, '', '/auth/oauth/complete?error=provider_error')
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...window.location,
+        assign: vi.fn(),
+        pathname: '/auth/oauth/complete',
+        search: '?error=provider_error',
+      },
+    })
+
+    mockUnauthenticatedSession()
+
+    render(<App />)
+
+    expect(await screen.findByText(/Could not sign in with that provider/i)).toBeInTheDocument()
+    expect(screen.queryByText('Signing you in')).not.toBeInTheDocument()
   })
 })

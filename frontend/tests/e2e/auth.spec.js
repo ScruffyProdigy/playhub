@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { SIGN_IN_HEADING } from '../../src/lib/playerCopy.js'
 import { setUserDisplayName, signInWithEmailCode, signInWithEmailLink } from './helpers/auth.js'
 
 test.describe('Auth flow', () => {
@@ -6,7 +7,7 @@ test.describe('Auth flow', () => {
     const email = `e2e-${Date.now()}@example.com`
 
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: SIGN_IN_HEADING })).toBeVisible()
 
     await signInWithEmailLink(page, email)
 
@@ -14,7 +15,7 @@ test.describe('Auth flow', () => {
     await expect(page.getByText(`${email.split('@')[0]} (new)`)).toBeVisible()
 
     await page.getByRole('button', { name: 'Log out' }).click()
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: SIGN_IN_HEADING })).toBeVisible()
     await expect(page.getByText(email)).not.toBeVisible()
   })
 
@@ -38,7 +39,7 @@ test.describe('Auth flow', () => {
     setUserDisplayName(email, customDisplayName)
 
     await page.getByRole('button', { name: 'Log out' }).click()
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: SIGN_IN_HEADING })).toBeVisible()
 
     await signInWithEmailLink(page, email)
 

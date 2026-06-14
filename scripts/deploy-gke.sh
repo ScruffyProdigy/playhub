@@ -47,7 +47,7 @@ ensure_game_secret() {
 if [ -d "$WORDHUNT" ]; then
   ensure_game_secret "$WORDHUNT" "rps-game"
   if [ "$BUILD_PUSH" = "true" ]; then
-    echo "Building and pushing Word Hunt images (tag: wordhunt)..."
+    echo "Building and pushing Word Hunt images (word-hunt-api:wordhunt, word-hunt-client:wordhunt)..."
     TAG=wordhunt "$WORDHUNT/scripts/build-and-push.sh" --push
   fi
   echo "Deploying Word Hunt (namespace rps-game, host word-hunt-arena.win)..."
@@ -59,7 +59,7 @@ fi
 if [ -d "$DEMO_GAME_RPS" ]; then
   ensure_game_secret "$DEMO_GAME_RPS" "rpsls-duel"
   if [ "$BUILD_PUSH" = "true" ]; then
-    echo "Building and pushing RPSLS images (tag: rpsls)..."
+    echo "Building and pushing RPSLS images (rps-game-api:rpsls, rps-game-client:rpsls)..."
     TAG=rpsls "$DEMO_GAME_RPS/scripts/build-and-push.sh" --push
   fi
   echo "Deploying RPSLS (namespace rpsls-duel, host rpsls-duel.win)..."
@@ -67,6 +67,13 @@ if [ -d "$DEMO_GAME_RPS" ]; then
 else
   echo "demo-game-rps not found at $DEMO_GAME_RPS — skipping" >&2
 fi
+
+echo ""
+echo "=== Verifying game identity on public hosts ==="
+"$ROOT/scripts/verify-game-deployments.sh" || {
+  echo "WARNING: game verification failed — check IMAGE_TAG and registry repos above." >&2
+  exit 1
+}
 
 echo ""
 echo "=== Done ==="

@@ -33,26 +33,42 @@ func (s *Store) ListSessionsNeedingProvision(ctx context.Context) ([]Unprovision
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var out []UnprovisionedSession
+	type pendingSession struct {
+		sessionID   uuid.UUID
+		gameID      uuid.UUID
+		modeQueueID uuid.UUID
+	}
+	var pending []pendingSession
 	for rows.Next() {
-		var sessionID, gameID, modeQueueID uuid.UUID
-		if err := rows.Scan(&sessionID, &gameID, &modeQueueID); err != nil {
+		var item pendingSession
+		if err := rows.Scan(&item.sessionID, &item.gameID, &item.modeQueueID); err != nil {
+			_ = rows.Close()
 			return nil, err
 		}
-		notifyIDs, err := s.listMatchedQueueUserIDsForSession(ctx, sessionID, modeQueueID)
+		pending = append(pending, item)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	var out []UnprovisionedSession
+	for _, item := range pending {
+		notifyIDs, err := s.listMatchedQueueUserIDsForSession(ctx, item.sessionID, item.modeQueueID)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, UnprovisionedSession{
-			SessionID:     sessionID,
-			GameID:        gameID,
-			ModeQueueID:   modeQueueID,
+			SessionID:     item.sessionID,
+			GameID:        item.gameID,
+			ModeQueueID:   item.modeQueueID,
 			NotifyUserIDs: notifyIDs,
 		})
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 func (s *Store) listMatchedQueueUserIDsForSession(ctx context.Context, sessionID, modeQueueID uuid.UUID) ([]uuid.UUID, error) {

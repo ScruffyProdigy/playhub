@@ -47,10 +47,15 @@ func (r *gameResolver) IntegrationChecks(ctx context.Context, obj *model.Game) (
 
 // CreateDeveloperAPIKey is the resolver for the createDeveloperApiKey field.
 func (r *mutationResolver) CreateDeveloperAPIKey(ctx context.Context, name *string) (*model.CreateDeveloperAPIKeyPayload, error) {
-	userID, err := requireAuthUserID(ctx)
+	authService, err := r.requireAuth()
 	if err != nil {
 		return nil, err
 	}
+	user, err := authService.RequireNonGuestUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	userID := user.ID
 	st, err := r.requireStore()
 	if err != nil {
 		return nil, err
@@ -97,10 +102,15 @@ func (r *mutationResolver) RevokeDeveloperAPIKey(ctx context.Context, id string)
 
 // RegisterMyGame is the resolver for the registerMyGame field.
 func (r *mutationResolver) RegisterMyGame(ctx context.Context, input model.RegisterMyGameInput) (*model.RegisterMyGamePayload, error) {
-	userID, err := requireAuthUserID(ctx)
+	authService, err := r.requireAuth()
 	if err != nil {
 		return nil, err
 	}
+	user, err := authService.RequireNonGuestUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	userID := user.ID
 	st, err := r.requireStore()
 	if err != nil {
 		return nil, err

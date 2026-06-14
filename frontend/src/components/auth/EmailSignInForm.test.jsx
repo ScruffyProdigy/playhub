@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import LoginForm from './LoginForm'
+import EmailSignInForm from './EmailSignInForm'
 import { AuthProvider, useAuth } from './AuthProvider'
 import * as auth from '../../lib/auth'
 
@@ -25,16 +25,16 @@ function SessionHint() {
   return user ? <p>Signed in as {user.email}</p> : null
 }
 
-function renderLoginForm() {
+function renderEmailSignInForm() {
   return render(
     <AuthProvider>
-      <LoginForm />
+      <EmailSignInForm />
       <SessionHint />
     </AuthProvider>,
   )
 }
 
-describe('LoginForm', () => {
+describe('EmailSignInForm', () => {
   beforeEach(() => {
     vi.mocked(auth.requestSignIn).mockReset()
     vi.mocked(auth.requestSignIn).mockResolvedValue(true)
@@ -52,13 +52,13 @@ describe('LoginForm', () => {
         }),
     )
 
-    renderLoginForm()
+    renderEmailSignInForm()
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+      expect(screen.getByLabelText('Email')).toBeInTheDocument()
     })
 
     await userEvent.type(screen.getByLabelText('Email'), 'player@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with email' }))
 
     expect(screen.getByRole('heading', { name: 'Enter your code' })).toBeInTheDocument()
     expect(screen.getByText('Sending sign-in email…')).toBeInTheDocument()
@@ -71,13 +71,13 @@ describe('LoginForm', () => {
   })
 
   it('submits a sign-in email request and shows the code step', async () => {
-    renderLoginForm()
+    renderEmailSignInForm()
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+      expect(screen.getByLabelText('Email')).toBeInTheDocument()
     })
 
     await userEvent.type(screen.getByLabelText('Email'), 'player@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with email' }))
 
     await waitFor(() => {
       expect(auth.requestSignIn).toHaveBeenCalledWith('player@example.com')
@@ -90,16 +90,12 @@ describe('LoginForm', () => {
   it('shows an error when the sign-in email request fails', async () => {
     vi.mocked(auth.requestSignIn).mockRejectedValue(new Error('SMTP unavailable'))
 
-    renderLoginForm()
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
-    })
-
+    renderEmailSignInForm()
     await userEvent.type(screen.getByLabelText('Email'), 'player@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with email' }))
 
     expect(await screen.findByText('SMTP unavailable')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Email')).toBeInTheDocument()
   })
 
   it('submits a 6-digit code to complete sign-in', async () => {
@@ -112,13 +108,9 @@ describe('LoginForm', () => {
       email: 'player@example.com',
     })
 
-    renderLoginForm()
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
-    })
-
+    renderEmailSignInForm()
     await userEvent.type(screen.getByLabelText('Email'), 'player@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with email' }))
 
     const codeInput = await screen.findByLabelText('Sign-in code')
     expect(codeInput).not.toBeDisabled()
@@ -135,13 +127,9 @@ describe('LoginForm', () => {
       new Error('Invalid or expired code. Try again or use the sign-in link in your email.'),
     )
 
-    renderLoginForm()
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
-    })
-
+    renderEmailSignInForm()
     await userEvent.type(screen.getByLabelText('Email'), 'player@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with email' }))
 
     const codeInput = await screen.findByLabelText('Sign-in code')
     expect(codeInput).not.toBeDisabled()

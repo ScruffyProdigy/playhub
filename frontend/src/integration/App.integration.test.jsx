@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import App from '../App'
+import { SIGN_IN_HEADING } from '../lib/playerCopy'
 import { mockAuthenticatedSession, mockUnauthenticatedSession } from '../test/setup'
 
 describe('App Integration Tests', () => {
@@ -17,7 +18,7 @@ describe('App Integration Tests', () => {
       expect(screen.getByText('Find your group. Play together.')).toBeInTheDocument()
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: SIGN_IN_HEADING })).toBeInTheDocument()
       })
     })
 

@@ -69,6 +69,7 @@ func TestSchemaFilesExist(t *testing.T) {
 	schemaDir := filepath.Join(projectRoot, "backend/graph/schema")
 
 	expectedFiles := []string{
+		"account.graphqls",
 		"auth.graphqls",
 		"catalog.graphqls",
 		"core.graphqls",
@@ -111,6 +112,7 @@ func resolverGeneratedFiles(projectRoot string) []string {
 		filepath.Join(projectRoot, "backend/graph/model/models_gen.go"),
 		filepath.Join(projectRoot, "backend/graph/core.resolvers.go"),
 		filepath.Join(projectRoot, "backend/graph/auth.resolvers.go"),
+		filepath.Join(projectRoot, "backend/graph/account.resolvers.go"),
 		filepath.Join(projectRoot, "backend/graph/game.resolvers.go"),
 		filepath.Join(projectRoot, "backend/graph/catalog.resolvers.go"),
 		filepath.Join(projectRoot, "backend/graph/match.resolvers.go"),

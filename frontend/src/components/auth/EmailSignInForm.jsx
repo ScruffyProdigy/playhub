@@ -10,7 +10,7 @@ function normalizeCode(value) {
   return value.replace(/\D/g, '').slice(0, 6)
 }
 
-export default function LoginForm() {
+export default function EmailSignInForm() {
   const { refreshSession, acceptSessionUser, user } = useAuth()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
@@ -39,7 +39,6 @@ export default function LoginForm() {
   const emailSentMessage =
     'We sent a 6-digit code and sign-in link. Delivery can take a few minutes—check spam if nothing arrives.'
 
-  /** Show the code field in the same click turn as Continue so focus/autofill stay user-activated. */
   function showVerifyStepForEmailRequest() {
     flushSync(() => {
       setStep('verify')
@@ -58,7 +57,6 @@ export default function LoginForm() {
     focusCodeField()
   }
 
-  // Refocus after the sign-in email is sent so iOS can offer one-time-code autofill.
   useLayoutEffect(() => {
     if (onVerifyStep && status === 'idle') {
       focusCodeField()
@@ -155,8 +153,8 @@ export default function LoginForm() {
 
   if (onVerifyStep) {
     return (
-      <section className="panel-card" aria-labelledby="verify-heading">
-        <h2 id="verify-heading">Enter your code</h2>
+      <div className="auth-email-verify" aria-labelledby="verify-heading">
+        <h3 id="verify-heading">Enter your code</h3>
         <p className="panel-copy">
           Check <strong>{email}</strong> for a 6-digit code. Tap the field below to use autofill from Mail or Messages,
           or paste your code.
@@ -207,15 +205,12 @@ export default function LoginForm() {
         >
           Use a different email
         </button>
-      </section>
+      </div>
     )
   }
 
   return (
-    <section className="panel-card" aria-labelledby="login-heading">
-      <h2 id="login-heading">Sign in</h2>
-      <p className="panel-copy">Enter your email and we&apos;ll send a 6-digit code and sign-in link.</p>
-
+    <div className="auth-email-form">
       {message ? (
         <p className={status === 'error' ? 'status-message status-message-error' : 'status-message'} role="status">
           {message}
@@ -234,11 +229,12 @@ export default function LoginForm() {
           onChange={(event) => setEmail(event.target.value)}
           placeholder="you@example.com"
           disabled={status === 'loading'}
+          className="auth-email-input"
         />
         <button type="submit" disabled={emailContinueDisabled}>
-          {status === 'loading' ? 'Sending…' : 'Continue'}
+          {status === 'loading' ? 'Sending…' : 'Continue with email'}
         </button>
       </form>
-    </section>
+    </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { completeSignInWithLinkOnce } from '../../lib/auth'
+import { completeAuthLinkOnce } from '../../lib/auth'
 import { notifyAuthComplete } from '../../lib/authBroadcast'
 import { APP_NAME } from '../../lib/brand'
 
@@ -22,7 +22,7 @@ export default function CompleteSignInPage() {
 
     let cancelled = false
 
-    completeSignInWithLinkOnce(token)
+    completeAuthLinkOnce(token)
       .then(() => {
         if (cancelled) {
           return

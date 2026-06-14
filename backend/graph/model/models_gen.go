@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+type Account struct {
+	User              *User           `json:"user"`
+	Emails            []*UserEmail    `json:"emails"`
+	Identities        []*UserIdentity `json:"identities"`
+	SignInMethodCount int             `json:"signInMethodCount"`
+}
+
 type ActiveIntent struct {
 	QueueID         *string     `json:"queueId,omitempty"`
 	GameID          string      `json:"gameId"`
@@ -51,6 +58,12 @@ type DigitalGood struct {
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty"`
 	Game        *Game   `json:"game,omitempty"`
+}
+
+type EmailLinkPreview struct {
+	Email                  string  `json:"email"`
+	WillMergeAccounts      bool    `json:"willMergeAccounts"`
+	MergeSourceDisplayName *string `json:"mergeSourceDisplayName,omitempty"`
 }
 
 type Entitlement struct {
@@ -406,14 +419,90 @@ type UpdateMyGameMetadataInput struct {
 }
 
 type User struct {
-	ID           string        `json:"id"`
-	Email        *string       `json:"email,omitempty"`
-	DisplayName  *string       `json:"displayName,omitempty"`
-	AvatarURL    *string       `json:"avatarUrl,omitempty"`
-	AvatarKey    *string       `json:"avatarKey,omitempty"`
-	AvatarSource *AvatarSource `json:"avatarSource,omitempty"`
-	CreatedAt    time.Time     `json:"createdAt"`
-	IsAdmin      bool          `json:"isAdmin"`
+	ID           string          `json:"id"`
+	Email        *string         `json:"email,omitempty"`
+	DisplayName  *string         `json:"displayName,omitempty"`
+	AvatarURL    *string         `json:"avatarUrl,omitempty"`
+	AvatarKey    *string         `json:"avatarKey,omitempty"`
+	AvatarSource *AvatarSource   `json:"avatarSource,omitempty"`
+	CreatedAt    time.Time       `json:"createdAt"`
+	IsAdmin      bool            `json:"isAdmin"`
+	IsGuest      bool            `json:"isGuest"`
+	Emails       []*UserEmail    `json:"emails"`
+	Identities   []*UserIdentity `json:"identities"`
+}
+
+type UserEmail struct {
+	ID         string    `json:"id"`
+	Email      string    `json:"email"`
+	IsPrimary  bool      `json:"isPrimary"`
+	VerifiedAt time.Time `json:"verifiedAt"`
+}
+
+type UserIdentity struct {
+	ID         string       `json:"id"`
+	Provider   AuthProvider `json:"provider"`
+	Email      *string      `json:"email,omitempty"`
+	VerifiedAt time.Time    `json:"verifiedAt"`
+}
+
+type AuthProvider string
+
+const (
+	AuthProviderGoogle   AuthProvider = "GOOGLE"
+	AuthProviderDiscord  AuthProvider = "DISCORD"
+	AuthProviderApple    AuthProvider = "APPLE"
+	AuthProviderFacebook AuthProvider = "FACEBOOK"
+)
+
+var AllAuthProvider = []AuthProvider{
+	AuthProviderGoogle,
+	AuthProviderDiscord,
+	AuthProviderApple,
+	AuthProviderFacebook,
+}
+
+func (e AuthProvider) IsValid() bool {
+	switch e {
+	case AuthProviderGoogle, AuthProviderDiscord, AuthProviderApple, AuthProviderFacebook:
+		return true
+	}
+	return false
+}
+
+func (e AuthProvider) String() string {
+	return string(e)
+}
+
+func (e *AuthProvider) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AuthProvider(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AuthProvider", str)
+	}
+	return nil
+}
+
+func (e AuthProvider) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *AuthProvider) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e AuthProvider) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type AvatarSource string
