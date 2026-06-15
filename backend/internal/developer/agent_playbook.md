@@ -96,7 +96,7 @@ Read their description and identify gaps. You need enough to draft registration 
 
 **Claude Code:** `claude mcp add --scope project --transport stdio --env JOINQUEST_API_KEY=lq_dev_... joinquest-integration -- npx -y @joinquest/mcp-integration`
 
-Config paths: Cursor → `.cursor/mcp.json`; Claude Code → `.mcp.json`; Copilot → `.vscode/mcp.json`; Roo → `.roo/mcp.json`; Windsurf → `~/.codeium/windsurf/mcp_config.json`; Cline → Cline MCP settings. **ChatGPT:** not supported (needs hosted HTTPS MCP).
+Config paths: Cursor → `.cursor/mcp.json`; Claude Code → `.mcp.json`; Copilot → `.vscode/mcp.json`; Roo → `.roo/mcp.json`; Windsurf → `~/.codeium/windsurf/mcp_config.json`; Cline → Cline MCP settings. **ChatGPT:** not supported (needs hosted HTTPS MCP) — use [Register in the browser](https://joinquest.cc/developers?path=manual) instead.
 
 5. **Fully quit** the agent client and reopen (Cursor: **Cmd+Q**, not just Reload Window). Start a **new Agent chat**.
 

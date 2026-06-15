@@ -152,9 +152,9 @@ Production deploys also run `k8s/jobs/patch-game-handoff-urls.yaml` via `./scrip
 
 ### JoinQuest integration MCP (developer agents)
 
-The MCP server in `mcp/joinquest-integration/` exposes developer dashboard operations to Cursor and other agents via stdio. It calls the same GraphQL API as the portal (defaults to `https://joinquest.cc/graphql`).
+The MCP server in `mcp/joinquest-integration/` exposes developer dashboard operations to AI agents (Cursor, Claude, Copilot, Roo, Windsurf, Cline, etc.) via stdio. It calls the same GraphQL API as the portal (defaults to `https://joinquest.cc/graphql`).
 
-**Game developers:** dashboard wizard or [`.agents/skills/joinquest-integration/mcp-setup.md`](../.agents/skills/joinquest-integration/mcp-setup.md). MCP runs via `npx -y @joinquest/mcp-integration` (only `JOINQUEST_API_KEY` in env).
+**Game developers:** [developer dashboard](https://joinquest.cc/developers) wizard or [`.agents/skills/joinquest-integration/mcp-setup.md`](../.agents/skills/joinquest-integration/mcp-setup.md). MCP runs via `npx -y @joinquest/mcp-integration` (only `JOINQUEST_API_KEY` in env). ChatGPT: no MCP — register at `https://joinquest.cc/developers?path=manual`.
 
 **Lobby contributors** testing against `./scripts/dev.sh`:
 

@@ -37,6 +37,16 @@ claude mcp add --scope project --transport stdio \
 
 4. Fully quit and reopen your agent client. Test: ask the agent to call `joinquest_integration_list_my_games`.
 
+**Other clients** — GitHub Copilot, Roo Code, Windsurf, and Cline: use the matching tab on the [developer dashboard](https://joinquest.cc/developers) or from your game repo:
+
+```bash
+JOINQUEST_API_KEY=lq_dev_... curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-dev.sh | sh -s -- --copilot
+```
+
+Flags: `--copilot`, `--roo`, `--windsurf`, `--cline`. See [Client config paths](#client-config-paths) below.
+
+**ChatGPT** is not supported (requires hosted HTTPS MCP). Use [Register in the browser](https://joinquest.cc/developers?path=manual) instead.
+
 ### Why a separate Cursor bin?
 
 Cursor injects `ELECTRON_RUN_AS_NODE` into MCP child processes. Use the second npx arg `joinquest-integration-mcp-cursor` (wrapper that unsets it). Other clients use the default bin.

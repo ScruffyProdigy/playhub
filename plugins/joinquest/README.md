@@ -4,7 +4,7 @@ Agent skill + MCP for integrating multiplayer games with [JoinQuest](https://joi
 
 Works as a **Cursor plugin** (`.cursor-plugin/`, `mcp.json`) and a **Claude Code plugin** (`.claude-plugin/`, `.mcp.json`). Both share the same `skills/` directory.
 
-**Also supported** via `install-joinquest-dev.sh`: GitHub Copilot, Roo Code, Windsurf, and Cline. ChatGPT is not supported yet (requires hosted MCP).
+**Also supported** via `install-joinquest-dev.sh`: GitHub Copilot, Roo Code, Windsurf, and Cline. ChatGPT is not supported yet (requires hosted MCP) — use [Register in the browser](https://joinquest.cc/developers?path=manual).
 
 ## Install
 

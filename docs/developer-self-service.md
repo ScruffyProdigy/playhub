@@ -334,7 +334,7 @@ MCP calls backend GraphQL — **one implementation**, two clients (UI + MCP).
 
 **Agent playbook (markdown):** [developer-agent-playbook.md](./developer-agent-playbook.md) — also served via GraphQL `developerAgentPlaybook` and MCP.
 
-**Cursor/Claude setup:** Copy the config from your welcome page or [`mcp/joinquest-integration/cursor-mcp.example.json`](../../mcp/joinquest-integration/cursor-mcp.example.json).
+**Cursor/Claude setup:** [Developer dashboard](https://joinquest.cc/developers) → **Connect an AI assistant** (per-editor tabs). **Plugins:** Cursor / Claude Code via `install-joinquest-cursor-plugin.sh` and `install-joinquest-claude-plugin.sh`. **Other editors:** `install-joinquest-dev.sh --copilot` / `--roo` / `--windsurf` / `--cline` from your game repo. **ChatGPT:** no MCP — [register in the browser](https://joinquest.cc/developers?path=manual). Reference: [`mcp/joinquest-integration/README.md`](../../mcp/joinquest-integration/README.md) and [`.agents/skills/joinquest-integration/mcp-setup.md`](../../.agents/skills/joinquest-integration/mcp-setup.md).
 
 ---
 

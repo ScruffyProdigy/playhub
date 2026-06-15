@@ -181,8 +181,8 @@ jobs:
     - name: Test deployment scripts
       run: |
         # Test that deployment scripts are executable and valid
-        chmod +x scripts/deploy-*.sh
-        for script in scripts/deploy-*.sh; do
+        chmod +x scripts/deploy-*.sh scripts/install-joinquest-*.sh scripts/lib/joinquest-*.sh
+        for script in scripts/deploy-*.sh scripts/install-joinquest-*.sh scripts/lib/joinquest-*.sh; do
           echo "Validating $script"
           bash -n "$script" || (echo "Syntax error in $script" && exit 1)
         done

@@ -9,7 +9,7 @@ Track simplifying JoinQuest integration for game developers using Cursor, Claude
 | **Cursor** | Dashboard → copy config → Cmd+Q → Agent chat → verify MCP → “I want to create a game on JoinQuest” |
 | **Claude Code** | Dashboard → copy `claude mcp add …` → new session → approve MCP → same prompt |
 | **Copilot / Roo / Windsurf / Cline** | Dashboard → copy `install-joinquest-dev.sh --<platform>` from game repo |
-| **ChatGPT** | Not supported — needs hosted HTTPS MCP (see dashboard explanation) |
+| **ChatGPT** | Not supported for MCP — use [Register in the browser](https://joinquest.cc/developers?path=manual) in ChatGPT’s browser |
 | **Everyone** | Agent skill installed in game repo (`.agents/skills/` + platform rules) |
 
 Production only for game devs: `JOINQUEST_API_KEY` in MCP env (no URL). Lobby contributors: see [development.md](./development.md) for local override.
@@ -22,26 +22,26 @@ Production only for game devs: `JOINQUEST_API_KEY` in MCP env (no URL). Lobby co
 |---|------|--------|-------|
 | 1 | **Publish `@joinquest/mcp-integration` to npm** | Republish 0.1.1 | 0.1.0 missing default bin; Cursor wrapper path fix in 0.1.1 |
 | 2 | **Dashboard copy-ready commands** | Done | One-click Copy Cursor JSON + Copy Claude command after key gen |
-| 3 | **Unified setup script** (skill + MCP hints) | Done | `install-joinquest-dev.sh` — skill + `--cursor` / `--claude` / `--all` |
-| 10 | **Skill install automation** | Done | Bundled in `install-joinquest-dev.sh` |
-| 4 | **Deploy doc/wizard/MCP fixes to joinquest.cc** | Done | Deployed commit 816bb8f to joinquest.cc |
+| 3 | **Unified setup script** (skill + MCP hints) | Done | `install-joinquest-dev.sh` — all platform flags |
+| 4 | **Skill install automation** | Done | Bundled in `install-joinquest-dev.sh` |
+| 5 | **Deploy doc/wizard/MCP fixes to joinquest.cc** | Done | Live on joinquest.cc (multi-platform wizard + ChatGPT manual path) |
 
 ## Tier 2 — Remove secrets & friction
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 5 | **`joinquest login` / device auth for MCP** | Pending | No API key in `.cursor/mcp.json` |
-| 6 | **Single `setup.sh --cursor \| --claude`** | Pending | One URL in docs and dashboard |
-| 7 | **Cursor MCP reliability** | Ongoing | `joinquest-integration-mcp-cursor` wrapper; consider HTTP MCP later |
+| 6 | **`joinquest login` / device auth for MCP** | Pending | No API key in `.cursor/mcp.json` |
+| 7 | **One curl URL for all platforms** | Done | `install-joinquest-dev.sh` + dashboard tabs; plugin scripts for Cursor/Claude |
+| 8 | **Cursor MCP reliability** | Ongoing | `joinquest-integration-mcp-cursor` wrapper; consider HTTP MCP later |
 
 ## Tier 3 — Polish & reach
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 8 | **npx-first docs everywhere** | In progress | After npm publish, install script = fallback only |
-| 9 | **Claude Desktop / Copilot / Roo / Windsurf / Cline** | Done | `--claude-desktop`, `--copilot`, `--roo`, `--windsurf`, `--cline` on install script + dashboard tabs |
-| 10 | **ChatGPT connector** | Pending | Requires hosted HTTPS MCP + OAuth; documented as unsupported |
-| 11 | **Dashboard API key management UX** | Pending | Clear list/revoke/regenerate for MCP |
+| 9 | **npx-first docs everywhere** | In progress | After npm publish, install script = fallback only |
+| 10 | **Claude Desktop / Copilot / Roo / Windsurf / Cline** | Done | `--claude-desktop`, `--copilot`, `--roo`, `--windsurf`, `--cline` on install script + dashboard tabs |
+| 11 | **ChatGPT connector** | Pending | Requires hosted HTTPS MCP + OAuth; manual browser flow documented |
+| 12 | **Dashboard API key management UX** | Pending | Clear list/revoke/regenerate for MCP |
 
 ## Explicitly not now
 
@@ -76,12 +76,29 @@ claude mcp add --scope project --transport stdio \
   joinquest-integration -- npx -y @joinquest/mcp-integration
 ```
 
-**Other stdio clients:**
+**GitHub Copilot** — `.vscode/mcp.json` uses `servers` (not `mcpServers`):
+
+```json
+{
+  "servers": {
+    "joinquest-integration": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@joinquest/mcp-integration"],
+      "env": { "JOINQUEST_API_KEY": "lq_dev_..." }
+    }
+  }
+}
+```
+
+**Other stdio clients** (Roo, Windsurf, Cline, Claude Desktop):
 
 ```json
 "command": "npx",
 "args": ["-y", "@joinquest/mcp-integration"]
 ```
+
+Game-repo install: `install-joinquest-dev.sh --<platform>` from the dashboard.
 
 ---
 
@@ -89,3 +106,5 @@ claude mcp add --scope project --transport stdio \
 
 - 2026-06-13 — Roadmap created; MCP package npx-first configs landed; publish pending npm auth.
 - 2026-06-13 — `@joinquest/mcp-integration@0.1.0` published to npm.
+- 2026-06-15 — Multi-platform install (`--copilot`, `--roo`, `--windsurf`, `--cline`) + dashboard tabs; ChatGPT manual path at `?path=manual`.
+- 2026-06-15 — Docs cleanup: expanded `mcp-setup.md`, playbook ChatGPT note, Cline rules parity.

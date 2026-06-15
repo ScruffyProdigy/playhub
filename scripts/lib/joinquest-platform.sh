@@ -66,8 +66,15 @@ joinquest_install_roo_artifacts() {
 }
 
 joinquest_install_cline_artifacts() {
+  local skill_src
+  skill_src="$(joinquest_skill_source_dir)" || {
+    echo "Install the agent skill first (missing .agents/skills/joinquest-integration)." >&2
+    return 1
+  }
+
+  joinquest_copy_skill_tree "$skill_src" ".cline/rules/joinquest-integration"
   joinquest_write_mcp_first_instructions ".clinerules"
-  echo "Installed Cline rules at .clinerules"
+  echo "Installed Cline rules at .cline/rules/joinquest-integration/ and .clinerules"
 }
 
 joinquest_install_windsurf_artifacts() {

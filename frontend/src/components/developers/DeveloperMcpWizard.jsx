@@ -135,7 +135,7 @@ const PLATFORM_INSTALL_NOTES = {
     'Merges MCP into ~/.codeium/windsurf/mcp_config.json (global — not per-repo).',
   ],
   cline: [
-    'Adds .agents/skills/joinquest-integration/ and .clinerules.',
+    'Adds .agents/skills/joinquest-integration/, .cline/rules/joinquest-integration/, and .clinerules.',
     'Merges MCP into Cline’s cline_mcp_settings.json.',
   ],
   'claude-desktop': [
