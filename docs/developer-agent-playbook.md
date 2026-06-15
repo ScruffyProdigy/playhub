@@ -95,19 +95,17 @@ Read their description and identify gaps. You need enough to draft registration 
 
 **Claude Code:** `claude mcp add --scope project --transport stdio --env JOINQUEST_API_KEY=lq_dev_... joinquest-integration -- npx -y @joinquest/mcp-integration`
 
-Config paths: Cursor → `~/.cursor/mcp.json` or `.cursor/mcp.json`; Claude Code → `.mcp.json`.
+Config paths: Cursor → `.cursor/mcp.json`; Claude Code → `.mcp.json`; Copilot → `.vscode/mcp.json`; Roo → `.roo/mcp.json`; Windsurf → `~/.codeium/windsurf/mcp_config.json`; Cline → Cline MCP settings. **ChatGPT:** not supported (needs hosted HTTPS MCP).
 
 5. **Fully quit** the agent client and reopen (Cursor: **Cmd+Q**, not just Reload Window). Start a **new Agent chat**.
 
-**Optional — Agent Skill (no MCP required for workflow text):**
-
-From the developer's **game repo root** (installs agent skill + MCP):
+**Optional — one-line install from game repo** (skill + MCP + platform rules):
 
 ```bash
 JOINQUEST_API_KEY=lq_dev_... curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-dev.sh | sh -s -- --cursor
 ```
 
-Use `--claude` for Claude Code or `--all` for both. Skill-only: omit flags and API key.
+Flags: `--claude`, `--claude-desktop`, `--copilot`, `--roo`, `--windsurf`, `--cline`, or `--all` (Cursor + Claude Code). Skill-only: `--skill-only`.
 
 **Verify MCP:**
 

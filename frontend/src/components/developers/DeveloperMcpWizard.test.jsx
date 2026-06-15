@@ -15,19 +15,32 @@ import {
 vi.mock('../../lib/developers', () => ({
   fetchMyDeveloperApiKeys: vi.fn().mockResolvedValue([]),
   createDeveloperApiKey: vi.fn(),
-  buildMcpServerConfig: vi.fn(({ clientId, apiKey }) => ({
-    mcpServers: {
-      'joinquest-integration': {
-        type: 'stdio',
-        command: 'npx',
-        args:
-          clientId === 'cursor'
-            ? ['--yes', '--package', '@joinquest/mcp-integration', 'joinquest-integration-mcp-cursor']
-            : ['-y', '@joinquest/mcp-integration'],
-        env: { JOINQUEST_API_KEY: apiKey },
-      },
-    },
-  })),
+  buildMcpServerConfig: vi.fn(({ clientId, apiKey }) =>
+    clientId === 'copilot'
+      ? {
+          servers: {
+            'joinquest-integration': {
+              type: 'stdio',
+              command: 'npx',
+              args: ['-y', '@joinquest/mcp-integration'],
+              env: { JOINQUEST_API_KEY: apiKey },
+            },
+          },
+        }
+      : {
+          mcpServers: {
+            'joinquest-integration': {
+              type: 'stdio',
+              command: 'npx',
+              args:
+                clientId === 'cursor'
+                  ? ['--yes', '--package', '@joinquest/mcp-integration', 'joinquest-integration-mcp-cursor']
+                  : ['-y', '@joinquest/mcp-integration'],
+              env: { JOINQUEST_API_KEY: apiKey },
+            },
+          },
+        },
+  ),
   buildClaudeMcpAddCommand: vi.fn(
     ({ apiKey }) => `claude mcp add --env JOINQUEST_API_KEY=${apiKey} ...`,
   ),
@@ -112,5 +125,27 @@ describe('DeveloperMcpWizard', () => {
 
     expect(buildInstallClaudePluginCommand).toHaveBeenCalled()
     expect(screen.getByRole('button', { name: /copy plugin install command/i })).toBeInTheDocument()
+  })
+
+  it('shows Copilot install command after switching tabs', async () => {
+    const user = userEvent.setup()
+    render(<DeveloperMcpWizard defaultExpanded />)
+
+    await user.click(screen.getByRole('tab', { name: 'GitHub Copilot' }))
+
+    expect(buildInstallDevCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ client: 'copilot' }),
+    )
+    expect(screen.getByText(/--copilot/)).toBeInTheDocument()
+  })
+
+  it('explains ChatGPT is unsupported', async () => {
+    const user = userEvent.setup()
+    render(<DeveloperMcpWizard defaultExpanded />)
+
+    await user.click(screen.getByRole('tab', { name: 'ChatGPT' }))
+
+    expect(screen.getByText(/ChatGPT is not supported yet/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /generate new api key/i })).not.toBeInTheDocument()
   })
 })

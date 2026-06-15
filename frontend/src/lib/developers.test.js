@@ -19,6 +19,35 @@ function parseGoRequiredChecks(source) {
   return [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1])
 }
 
+describe('buildMcpServerConfig', () => {
+  it('uses mcpServers for Cursor', async () => {
+    const { buildMcpServerConfig } = await import('./developers')
+    const config = buildMcpServerConfig({ apiKey: 'lq_dev_test', clientId: 'cursor' })
+    expect(config.mcpServers['joinquest-integration'].args).toContain('joinquest-integration-mcp-cursor')
+  })
+
+  it('uses servers for Copilot', async () => {
+    const { buildMcpServerConfig } = await import('./developers')
+    const config = buildMcpServerConfig({ apiKey: 'lq_dev_test', clientId: 'copilot' })
+    expect(config.servers['joinquest-integration'].env.JOINQUEST_API_KEY).toBe('lq_dev_test')
+    expect(config.mcpServers).toBeUndefined()
+  })
+
+  it('uses env interpolation for Windsurf', async () => {
+    const { buildMcpServerConfig } = await import('./developers')
+    const config = buildMcpServerConfig({ apiKey: 'lq_dev_test', clientId: 'windsurf' })
+    expect(config.mcpServers['joinquest-integration'].env.JOINQUEST_API_KEY).toBe('${env:JOINQUEST_API_KEY}')
+  })
+})
+
+describe('buildInstallDevCommand', () => {
+  it('maps platform flags', async () => {
+    const { buildInstallDevCommand } = await import('./developers')
+    expect(buildInstallDevCommand({ apiKey: 'k', client: 'copilot' })).toContain('--copilot')
+    expect(buildInstallDevCommand({ apiKey: 'k', client: 'roo' })).toContain('--roo')
+  })
+})
+
 describe('REQUIRED_INTEGRATION_CHECKS', () => {
   it('matches backend requiredPassChecks', () => {
     const goSource = readFileSync(join(repoRoot, 'backend/internal/store/developer.go'), 'utf8')

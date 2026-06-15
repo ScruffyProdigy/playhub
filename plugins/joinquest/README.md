@@ -4,6 +4,8 @@ Agent skill + MCP for integrating multiplayer games with [JoinQuest](https://joi
 
 Works as a **Cursor plugin** (`.cursor-plugin/`, `mcp.json`) and a **Claude Code plugin** (`.claude-plugin/`, `.mcp.json`). Both share the same `skills/` directory.
 
+**Also supported** via `install-joinquest-dev.sh`: GitHub Copilot, Roo Code, Windsurf, and Cline. ChatGPT is not supported yet (requires hosted MCP).
+
 ## Install
 
 Generate an API key at [joinquest.cc/developers](https://joinquest.cc/developers) → **Connect an AI assistant**, then copy the install command for your editor.
@@ -25,6 +27,17 @@ curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts
 ```
 
 Start a new Claude Code session in your game repo (or run `/reload-plugins`).
+
+### GitHub Copilot / Roo Code / Windsurf / Cline
+
+From the [developer dashboard](https://joinquest.cc/developers) → **Connect an AI assistant**, pick your editor, copy the install command.
+
+Or from your game repo:
+
+```bash
+export JOINQUEST_API_KEY=lq_dev_PASTE_YOUR_KEY
+curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-dev.sh | sh -s -- --copilot   # or --roo, --windsurf, --cline
+```
 
 ## What's included
 

@@ -445,17 +445,48 @@ export function buildInstallClaudePluginCommand({ apiKey }) {
 curl -fsSL ${INSTALL_CLAUDE_PLUGIN_SCRIPT_URL} | sh`
 }
 
+function joinquestInstallDevFlag(client) {
+  switch (client) {
+    case 'claude':
+      return '--claude'
+    case 'claude-desktop':
+      return '--claude-desktop'
+    case 'copilot':
+      return '--copilot'
+    case 'roo':
+      return '--roo'
+    case 'windsurf':
+      return '--windsurf'
+    case 'cline':
+      return '--cline'
+    case 'all':
+      return '--all'
+    case 'skill-only':
+      return '--skill-only'
+    default:
+      return '--cursor'
+  }
+}
+
+function joinquestStdioMcpServer({ apiKey, clientId }) {
+  const args =
+    clientId === 'cursor'
+      ? ['--yes', '--package', MCP_NPX_PACKAGE, 'joinquest-integration-mcp-cursor']
+      : ['-y', MCP_NPX_PACKAGE]
+  const env =
+    clientId === 'windsurf'
+      ? { JOINQUEST_API_KEY: '${env:JOINQUEST_API_KEY}' }
+      : joinquestMcpEnv({ apiKey })
+  return {
+    type: 'stdio',
+    command: 'npx',
+    args,
+    env,
+  }
+}
+
 export function buildInstallDevCommand({ apiKey, client = 'cursor' }) {
-  const flag =
-    client === 'claude'
-      ? '--claude'
-      : client === 'claude-desktop'
-        ? '--claude-desktop'
-        : client === 'all'
-          ? '--all'
-          : client === 'skill-only'
-            ? '--skill-only'
-            : '--cursor'
+  const flag = joinquestInstallDevFlag(client)
   if (client === 'skill-only') {
     return `curl -fsSL ${INSTALL_DEV_SCRIPT_URL} | sh -s -- ${flag}`
   }
@@ -465,16 +496,7 @@ curl -fsSL ${INSTALL_DEV_SCRIPT_URL} | sh -s -- ${flag}`
 }
 
 export function buildInstallDevInspectCommand({ apiKey, client = 'cursor' }) {
-  const flag =
-    client === 'claude'
-      ? '--claude'
-      : client === 'claude-desktop'
-        ? '--claude-desktop'
-        : client === 'all'
-          ? '--all'
-          : client === 'skill-only'
-            ? '--skill-only'
-            : '--cursor'
+  const flag = joinquestInstallDevFlag(client)
   if (client === 'skill-only') {
     return `curl -fsSL ${INSTALL_DEV_SCRIPT_URL} -o install-joinquest-dev.sh
 less install-joinquest-dev.sh
@@ -495,19 +517,20 @@ export function buildClaudeMcpAddCommand({ apiKey }) {
 }
 
 export function buildMcpServerConfig({ apiKey, clientId = 'cursor' }) {
-  const env = joinquestMcpEnv({ apiKey })
-  const args =
-    clientId === 'cursor'
-      ? ['--yes', '--package', MCP_NPX_PACKAGE, 'joinquest-integration-mcp-cursor']
-      : ['-y', MCP_NPX_PACKAGE]
+  const server = joinquestStdioMcpServer({
+    apiKey: apiKey ?? '<paste-api-key-here>',
+    clientId,
+  })
+  if (clientId === 'copilot') {
+    return {
+      servers: {
+        'joinquest-integration': server,
+      },
+    }
+  }
   return {
     mcpServers: {
-      'joinquest-integration': {
-        type: 'stdio',
-        command: 'npx',
-        args,
-        env,
-      },
+      'joinquest-integration': server,
     },
   }
 }

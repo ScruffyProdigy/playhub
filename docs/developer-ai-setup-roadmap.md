@@ -8,7 +8,9 @@ Track simplifying JoinQuest integration for game developers using Cursor, Claude
 |----------|-----------|
 | **Cursor** | Dashboard → copy config → Cmd+Q → Agent chat → verify MCP → “I want to create a game on JoinQuest” |
 | **Claude Code** | Dashboard → copy `claude mcp add …` → new session → approve MCP → same prompt |
-| **Everyone** | Agent skill installed in game repo automatically (not a separate GitHub copy) |
+| **Copilot / Roo / Windsurf / Cline** | Dashboard → copy `install-joinquest-dev.sh --<platform>` from game repo |
+| **ChatGPT** | Not supported — needs hosted HTTPS MCP (see dashboard explanation) |
+| **Everyone** | Agent skill installed in game repo (`.agents/skills/` + platform rules) |
 
 Production only for game devs: `JOINQUEST_API_KEY` in MCP env (no URL). Lobby contributors: see [development.md](./development.md) for local override.
 
@@ -37,8 +39,8 @@ Production only for game devs: `JOINQUEST_API_KEY` in MCP env (no URL). Lobby co
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 8 | **npx-first docs everywhere** | In progress | After npm publish, install script = fallback only |
-| 9 | **Claude Desktop / Copilot** | Partial | `--claude-desktop` install flag; Copilot still manual |
-| 10 | **Skill install automation** | Done | Bundled in `install-joinquest-dev.sh` |
+| 9 | **Claude Desktop / Copilot / Roo / Windsurf / Cline** | Done | `--claude-desktop`, `--copilot`, `--roo`, `--windsurf`, `--cline` on install script + dashboard tabs |
+| 10 | **ChatGPT connector** | Pending | Requires hosted HTTPS MCP + OAuth; documented as unsupported |
 | 11 | **Dashboard API key management UX** | Pending | Clear list/revoke/regenerate for MCP |
 
 ## Explicitly not now

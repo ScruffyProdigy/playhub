@@ -69,6 +69,11 @@ Maintainers: `./scripts/publish-joinquest-mcp.sh` (requires npm login + `@joinqu
 | Cursor | `~/.cursor/mcp.json` or `.cursor/mcp.json` |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` |
 | Claude Code | `.mcp.json` at project root |
+| GitHub Copilot | `.vscode/mcp.json` (`servers` key) |
+| Roo Code | `.roo/mcp.json` at project root |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json` (global) |
+| Cline | VS Code `globalStorage/.../cline_mcp_settings.json` |
+| ChatGPT | Not supported — requires hosted HTTPS MCP |
 
 ## Tools
 

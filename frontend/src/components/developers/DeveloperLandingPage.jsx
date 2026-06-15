@@ -42,7 +42,7 @@ export default function DeveloperLandingPage() {
         <section className="developer-route-picker" aria-labelledby="developer-route-heading">
           <h2 id="developer-route-heading">How do you want to get started?</h2>
           <p className="panel-copy developer-route-picker__lead">
-            Pick one path — most developers use an AI assistant in Cursor or Claude.
+            Pick one path — most developers use an AI assistant (Cursor, Claude, Copilot, and more).
           </p>
           <div className="developer-route-picker__options">
             <button
