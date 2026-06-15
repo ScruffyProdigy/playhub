@@ -65,6 +65,8 @@ vi.mock('../../lib/developers', () => ({
   INSTALL_CURSOR_PLUGIN_SCRIPT_GITHUB: 'https://github.com/example/install-joinquest-cursor-plugin.sh',
   INSTALL_CLAUDE_PLUGIN_SCRIPT_GITHUB: 'https://github.com/example/install-joinquest-claude-plugin.sh',
   CURSOR_PLUGIN_GITHUB: 'https://github.com/example/plugins/joinquest',
+  developerLandingHref: (path) =>
+    path === 'manual' ? '/developers?path=manual' : '/developers',
 }))
 
 describe('DeveloperMcpWizard', () => {
@@ -139,13 +141,17 @@ describe('DeveloperMcpWizard', () => {
     expect(screen.getByText(/--copilot/)).toBeInTheDocument()
   })
 
-  it('explains ChatGPT is unsupported', async () => {
+  it('explains ChatGPT is unsupported and links to manual registration', async () => {
     const user = userEvent.setup()
     render(<DeveloperMcpWizard defaultExpanded />)
 
     await user.click(screen.getByRole('tab', { name: 'ChatGPT' }))
 
-    expect(screen.getByText(/ChatGPT is not supported yet/i)).toBeInTheDocument()
+    expect(screen.getByText(/ChatGPT isn.t supported yet/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /register in the browser/i })).toHaveAttribute(
+      'href',
+      '/developers?path=manual',
+    )
     expect(screen.queryByRole('button', { name: /generate new api key/i })).not.toBeInTheDocument()
   })
 })

@@ -3027,6 +3027,18 @@
   margin-top: 0.35rem;
 }
 
+.developer-mcp__unsupported {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.developer-mcp__unsupported-heading {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 .developer-mcp__manual {
   margin-top: 1.25rem;
   padding-top: 0.25rem;

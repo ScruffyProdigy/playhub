@@ -1,12 +1,34 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AuthPanel from '../auth/AuthPanel'
 import { APP_NAME } from '../../lib/brand'
+import { developerLandingHref, parseDeveloperLandingPath } from '../../lib/developers'
+import { navigateTo } from '../../lib/usePathname'
 import DeveloperMcpWizard from './DeveloperMcpWizard'
 import ReferenceGamesPanel from './ReferenceGamesPanel'
 import RegisterGameForm from './RegisterGameForm'
 
+function readLandingPathFromUrl() {
+  return parseDeveloperLandingPath(window.location.search)
+}
+
 export default function DeveloperLandingPage() {
-  const [route, setRoute] = useState(null)
+  const [route, setRoute] = useState(() => readLandingPathFromUrl())
+
+  useEffect(() => {
+    const syncFromUrl = () => setRoute(readLandingPathFromUrl())
+    window.addEventListener('popstate', syncFromUrl)
+    return () => window.removeEventListener('popstate', syncFromUrl)
+  }, [])
+
+  function selectRoute(next) {
+    setRoute(next)
+    navigateTo(developerLandingHref(next), { replace: true })
+  }
+
+  function clearRoute() {
+    setRoute(null)
+    navigateTo(developerLandingHref(), { replace: true })
+  }
 
   return (
     <main className="app-shell developer-shell">
@@ -48,7 +70,7 @@ export default function DeveloperLandingPage() {
             <button
               type="button"
               className="developer-route-card developer-route-card--recommended"
-              onClick={() => setRoute('ai')}
+              onClick={() => selectRoute('ai')}
             >
               <span className="developer-route-card__badge">Recommended</span>
               <h3 className="developer-route-card__title">Connect an AI assistant</h3>
@@ -60,7 +82,7 @@ export default function DeveloperLandingPage() {
             <button
               type="button"
               className="developer-route-card"
-              onClick={() => setRoute('manual')}
+              onClick={() => selectRoute('manual')}
             >
               <h3 className="developer-route-card__title">Register in the browser</h3>
               <p className="developer-route-card__copy">
@@ -72,7 +94,7 @@ export default function DeveloperLandingPage() {
       ) : (
         <>
           <p className="developer-route-back">
-            <button type="button" className="auth-link-button" onClick={() => setRoute(null)}>
+            <button type="button" className="auth-link-button" onClick={clearRoute}>
               ← Choose a different path
             </button>
           </p>

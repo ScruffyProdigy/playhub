@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest'
 import {
   REQUIRED_INTEGRATION_CHECKS,
   canRequestPublicRelease,
+  developerLandingHref,
   integrationNextSteps,
+  parseDeveloperLandingPath,
   parseDeveloperRoute,
   suggestSlugFromName,
   visibilityLabel,
@@ -52,6 +54,19 @@ describe('REQUIRED_INTEGRATION_CHECKS', () => {
   it('matches backend requiredPassChecks', () => {
     const goSource = readFileSync(join(repoRoot, 'backend/internal/store/developer.go'), 'utf8')
     expect(REQUIRED_INTEGRATION_CHECKS).toEqual(parseGoRequiredChecks(goSource))
+  })
+})
+
+describe('parseDeveloperLandingPath', () => {
+  it('parses manual and ai paths', () => {
+    expect(parseDeveloperLandingPath('?path=manual')).toBe('manual')
+    expect(parseDeveloperLandingPath('?path=ai')).toBe('ai')
+    expect(parseDeveloperLandingPath('')).toBeNull()
+  })
+
+  it('builds landing hrefs', () => {
+    expect(developerLandingHref('manual')).toBe('/developers?path=manual')
+    expect(developerLandingHref()).toBe('/developers')
   })
 })
 

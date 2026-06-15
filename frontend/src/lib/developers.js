@@ -219,6 +219,26 @@ export const CHECK_FIX_HINTS = {
   'jwt.wrong_seat': 'Reject tokens that claim another player\'s reserved seat.',
 }
 
+export const DEVELOPER_LANDING_PATH = '/developers'
+
+/** Parse ?path= from /developers landing (manual browser registration vs AI setup). */
+export function parseDeveloperLandingPath(search = '') {
+  const raw = String(search || '')
+  const params = new URLSearchParams(raw.startsWith('?') ? raw.slice(1) : raw)
+  const path = params.get('path')
+  if (path === 'manual' || path === 'ai') {
+    return path
+  }
+  return null
+}
+
+export function developerLandingHref(path = null) {
+  if (path === 'manual' || path === 'ai') {
+    return `${DEVELOPER_LANDING_PATH}?path=${path}`
+  }
+  return DEVELOPER_LANDING_PATH
+}
+
 /** Parse developer routes from pathname. */
 export function parseDeveloperRoute(pathname) {
   const path = String(pathname || '')

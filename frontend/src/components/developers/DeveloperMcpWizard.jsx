@@ -12,7 +12,9 @@ import {
   INSTALL_CURSOR_PLUGIN_SCRIPT_GITHUB,
   INSTALL_DEV_SCRIPT_GITHUB,
   CURSOR_PLUGIN_GITHUB,
+  developerLandingHref,
 } from '../../lib/developers'
+import { navigateTo } from '../../lib/usePathname'
 
 const CLIENTS = [
   {
@@ -327,22 +329,45 @@ export default function DeveloperMcpWizard({ defaultExpanded = false, alwaysExpa
           </div>
 
           {unsupported ? (
-            <>
+            <div className="developer-mcp__unsupported">
+              <div className="developer-mcp__info" role="note">
+                <p>
+                  <strong>ChatGPT isn&apos;t supported yet</strong>
+                </p>
+                <p>
+                  JoinQuest connects through a local MCP server (<code>npx</code>, stdio). ChatGPT
+                  connectors need a hosted HTTPS endpoint and OAuth — we can&apos;t wire that up
+                  from your game repo today.
+                </p>
+              </div>
+
+              <h3 className="developer-mcp__unsupported-heading">Use another assistant instead</h3>
               <p className="panel-copy">
-                <strong>ChatGPT is not supported yet.</strong> JoinQuest&apos;s MCP server runs
-                locally via <code>npx</code> (stdio). ChatGPT connectors require a{' '}
-                <strong>hosted HTTPS MCP endpoint</strong> plus OAuth or connector approval — not
-                something we can wire up from your game repo today.
+                For the full agent workflow — integration checks, metadata, release — pick Cursor,
+                Claude Code, Copilot, Roo, Windsurf, or Cline from the tabs above.
               </p>
+
+              <h3 className="developer-mcp__unsupported-heading">Using ChatGPT today</h3>
               <p className="panel-copy">
-                Use Cursor, Claude Code, Copilot, Roo, Windsurf, or Cline for the full agent
-                workflow. You can still use the{' '}
-                <a className="auth-link" href="/developers">
-                  developer dashboard
-                </a>{' '}
-                manually in ChatGPT&apos;s browser while we evaluate hosted MCP.
+                You can still register and manage your game in ChatGPT&apos;s browser:
               </p>
-            </>
+              <ol className="developer-mcp__steps">
+                <li>
+                  <a
+                    className="auth-link"
+                    href={developerLandingHref('manual')}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      navigateTo(developerLandingHref('manual'))
+                    }}
+                  >
+                    Register in the browser
+                  </a>{' '}
+                  — fill out the registration form on joinquest.cc.
+                </li>
+                <li>After registration, use your game dashboard to run checks and request release.</li>
+              </ol>
+            </div>
           ) : (
             <>
               <p className="panel-copy">
