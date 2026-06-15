@@ -16,8 +16,8 @@ describe('avatars', () => {
     expect(avatarInitial({})).toBe('P')
   })
 
-  it('ships five journey starter avatars', () => {
-    expect(STARTER_AVATAR_FALLBACK).toHaveLength(5)
+  it('ships eighteen starter avatars', () => {
+    expect(STARTER_AVATAR_FALLBACK).toHaveLength(18)
   })
 
   it('detects provisional display names', () => {

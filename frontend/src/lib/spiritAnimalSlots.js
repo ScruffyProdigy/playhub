@@ -1,4 +1,5 @@
-import { STARTER_AVATAR_FALLBACK } from './avatars'
+/** Journey slot icons for the tarot reading (subset of starter avatars). */
+const JOURNEY_SLOT_KEYS = ['compass', 'coin', 'storm', 'campfire', 'beacon']
 
 /** What each journey slot is asking about (from product spec). */
 const SLOT_PROMPTS = {
@@ -9,12 +10,20 @@ const SLOT_PROMPTS = {
   beacon: 'What the traveler ultimately becomes known for.',
 }
 
+const JOURNEY_SLOT_ICONS = {
+  compass: { name: 'Compass', imageUrl: '/avatars/compass.png' },
+  coin: { name: 'Coin', imageUrl: '/avatars/coin.png' },
+  storm: { name: 'Storm', imageUrl: '/avatars/storm.png' },
+  campfire: { name: 'Campfire', imageUrl: '/avatars/campfire.png' },
+  beacon: { name: 'Beacon', imageUrl: '/avatars/beacon.png' },
+}
+
 /** Journey slots in tarot draw order (Compass → Beacon). */
-export const JOURNEY_SLOTS = STARTER_AVATAR_FALLBACK.map((avatar) => ({
-  key: avatar.key,
-  name: avatar.name,
-  imageUrl: avatar.imageUrl,
-  prompt: SLOT_PROMPTS[avatar.key] ?? 'A chapter of your journey.',
+export const JOURNEY_SLOTS = JOURNEY_SLOT_KEYS.map((key) => ({
+  key,
+  name: JOURNEY_SLOT_ICONS[key].name,
+  imageUrl: JOURNEY_SLOT_ICONS[key].imageUrl,
+  prompt: SLOT_PROMPTS[key] ?? 'A chapter of your journey.',
 }))
 
 export function slotPromptForKey(slotKey) {

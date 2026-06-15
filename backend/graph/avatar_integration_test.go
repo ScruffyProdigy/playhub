@@ -89,8 +89,8 @@ func TestUpdatePlayerProfileAndPlayerLookup(t *testing.T) {
 	if err := json.Unmarshal(catalogBody, &catalogResp); err != nil {
 		t.Fatalf("decode catalog: %v", err)
 	}
-	if len(catalogResp.Data.StarterAvatars) != 5 {
-		t.Fatalf("expected 5 starter avatars, got %d", len(catalogResp.Data.StarterAvatars))
+	if len(catalogResp.Data.StarterAvatars) != 18 {
+		t.Fatalf("expected 18 starter avatars, got %d", len(catalogResp.Data.StarterAvatars))
 	}
 }
 
