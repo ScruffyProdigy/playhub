@@ -123,6 +123,40 @@ const RUN_MY_GAME_CHECKS = `
   }
 `
 
+const SYNC_MY_GAME_MANIFEST = `
+  mutation SyncMyGameManifest($gameId: ID!) {
+    syncMyGameManifest(gameId: $gameId) {
+      changed
+      connectError
+      game {
+        ${MY_GAME_FIELDS}
+      }
+    }
+  }
+`
+
+const CONNECT_MY_GAME = `
+  mutation ConnectMyGame($input: ConnectMyGameInput!) {
+    connectMyGame(input: $input) {
+      connected
+      changed
+      connectError
+      game {
+        ${MY_GAME_FIELDS}
+      }
+    }
+  }
+`
+
+const ROTATE_MY_GAME_WEBHOOK_SECRET = `
+  mutation RotateMyGameWebhookSecret($gameId: ID!) {
+    rotateMyGameWebhookSecret(gameId: $gameId) {
+      serviceToken
+      webhookSecret
+    }
+  }
+`
+
 const INTEGRATION_GUIDE_QUERY = `
   query DeveloperIntegrationGuide {
     developerIntegrationGuide
@@ -194,7 +228,7 @@ export const CHECK_FIX_HINTS = {
   'manifest.game_modes':
     'GET /api/v1/game-modes needs valid seatTemplate JSON for each mode.',
   'manifest.sync_freshness':
-    'Re-sync your manifest — run checks again after deploying API changes.',
+    'Call syncMyGameManifest (dashboard: Resync game modes) after deploying API changes, then re-run checks.',
   'provision.happy_path':
     'POST /api/v1/matches should return launch URLs for each seated player.',
   'provision.idempotent_repush':
@@ -328,6 +362,21 @@ export async function runMyGameChecks(gameId) {
   return data.runMyGameChecks ?? []
 }
 
+export async function syncMyGameManifest(gameId) {
+  const data = await graphqlRequest(SYNC_MY_GAME_MANIFEST, { gameId })
+  return data.syncMyGameManifest
+}
+
+export async function connectMyGame(input) {
+  const data = await graphqlRequest(CONNECT_MY_GAME, { input })
+  return data.connectMyGame
+}
+
+export async function rotateMyGameWebhookSecret(gameId) {
+  const data = await graphqlRequest(ROTATE_MY_GAME_WEBHOOK_SECRET, { gameId })
+  return data.rotateMyGameWebhookSecret
+}
+
 export async function fetchDeveloperIntegrationGuide() {
   const data = await graphqlRequest(INTEGRATION_GUIDE_QUERY)
   return data.developerIntegrationGuide ?? ''
@@ -376,7 +425,7 @@ export function integrationNextSteps(game) {
       done: connected,
       hint: connected
         ? 'Your API is reachable and modes are synced.'
-        : 'Deploy a public HTTPS URL with /healthz and /api/v1/game-modes — localhost will not work.',
+        : 'Deploy a public HTTPS URL with /healthz and /api/v1/game-modes, then use Connect API (or connectMyGame). Localhost will not work.',
     },
     {
       id: 'checks',

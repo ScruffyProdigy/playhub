@@ -128,10 +128,67 @@ export const MUTATIONS = {
     mutation UpdateMyGameMetadata($input: UpdateMyGameMetadataInput!) {
       updateMyGameMetadata(input: $input) {
         id
+        name
         shortDescription
         longDescription
         howToPlay
         tags
+        contactEmail
+        websiteUrl
+        communityUrl
+      }
+    }
+  `,
+  syncMyGameManifest: `
+    mutation SyncMyGameManifest($gameId: ID!) {
+      syncMyGameManifest(gameId: $gameId) {
+        changed
+        connectError
+        game {
+          id
+          visibility
+          apiBaseUrl
+          manifestSyncedAt
+          modes {
+            modeKey
+            displayName
+            minPlayers
+            maxPlayers
+            seats {
+              seatKey
+              queuePath
+            }
+          }
+        }
+      }
+    }
+  `,
+  connectMyGame: `
+    mutation ConnectMyGame($input: ConnectMyGameInput!) {
+      connectMyGame(input: $input) {
+        connected
+        changed
+        connectError
+        game {
+          id
+          visibility
+          apiBaseUrl
+          manifestSyncedAt
+          modes {
+            modeKey
+            displayName
+            minPlayers
+            maxPlayers
+          }
+        }
+      }
+    }
+  `,
+  rotateMyGameWebhookSecret: `
+    mutation RotateMyGameWebhookSecret($gameId: ID!) {
+      rotateMyGameWebhookSecret(gameId: $gameId) {
+        serviceToken
+        webhookSecret
       }
     }
   `,

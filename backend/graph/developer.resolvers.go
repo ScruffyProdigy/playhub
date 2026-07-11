@@ -176,6 +176,148 @@ func (r *mutationResolver) RegisterMyGame(ctx context.Context, input model.Regis
 	return payload, nil
 }
 
+// SyncMyGameManifest is the resolver for the syncMyGameManifest field.
+func (r *mutationResolver) SyncMyGameManifest(ctx context.Context, gameID string) (*model.SyncMyGameManifestPayload, error) {
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+	id, err := parseUUID(gameID, "game id")
+	if err != nil {
+		return nil, err
+	}
+	game, err := st.GetOwnedGame(ctx, id, userID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, fmt.Errorf("game not found")
+		}
+		return nil, err
+	}
+	if game.APIBaseURL == nil || strings.TrimSpace(*game.APIBaseURL) == "" {
+		return nil, fmt.Errorf("game has no apiBaseUrl configured")
+	}
+
+	manifest, fetchErr := r.manifestFetcher().Fetch(ctx, *game.APIBaseURL, "")
+	result, err := st.ConnectOwnedGame(ctx, id, userID, nil, manifest, fetchErr)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.publishKickedWaiters(ctx, result.Kicked); err != nil {
+		return nil, err
+	}
+
+	payload := &model.SyncMyGameManifestPayload{
+		Game:    ToGraphQLGame(result.Game),
+		Changed: result.Changed,
+	}
+	if result.ConnectError != "" {
+		payload.ConnectError = &result.ConnectError
+	}
+	return payload, nil
+}
+
+// ConnectMyGame is the resolver for the connectMyGame field.
+func (r *mutationResolver) ConnectMyGame(ctx context.Context, input model.ConnectMyGameInput) (*model.ConnectMyGamePayload, error) {
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+	id, err := parseUUID(input.GameID, "game id")
+	if err != nil {
+		return nil, err
+	}
+	game, err := st.GetOwnedGame(ctx, id, userID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, fmt.Errorf("game not found")
+		}
+		return nil, err
+	}
+
+	apiBaseURL := ""
+	var newURL *string
+	if input.APIBaseURL != nil {
+		trimmed := strings.TrimRight(strings.TrimSpace(*input.APIBaseURL), "/")
+		if trimmed == "" {
+			return nil, fmt.Errorf("apiBaseUrl: must not be empty")
+		}
+		if err := gameurl.ValidateOutboundURL(ctx, trimmed, auth.IsProductionEnv()); err != nil {
+			return nil, fmt.Errorf("apiBaseUrl: %w", err)
+		}
+		newURL = &trimmed
+		apiBaseURL = trimmed
+	} else if game.APIBaseURL != nil {
+		apiBaseURL = strings.TrimSpace(*game.APIBaseURL)
+	}
+	if apiBaseURL == "" {
+		return nil, fmt.Errorf("apiBaseUrl is required")
+	}
+
+	manifest, fetchErr := r.manifestFetcher().Fetch(ctx, apiBaseURL, "")
+	result, err := st.ConnectOwnedGame(ctx, id, userID, newURL, manifest, fetchErr)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.publishKickedWaiters(ctx, result.Kicked); err != nil {
+		return nil, err
+	}
+
+	if result.Connected {
+		if _, err := r.persistGameChecks(ctx, result.Game); err != nil {
+			return nil, err
+		}
+	}
+
+	payload := &model.ConnectMyGamePayload{
+		Game:      ToGraphQLGame(result.Game),
+		Connected: result.Connected,
+		Changed:   result.Changed,
+	}
+	if result.ConnectError != "" {
+		payload.ConnectError = &result.ConnectError
+	}
+	return payload, nil
+}
+
+// RotateMyGameWebhookSecret is the resolver for the rotateMyGameWebhookSecret field.
+func (r *mutationResolver) RotateMyGameWebhookSecret(ctx context.Context, gameID string) (*model.MyGameCredentials, error) {
+	userID, err := requireAuthUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	st, err := r.requireStore()
+	if err != nil {
+		return nil, err
+	}
+	id, err := parseUUID(gameID, "game id")
+	if err != nil {
+		return nil, err
+	}
+	secret, game, err := st.RotateMyGameWebhookSecret(ctx, id, userID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, fmt.Errorf("game not found")
+		}
+		return nil, err
+	}
+	serviceToken, err := auth.FormatGameServiceToken(game.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.MyGameCredentials{
+		ServiceToken:  serviceToken,
+		WebhookSecret: secret,
+	}, nil
+}
+
 // RunMyGameChecks is the resolver for the runMyGameChecks field.
 func (r *mutationResolver) RunMyGameChecks(ctx context.Context, gameID string) ([]*model.GameIntegrationCheck, error) {
 	userID, err := requireAuthUserID(ctx)
@@ -222,6 +364,10 @@ func (r *mutationResolver) UpdateMyGameMetadata(ctx context.Context, input model
 	}
 
 	params := store.UpdateMyGameMetadataParams{}
+	if input.Name != nil {
+		trimmed := strings.TrimSpace(*input.Name)
+		params.Name = &trimmed
+	}
 	if input.ShortDescription != nil {
 		trimmed := strings.TrimSpace(*input.ShortDescription)
 		params.ShortDescription = &trimmed
@@ -239,6 +385,26 @@ func (r *mutationResolver) UpdateMyGameMetadata(ctx context.Context, input model
 			return nil, err
 		}
 		params.Tags = input.Tags
+	}
+	if input.ContactEmail != nil {
+		trimmed := strings.TrimSpace(*input.ContactEmail)
+		params.ContactEmail = &trimmed
+	}
+	if input.WebsiteURL != nil {
+		trimmed := strings.TrimSpace(*input.WebsiteURL)
+		if trimmed == "" {
+			params.ClearWebsite = true
+		} else {
+			params.WebsiteURL = &trimmed
+		}
+	}
+	if input.CommunityURL != nil {
+		trimmed := strings.TrimSpace(*input.CommunityURL)
+		if trimmed == "" {
+			params.ClearCommunity = true
+		} else {
+			params.CommunityURL = &trimmed
+		}
 	}
 
 	game, err := st.UpdateMyGameMetadata(ctx, gameID, userID, params)

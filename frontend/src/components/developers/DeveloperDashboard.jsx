@@ -5,12 +5,15 @@ import {
   checkFixHint,
   checkSectionTitle,
   checkStatusLabel,
+  connectMyGame,
   defaultModeForMyGame,
   fetchDeveloperIntegrationGuide,
   fetchMyGame,
   fetchMyGameCredentials,
   requestPublicRelease,
+  rotateMyGameWebhookSecret,
   runMyGameChecks,
+  syncMyGameManifest,
   visibilityLabel,
 } from '../../lib/developers'
 import { createPrivateTable } from '../../lib/tables'
@@ -66,9 +69,14 @@ export default function DeveloperDashboard({ gameId }) {
   const [guide, setGuide] = useState('')
   const [status, setStatus] = useState('loading')
   const [checksBusy, setChecksBusy] = useState(false)
+  const [syncBusy, setSyncBusy] = useState(false)
+  const [connectBusy, setConnectBusy] = useState(false)
+  const [rotateBusy, setRotateBusy] = useState(false)
   const [tableBusy, setTableBusy] = useState(false)
   const [releaseBusy, setReleaseBusy] = useState(false)
   const [actionError, setActionError] = useState('')
+  const [actionInfo, setActionInfo] = useState('')
+  const [apiBaseUrlDraft, setApiBaseUrlDraft] = useState('')
 
   const load = useCallback(async () => {
     setStatus('loading')
@@ -81,6 +89,7 @@ export default function DeveloperDashboard({ gameId }) {
       setGame(gameData)
       setCredentials(creds)
       setGuide(guideText)
+      setApiBaseUrlDraft(gameData?.apiBaseUrl ?? '')
       setStatus(gameData ? 'ready' : 'missing')
     } catch {
       setStatus('error')
@@ -94,13 +103,15 @@ export default function DeveloperDashboard({ gameId }) {
   const checkGroups = useMemo(() => groupChecks(game?.integrationChecks), [game?.integrationChecks])
   const defaultMode = useMemo(() => defaultModeForMyGame(game), [game])
   const canTestTable = game?.visibility === 'PRIVATE_TESTING' || game?.visibility === 'PENDING_REVIEW'
+  const canEditApiUrl = game?.visibility === 'DRAFT' || game?.visibility === 'PRIVATE_TESTING'
   const showRelease = canRequestPublicRelease(game)
   const showCatalog = game?.visibility !== 'DRAFT'
-  const showCredentials = showCatalog && credentials
+  const showCredentials = Boolean(credentials)
 
   async function handleRunChecks() {
     setChecksBusy(true)
     setActionError('')
+    setActionInfo('')
     try {
       const checks = await runMyGameChecks(gameId)
       setGame((prev) => (prev ? { ...prev, integrationChecks: checks } : prev))
@@ -111,9 +122,90 @@ export default function DeveloperDashboard({ gameId }) {
     }
   }
 
+  async function handleSyncManifest() {
+    setSyncBusy(true)
+    setActionError('')
+    setActionInfo('')
+    try {
+      const result = await syncMyGameManifest(gameId)
+      if (result.connectError) {
+        setActionError(result.connectError)
+      } else {
+        setActionInfo(
+          result.changed
+            ? 'Game modes updated from your API.'
+            : 'Manifest already up to date — no changes.',
+        )
+      }
+      if (result.game) {
+        setGame(result.game)
+        setApiBaseUrlDraft(result.game.apiBaseUrl ?? '')
+      }
+    } catch (err) {
+      setActionError(err.message || 'Could not sync game modes.')
+    } finally {
+      setSyncBusy(false)
+    }
+  }
+
+  async function handleConnectApi(event) {
+    event.preventDefault()
+    setConnectBusy(true)
+    setActionError('')
+    setActionInfo('')
+    try {
+      const trimmed = apiBaseUrlDraft.trim()
+      const input = { gameId }
+      if (trimmed && trimmed !== (game?.apiBaseUrl ?? '')) {
+        input.apiBaseUrl = trimmed
+      }
+      const result = await connectMyGame(input)
+      if (result.connectError) {
+        setActionError(result.connectError)
+      } else {
+        setActionInfo(
+          result.connected
+            ? 'Connected — modes synced from your API.'
+            : 'Connect finished without an error, but the API was not connected.',
+        )
+      }
+      if (result.game) {
+        setGame(result.game)
+        setApiBaseUrlDraft(result.game.apiBaseUrl ?? '')
+      }
+    } catch (err) {
+      setActionError(err.message || 'Could not connect API.')
+    } finally {
+      setConnectBusy(false)
+    }
+  }
+
+  async function handleRotateWebhook() {
+    if (
+      !window.confirm(
+        'Rotate the webhook secret? The previous secret will stop working immediately. Update your game server env after this.',
+      )
+    ) {
+      return
+    }
+    setRotateBusy(true)
+    setActionError('')
+    setActionInfo('')
+    try {
+      const creds = await rotateMyGameWebhookSecret(gameId)
+      setCredentials(creds)
+      setActionInfo('Webhook secret rotated — copy the new secret below and update your game.')
+    } catch (err) {
+      setActionError(err.message || 'Could not rotate webhook secret.')
+    } finally {
+      setRotateBusy(false)
+    }
+  }
+
   async function handleRequestRelease() {
     setReleaseBusy(true)
     setActionError('')
+    setActionInfo('')
     try {
       const updated = await requestPublicRelease(gameId)
       setGame((prev) => (prev ? { ...prev, visibility: updated.visibility } : prev))
@@ -131,6 +223,7 @@ export default function DeveloperDashboard({ gameId }) {
     }
     setTableBusy(true)
     setActionError('')
+    setActionInfo('')
     try {
       await createPrivateTable(game.id, defaultMode.id)
       await refreshRoom()
@@ -194,6 +287,14 @@ export default function DeveloperDashboard({ gameId }) {
           >
             {checksBusy ? 'Running checks…' : 'Run all checks'}
           </button>
+          <button
+            type="button"
+            className="button-secondary"
+            disabled={syncBusy}
+            onClick={() => void handleSyncManifest()}
+          >
+            {syncBusy ? 'Syncing…' : 'Resync game modes'}
+          </button>
           {canTestTable ? (
             <button
               type="button"
@@ -215,9 +316,46 @@ export default function DeveloperDashboard({ gameId }) {
             </button>
           ) : null}
         </div>
+
+        {canEditApiUrl ? (
+          <form className="developer-form developer-connect-form" onSubmit={(event) => void handleConnectApi(event)}>
+            <h3 className="developer-actions__subheading">Connect / update API URL</h3>
+            <p className="panel-copy">
+              Public HTTPS origin for your game API. Use this to retry a failed connect or move from
+              staging to production. Cannot change while pending review or public.
+            </p>
+            <div className="developer-form__field">
+              <label htmlFor="dev-api-base-url">API base URL</label>
+              <input
+                id="dev-api-base-url"
+                type="url"
+                value={apiBaseUrlDraft}
+                onChange={(event) => setApiBaseUrlDraft(event.target.value)}
+                placeholder="https://mygame.example.com"
+                required
+              />
+            </div>
+            <button type="submit" className="button-secondary" disabled={connectBusy}>
+              {connectBusy ? 'Connecting…' : 'Connect API'}
+            </button>
+          </form>
+        ) : (
+          <p className="panel-copy">
+            API base URL: <code>{game.apiBaseUrl}</code>
+            {game.visibility === 'PENDING_REVIEW' || game.visibility === 'PUBLIC'
+              ? ' (locked while pending review or public)'
+              : null}
+          </p>
+        )}
+
         {game?.visibility === 'PENDING_REVIEW' ? (
           <p className="panel-copy" role="status">
             Your game is pending review — we&apos;ll email you at {game.contactEmail} when it&apos;s approved.
+          </p>
+        ) : null}
+        {actionInfo ? (
+          <p className="status-message" role="status">
+            {actionInfo}
           </p>
         ) : null}
         {actionError ? (
@@ -272,6 +410,18 @@ export default function DeveloperDashboard({ gameId }) {
           <h2 id="credentials-heading">Integration credentials</h2>
           <CredentialField label="Service token" value={credentials.serviceToken} />
           <CredentialField label="Webhook secret" value={credentials.webhookSecret} />
+          <p className="panel-copy">
+            The service token is derived from your game id (not rotatable). Rotate the webhook secret
+            if it leaks — the previous secret stops working immediately.
+          </p>
+          <button
+            type="button"
+            className="button-secondary"
+            disabled={rotateBusy}
+            onClick={() => void handleRotateWebhook()}
+          >
+            {rotateBusy ? 'Rotating…' : 'Rotate webhook secret'}
+          </button>
         </section>
       ) : null}
 

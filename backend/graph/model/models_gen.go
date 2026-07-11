@@ -39,6 +39,19 @@ type CatalogTagOption struct {
 	Description string `json:"description"`
 }
 
+type ConnectMyGameInput struct {
+	GameID string `json:"gameId"`
+	// Optional new public HTTPS API origin. Omit to retry the current URL.
+	APIBaseURL *string `json:"apiBaseUrl,omitempty"`
+}
+
+type ConnectMyGamePayload struct {
+	Game         *Game   `json:"game"`
+	Connected    bool    `json:"connected"`
+	Changed      bool    `json:"changed"`
+	ConnectError *string `json:"connectError,omitempty"`
+}
+
 type CreateDeveloperAPIKeyPayload struct {
 	APIKey *DeveloperAPIKey `json:"apiKey"`
 	Secret string           `json:"secret"`
@@ -372,6 +385,12 @@ type StarterAvatar struct {
 type Subscription struct {
 }
 
+type SyncMyGameManifestPayload struct {
+	Game         *Game   `json:"game"`
+	Changed      bool    `json:"changed"`
+	ConnectError *string `json:"connectError,omitempty"`
+}
+
 type Table struct {
 	ID                  string                     `json:"id"`
 	Game                *Game                      `json:"game"`
@@ -412,10 +431,14 @@ type TableSeatSlot struct {
 
 type UpdateMyGameMetadataInput struct {
 	GameID           string   `json:"gameId"`
+	Name             *string  `json:"name,omitempty"`
 	ShortDescription *string  `json:"shortDescription,omitempty"`
 	LongDescription  *string  `json:"longDescription,omitempty"`
 	HowToPlay        *string  `json:"howToPlay,omitempty"`
 	Tags             []string `json:"tags,omitempty"`
+	ContactEmail     *string  `json:"contactEmail,omitempty"`
+	WebsiteURL       *string  `json:"websiteUrl,omitempty"`
+	CommunityURL     *string  `json:"communityUrl,omitempty"`
 }
 
 type User struct {

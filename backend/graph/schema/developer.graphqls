@@ -45,10 +45,33 @@ type RegisterMyGamePayload {
 
 input UpdateMyGameMetadataInput {
   gameId: ID!
+  name: String
   shortDescription: String
   longDescription: String
   howToPlay: String
   tags: [String!]
+  contactEmail: String
+  websiteUrl: String
+  communityUrl: String
+}
+
+input ConnectMyGameInput {
+  gameId: ID!
+  """Optional new public HTTPS API origin. Omit to retry the current URL."""
+  apiBaseUrl: String
+}
+
+type ConnectMyGamePayload {
+  game: Game!
+  connected: Boolean!
+  changed: Boolean!
+  connectError: String
+}
+
+type SyncMyGameManifestPayload {
+  game: Game!
+  changed: Boolean!
+  connectError: String
 }
 
 extend type Game {
@@ -94,6 +117,12 @@ extend type Mutation {
   createDeveloperApiKey(name: String): CreateDeveloperApiKeyPayload!
   revokeDeveloperApiKey(id: ID!): Boolean!
   registerMyGame(input: RegisterMyGameInput!): RegisterMyGamePayload!
+  """Re-fetch game-modes from the current apiBaseUrl and refresh cached modes/seats."""
+  syncMyGameManifest(gameId: ID!): SyncMyGameManifestPayload!
+  """Connect or reconnect the game API (optional new apiBaseUrl). Promotes draft → private_testing on success."""
+  connectMyGame(input: ConnectMyGameInput!): ConnectMyGamePayload!
+  """Rotate the webhook secret. The previous secret stops working immediately."""
+  rotateMyGameWebhookSecret(gameId: ID!): MyGameCredentials!
   runMyGameChecks(gameId: ID!): [GameIntegrationCheck!]!
   updateMyGameMetadata(input: UpdateMyGameMetadataInput!): Game!
   requestPublicRelease(gameId: ID!): Game!

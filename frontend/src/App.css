@@ -2732,6 +2732,17 @@
   margin-bottom: 0.75rem;
 }
 
+.developer-actions__subheading {
+  margin: 1rem 0 0.35rem;
+  font-size: 1rem;
+}
+
+.developer-connect-form {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .developer-footnote {
   margin-top: 1rem;
   font-size: 0.9rem;

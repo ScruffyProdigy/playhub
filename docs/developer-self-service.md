@@ -321,6 +321,9 @@ Goal: agent runs the **same probes** as the dashboard without the developer in t
 | `joinquest_integration_register_game` | Register a new game (after developer confirms fields) |
 | `joinquest_integration_get_game_checks` | Latest checklist results + errors |
 | `joinquest_integration_run_game_checks` | Run manifest / provision / JWT suite (19 required checks) |
+| `joinquest_integration_sync_game_manifest` | Re-fetch modes/seats after API / seatTemplate fixes |
+| `joinquest_integration_connect_game` | Connect / update apiBaseUrl (draft + private_testing) |
+| `joinquest_integration_rotate_webhook_secret` | Rotate webhook secret |
 | `joinquest_integration_update_game_metadata` | Save catalog copy + tags (after dev approval) |
 | `joinquest_integration_get_game_credentials` | serviceToken, webhook URL (masked) |
 | `joinquest_integration_get_example_provision_payload` | Sample assignment for copy-paste |

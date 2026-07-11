@@ -97,7 +97,10 @@ Maintainers: `./scripts/publish-joinquest-mcp.sh` (requires npm login + `@joinqu
 | `joinquest_integration_register_game` | Register a new game (confirm fields with developer first) |
 | `joinquest_integration_get_game_checks` | Checklist + metadata |
 | `joinquest_integration_run_game_checks` | Run manifest / provision / JWT suite (19 required checks; see integration guide §11) |
-| `joinquest_integration_update_game_metadata` | Save catalog copy + tags |
+| `joinquest_integration_sync_game_manifest` | Re-fetch game-modes and refresh cached seats (after seatTemplate fixes) |
+| `joinquest_integration_connect_game` | Connect / reconnect API; optional new `apiBaseUrl` (draft + private_testing) |
+| `joinquest_integration_rotate_webhook_secret` | Rotate webhook secret (previous stops working) |
+| `joinquest_integration_update_game_metadata` | Save catalog copy, name, contact/links, tags |
 | `joinquest_integration_get_game_credentials` | serviceToken + webhook secret |
 | `joinquest_integration_get_example_provision_payload` | Sample provision JSON |
 | `joinquest_integration_request_public_release` | Submit for catalog review |

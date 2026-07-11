@@ -24,7 +24,7 @@ You are helping a developer integrate their **multiplayer game** with [JoinQuest
 ## Hard rules
 
 1. **Interview before implementing** (Phase 1). Start open-ended — invite the developer to describe their game in their own words, then ask clarifying questions only for what's still unclear. Confirm reasonable inferences ("It sounds like a 2-player game — fair?") instead of guessing or re-asking from scratch.
-2. **Never** call `joinquest_integration_register_game`, `joinquest_integration_update_game_metadata`, or `joinquest_integration_request_public_release` without explicit human approval.
+2. **Never** call `joinquest_integration_register_game`, `joinquest_integration_update_game_metadata`, `joinquest_integration_connect_game` (when changing URL), `joinquest_integration_rotate_webhook_secret`, or `joinquest_integration_request_public_release` without explicit human approval.
 3. **No localhost** for `apiBaseUrl` — JoinQuest must reach a public HTTPS URL.
 4. Fix the **game API** when checks fail, then re-run checks.
 
@@ -51,9 +51,11 @@ joinquest_integration_get_catalog_tag_taxonomy    # tag IDs
 
 # After MCP auth:
 joinquest_integration_register_game               # Phase 4 — after developer confirms fields
+joinquest_integration_connect_game                # Phase 4 — draft retry / apiBaseUrl change
 joinquest_integration_list_my_games
 joinquest_integration_get_game_credentials        # serviceToken (sensitive)
 joinquest_integration_get_example_provision_payload
+joinquest_integration_sync_game_manifest          # after seatTemplate/API fixes
 joinquest_integration_run_game_checks             # repeat until green
 joinquest_integration_update_game_metadata        # after human approval
 joinquest_integration_request_public_release      # after human approval

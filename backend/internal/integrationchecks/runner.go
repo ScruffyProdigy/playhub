@@ -121,7 +121,7 @@ func (r *Runner) RunManifestChecks(ctx context.Context, game *store.Game) []Resu
 		results = append(results, Result{
 			CheckID: "manifest.sync_freshness",
 			Status:  StatusFail,
-			Message: "Your manifest has not been synced to JoinQuest yet — re-run registration connect or refresh.",
+			Message: "Your manifest has not been synced to JoinQuest yet — call syncMyGameManifest (or connectMyGame) after your API is reachable.",
 		})
 	}
 

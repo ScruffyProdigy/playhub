@@ -261,19 +261,32 @@ func (s *Store) ListIntegrationChecks(ctx context.Context, gameID uuid.UUID) ([]
 }
 
 type UpdateMyGameMetadataParams struct {
+	Name             *string
 	ShortDescription *string
 	LongDescription  *string
 	HowToPlay        *string
 	Tags             []string
+	ContactEmail     *string
+	WebsiteURL       *string
+	CommunityURL     *string
+	ClearWebsite     bool
+	ClearCommunity   bool
 }
 
-// UpdateMyGameMetadata updates owner-editable catalog fields.
+// UpdateMyGameMetadata updates owner-editable catalog and contact fields.
 func (s *Store) UpdateMyGameMetadata(ctx context.Context, gameID, ownerUserID uuid.UUID, params UpdateMyGameMetadataParams) (*Game, error) {
 	game, err := s.GetOwnedGame(ctx, gameID, ownerUserID)
 	if err != nil {
 		return nil, err
 	}
 
+	if params.Name != nil {
+		name := strings.TrimSpace(*params.Name)
+		if name == "" {
+			return nil, fmt.Errorf("store: name is required")
+		}
+		game.Name = name
+	}
 	if params.ShortDescription != nil {
 		game.ShortDescription = params.ShortDescription
 	}
@@ -286,17 +299,148 @@ func (s *Store) UpdateMyGameMetadata(ctx context.Context, gameID, ownerUserID uu
 	if params.Tags != nil {
 		game.Tags = params.Tags
 	}
+	if params.ContactEmail != nil {
+		email := strings.TrimSpace(*params.ContactEmail)
+		if email == "" {
+			return nil, fmt.Errorf("store: contact email is required")
+		}
+		game.ContactEmail = &email
+	}
+	if params.ClearWebsite {
+		game.WebsiteURL = nil
+	} else if params.WebsiteURL != nil {
+		game.WebsiteURL = params.WebsiteURL
+	}
+	if params.ClearCommunity {
+		game.CommunityURL = nil
+	} else if params.CommunityURL != nil {
+		game.CommunityURL = params.CommunityURL
+	}
 
 	row := s.db.QueryRowContext(ctx, `
 		UPDATE games SET
-			short_description = $3,
-			description = $4,
-			how_to_play = $5,
-			tags = $6
+			name = $3,
+			short_description = $4,
+			description = $5,
+			how_to_play = $6,
+			tags = $7,
+			contact_email = $8,
+			website_url = $9,
+			community_url = $10,
+			updated_at = NOW()
 		WHERE id = $1 AND owner_user_id = $2
 		RETURNING `+gameColumns+`
-	`, gameID, ownerUserID, game.ShortDescription, game.Description, game.HowToPlay, pq.Array(game.Tags))
+	`, gameID, ownerUserID, game.Name, game.ShortDescription, game.Description, game.HowToPlay, pq.Array(game.Tags), game.ContactEmail, game.WebsiteURL, game.CommunityURL)
 	return scanGame(row)
+}
+
+type ConnectOwnedGameResult struct {
+	Game         *Game
+	Changed      bool
+	Kicked       []KickedWaiter
+	Connected    bool
+	ConnectError string
+}
+
+// ConnectOwnedGame updates api_base_url (optional), applies a fetched manifest, and promotes draft games.
+// On connect failure the URL is not changed and existing modes are left intact.
+func (s *Store) ConnectOwnedGame(ctx context.Context, gameID, ownerUserID uuid.UUID, newAPIBaseURL *string, manifest *gameclient.Manifest, connectErr error) (*ConnectOwnedGameResult, error) {
+	game, err := s.GetOwnedGame(ctx, gameID, ownerUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if newAPIBaseURL != nil {
+		trimmed := strings.TrimRight(strings.TrimSpace(*newAPIBaseURL), "/")
+		if trimmed == "" {
+			return nil, fmt.Errorf("store: api base URL is required")
+		}
+		switch game.Visibility {
+		case GameVisibilityPendingReview, GameVisibilityPublic:
+			return nil, fmt.Errorf("store: cannot change apiBaseUrl while the game is %s — withdraw or wait until private testing", game.Visibility)
+		}
+		if connectErr != nil || manifest == nil {
+			return &ConnectOwnedGameResult{
+				Game:         game,
+				Connected:    false,
+				ConnectError: connectErrorMessage(connectErr),
+			}, nil
+		}
+		if _, err := s.db.ExecContext(ctx, `
+			UPDATE games SET api_base_url = $2, updated_at = NOW() WHERE id = $1 AND owner_user_id = $3
+		`, gameID, trimmed, ownerUserID); err != nil {
+			return nil, err
+		}
+		game, err = s.GetOwnedGame(ctx, gameID, ownerUserID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if connectErr != nil || manifest == nil {
+		return &ConnectOwnedGameResult{
+			Game:         game,
+			Connected:    false,
+			ConnectError: connectErrorMessage(connectErr),
+		}, nil
+	}
+
+	applied, err := s.ApplyGameManifest(ctx, gameID, manifest)
+	if err != nil {
+		return nil, err
+	}
+
+	game, err = s.promoteOwnedGameAfterConnect(ctx, gameID, ownerUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ConnectOwnedGameResult{
+		Game:      game,
+		Changed:   applied.Changed,
+		Kicked:    applied.Kicked,
+		Connected: true,
+	}, nil
+}
+
+func connectErrorMessage(err error) string {
+	if err == nil {
+		return "Could not reach the game API."
+	}
+	return err.Error()
+}
+
+func (s *Store) promoteOwnedGameAfterConnect(ctx context.Context, gameID, ownerUserID uuid.UUID) (*Game, error) {
+	row := s.db.QueryRowContext(ctx, `
+		UPDATE games SET
+			visibility = CASE WHEN visibility = $3 THEN $4 ELSE visibility END,
+			status = $5,
+			updated_at = NOW()
+		WHERE id = $1 AND owner_user_id = $2
+		RETURNING `+gameColumns+`
+	`, gameID, ownerUserID, GameVisibilityDraft, GameVisibilityPrivateTesting, ModeStatusActive)
+	return scanGame(row)
+}
+
+// RotateMyGameWebhookSecret replaces the webhook secret for an owned game.
+func (s *Store) RotateMyGameWebhookSecret(ctx context.Context, gameID, ownerUserID uuid.UUID) (string, *Game, error) {
+	if _, err := s.GetOwnedGame(ctx, gameID, ownerUserID); err != nil {
+		return "", nil, err
+	}
+	secret, err := generateWebhookSecret()
+	if err != nil {
+		return "", nil, err
+	}
+	row := s.db.QueryRowContext(ctx, `
+		UPDATE games SET webhook_secret = $3, updated_at = NOW()
+		WHERE id = $1 AND owner_user_id = $2
+		RETURNING `+gameColumns+`
+	`, gameID, ownerUserID, secret)
+	game, err := scanGame(row)
+	if err != nil {
+		return "", nil, err
+	}
+	return secret, game, nil
 }
 
 // RequestPublicRelease moves a game to pending_review when gates pass.

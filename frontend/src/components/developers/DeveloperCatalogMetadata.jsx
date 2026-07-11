@@ -5,18 +5,26 @@ import {
 } from '../../lib/developers'
 
 export default function DeveloperCatalogMetadata({ game, onSaved }) {
+  const [name, setName] = useState(game?.name ?? '')
   const [shortDescription, setShortDescription] = useState(game?.shortDescription ?? '')
   const [longDescription, setLongDescription] = useState(game?.longDescription ?? '')
   const [howToPlay, setHowToPlay] = useState(game?.howToPlay ?? '')
+  const [contactEmail, setContactEmail] = useState(game?.contactEmail ?? '')
+  const [websiteUrl, setWebsiteUrl] = useState(game?.websiteUrl ?? '')
+  const [communityUrl, setCommunityUrl] = useState(game?.communityUrl ?? '')
   const [selectedTags, setSelectedTags] = useState(game?.tags ?? [])
   const [taxonomy, setTaxonomy] = useState([])
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
 
   useEffect(() => {
+    setName(game?.name ?? '')
     setShortDescription(game?.shortDescription ?? '')
     setLongDescription(game?.longDescription ?? '')
     setHowToPlay(game?.howToPlay ?? '')
+    setContactEmail(game?.contactEmail ?? '')
+    setWebsiteUrl(game?.websiteUrl ?? '')
+    setCommunityUrl(game?.communityUrl ?? '')
     setSelectedTags(game?.tags ?? [])
   }, [game])
 
@@ -48,9 +56,13 @@ export default function DeveloperCatalogMetadata({ game, onSaved }) {
     try {
       const updated = await updateMyGameMetadata({
         gameId: game.id,
+        name: name.trim(),
         shortDescription: shortDescription.trim(),
         longDescription: longDescription.trim(),
         howToPlay: howToPlay.trim(),
+        contactEmail: contactEmail.trim(),
+        websiteUrl: websiteUrl.trim(),
+        communityUrl: communityUrl.trim(),
         tags: selectedTags,
       })
       onSaved?.(updated)
@@ -65,10 +77,20 @@ export default function DeveloperCatalogMetadata({ game, onSaved }) {
     <section className="panel-card" aria-labelledby="catalog-metadata-heading">
       <h2 id="catalog-metadata-heading">Catalog listing</h2>
       <p className="panel-copy">
-        Player-facing copy for your catalog card and detail page. Agents can draft these fields
-        after the discovery interview — edit and save here.
+        Player-facing copy and contact details. Agents can draft these after discovery — edit and
+        save here. Slug stays fixed after registration.
       </p>
       <form className="developer-form" onSubmit={(event) => void handleSubmit(event)}>
+        <div className="developer-form__field">
+          <label htmlFor="dev-game-display-name">Display name</label>
+          <input
+            id="dev-game-display-name"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            required
+          />
+        </div>
         <div className="developer-form__field">
           <label htmlFor="dev-short-description">Short description</label>
           <textarea
@@ -96,6 +118,36 @@ export default function DeveloperCatalogMetadata({ game, onSaved }) {
             value={howToPlay}
             onChange={(event) => setHowToPlay(event.target.value)}
             placeholder="Step-by-step for first-time players"
+          />
+        </div>
+        <div className="developer-form__field">
+          <label htmlFor="dev-contact-email-edit">Contact email</label>
+          <input
+            id="dev-contact-email-edit"
+            type="email"
+            value={contactEmail}
+            onChange={(event) => setContactEmail(event.target.value)}
+            required
+          />
+        </div>
+        <div className="developer-form__field">
+          <label htmlFor="dev-website-edit">Website (optional)</label>
+          <input
+            id="dev-website-edit"
+            type="url"
+            value={websiteUrl}
+            onChange={(event) => setWebsiteUrl(event.target.value)}
+            placeholder="https://"
+          />
+        </div>
+        <div className="developer-form__field">
+          <label htmlFor="dev-community-edit">Community URL (optional)</label>
+          <input
+            id="dev-community-edit"
+            type="url"
+            value={communityUrl}
+            onChange={(event) => setCommunityUrl(event.target.value)}
+            placeholder="https://discord.gg/…"
           />
         </div>
         {taxonomy.length > 0 ? (

@@ -18,7 +18,7 @@ End-to-end workflow for AI agents helping a developer integrate a multiplayer ga
 ## Agent rules (always)
 
 1. **Interview before implementing.** Start open-ended — let the developer describe their game, then ask clarifying questions for what's still unclear. Confirm reasonable inferences instead of guessing or re-asking from scratch.
-2. **Human gates.** Never call `joinquest_integration_register_game`, `joinquest_integration_update_game_metadata`, or `joinquest_integration_request_public_release` without explicit developer approval of the draft values.
+2. **Human gates.** Never call `joinquest_integration_register_game`, `joinquest_integration_update_game_metadata`, `joinquest_integration_connect_game` (when changing `apiBaseUrl`), `joinquest_integration_rotate_webhook_secret`, or `joinquest_integration_request_public_release` without explicit developer approval.
 3. **Public HTTPS only.** JoinQuest cannot reach `localhost` — use staging, Render, Fly, ngrok, etc.
 4. **One phase at a time.** Finish the current phase (or get explicit skip) before moving on.
 5. **MCP first when connected.** Prefer MCP tools over guessing dashboard state. If MCP is not configured, tell the developer how to set it up (Phase 2).
@@ -153,7 +153,7 @@ Use Phase 1 seatTemplate plan. Full details: integration guide §3–§8. Pick a
 | Field | Required | Notes |
 |-------|----------|-------|
 | Game name | Yes | Display name |
-| Slug | Yes | Lowercase URL slug (auto-suggested from name) |
+| Slug | Yes | Lowercase URL slug (auto-suggested from name; **immutable** after register) |
 | Short description | Yes | Initial card blurb (~1–2 sentences) |
 | API base URL | Yes | Public HTTPS origin, e.g. `https://mygame.example.com` |
 | Contact email | Yes | Review notifications |
@@ -164,6 +164,10 @@ Use Phase 1 seatTemplate plan. Full details: integration guide §3–§8. Pick a
 
 **After register:** Success → `private_testing`. Failure → stays `draft` with `connectError`.
 
+**If draft / connect failed:** fix the public API, then MCP `joinquest_integration_connect_game` (optional new `apiBaseUrl`) or dashboard **Connect API**. Do not re-register.
+
+**If API host changes later** (staging → prod): `joinquest_integration_connect_game` with the new URL — only while `draft` or `private_testing` (blocked for pending review / public).
+
 **MCP (after register):**
 
 - `joinquest_integration_list_my_games` — confirm `gameId`
@@ -171,13 +175,15 @@ Use Phase 1 seatTemplate plan. Full details: integration guide §3–§8. Pick a
 - `joinquest_integration_get_game_credentials` — `serviceToken`, `webhookSecret` (sensitive)
 - `joinquest_integration_get_example_provision_payload` — sample POST body for local debugging
 
-**Done when:** Game visibility is `PRIVATE_TESTING` (or developer understands draft errors and is fixing API URL).
+**Done when:** Game visibility is `PRIVATE_TESTING` (or developer understands draft errors and is fixing via connect).
 
 ---
 
 ## Phase 5 — Run integration checks and fix failures
 
 **Goal:** All required checks pass.
+
+**When the game API’s seatTemplate / modes change:** call `joinquest_integration_sync_game_manifest` **before** re-running checks. Live checks can pass against a new API while JoinQuest still has a stale cached manifest — sync refreshes modes/seats. Dashboard: **Resync game modes**.
 
 **MCP:** `joinquest_integration_run_game_checks` with `gameId`.
 
@@ -193,7 +199,7 @@ Use Phase 1 seatTemplate plan. Full details: integration guide §3–§8. Pick a
 
 1. Read `message` and `detail` from the check result.
 2. Load integration guide §11 checklist index → relevant section; add local tests per §8 in the game repo.
-3. Fix the **game API**, deploy, re-run checks.
+3. Fix the **game API**, deploy, **`joinquest_integration_sync_game_manifest`**, then re-run checks.
 
 Common fixes:
 
@@ -201,7 +207,8 @@ Common fixes:
 |-------|-----|
 | `manifest.reach_api` | API must be public HTTPS; `/healthz` returns 200 |
 | `manifest.launch_urls_on_provision` | Set `launchUrlsOnProvision: true` on `GET /api/v1/status` |
-| `manifest.game_modes` | Valid `seatTemplate` JSON per mode |
+| `manifest.game_modes` | Valid `seatTemplate` JSON per mode; then **sync** |
+| `manifest.sync_freshness` | `joinquest_integration_sync_game_manifest` or `connectMyGame` |
 | `provision.auth` | Accept dashboard `serviceToken` on `Authorization: Bearer …` |
 | `provision.missing_auth` | Reject provision with no (or wrong) `Authorization` header |
 | `provision.idempotent_repush` | Re-posting the same `externalMatchId` must succeed |
@@ -233,12 +240,20 @@ Common fixes:
 ```json
 {
   "gameId": "...",
+  "name": "...",
   "shortDescription": "...",
   "longDescription": "...",
   "howToPlay": "...",
-  "tags": ["party", "quick"]
+  "tags": ["party", "quick"],
+  "contactEmail": "dev@example.com",
+  "websiteUrl": "https://...",
+  "communityUrl": "https://discord.gg/..."
 }
 ```
+
+Empty `websiteUrl` / `communityUrl` clears those optional fields. Slug is not editable.
+
+**Credentials:** If `webhookSecret` leaks, `joinquest_integration_rotate_webhook_secret` (human approval). `serviceToken` is derived from game id — not rotatable.
 
 **Done when:** Metadata saved and visible via `joinquest_integration_get_game_checks`.
 
@@ -316,8 +331,8 @@ Play live first when you can: [rpsls-duel.win](https://rpsls-duel.win), [word-hu
 |-------|-------|
 | Setup | `joinquest_integration_get_agent_playbook` (this doc), `joinquest_integration_get_integration_guide` |
 | Discover | `joinquest_integration_get_discovery_prompt`, `joinquest_integration_get_catalog_tag_taxonomy` |
-| Register / status | `joinquest_integration_register_game`, `joinquest_integration_list_my_games`, `joinquest_integration_get_game_checks`, `joinquest_integration_get_game_credentials`, `joinquest_integration_get_example_provision_payload` |
-| Checks | `joinquest_integration_run_game_checks` |
+| Register / status | `joinquest_integration_register_game`, `joinquest_integration_connect_game`, `joinquest_integration_sync_game_manifest`, `joinquest_integration_list_my_games`, `joinquest_integration_get_game_checks`, `joinquest_integration_get_game_credentials`, `joinquest_integration_rotate_webhook_secret`, `joinquest_integration_get_example_provision_payload` |
+| Checks | `joinquest_integration_run_game_checks` (after sync when modes changed) |
 | Metadata | `joinquest_integration_update_game_metadata` |
 | Release | `joinquest_integration_request_public_release` |
 | Build game | Reference repos — [reference-games.md](./reference-games.md); no MCP substitute for gameplay code |

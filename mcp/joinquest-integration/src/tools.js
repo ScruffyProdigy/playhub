@@ -170,23 +170,95 @@ export function registerJoinQuestIntegrationTools(server, config) {
   )
 
   server.registerTool(
+    'joinquest_integration_sync_game_manifest',
+    {
+      description:
+        'Re-fetch /api/v1/game-modes from the game apiBaseUrl and refresh JoinQuest’s cached modes/seats. Call this after fixing seatTemplate (or other manifest fields) before re-running checks. Promotes draft → private_testing on success.',
+      inputSchema: z.object({
+        gameId: z.string().describe('JoinQuest game UUID'),
+      }),
+    },
+    async ({ gameId }) => {
+      const data = await gql(MUTATIONS.syncMyGameManifest, { gameId })
+      return textResult(data.syncMyGameManifest)
+    },
+  )
+
+  server.registerTool(
+    'joinquest_integration_connect_game',
+    {
+      description:
+        'Connect or reconnect the game API. Optionally set a new public HTTPS apiBaseUrl. Use for draft games that failed first connect, or when the API host changes. Confirm the URL with the developer before changing it. Cannot change apiBaseUrl while pending_review or public.',
+      inputSchema: z.object({
+        gameId: z.string().describe('JoinQuest game UUID'),
+        apiBaseUrl: z
+          .string()
+          .optional()
+          .describe('Optional new public HTTPS origin; omit to retry the current URL'),
+      }),
+    },
+    async ({ gameId, apiBaseUrl }) => {
+      const input = { gameId }
+      if (apiBaseUrl !== undefined) {
+        input.apiBaseUrl = apiBaseUrl
+      }
+      const data = await gql(MUTATIONS.connectMyGame, { input })
+      return textResult(data.connectMyGame)
+    },
+  )
+
+  server.registerTool(
+    'joinquest_integration_rotate_webhook_secret',
+    {
+      description:
+        'Rotate the webhook secret for an owned game. The previous secret stops working immediately. Confirm with the developer before calling (sensitive).',
+      inputSchema: z.object({
+        gameId: z.string().describe('JoinQuest game UUID'),
+      }),
+    },
+    async ({ gameId }) => {
+      const data = await gql(MUTATIONS.rotateMyGameWebhookSecret, { gameId })
+      return textResult(data.rotateMyGameWebhookSecret)
+    },
+  )
+
+  server.registerTool(
     'joinquest_integration_update_game_metadata',
     {
-      description: 'Save catalog listing copy and tags after developer approval. Use catalogTagTaxonomy IDs.',
+      description:
+        'Save catalog listing copy, display name, contact/links, and tags after developer approval. Use catalogTagTaxonomy IDs. Empty websiteUrl/communityUrl clears those fields.',
       inputSchema: z.object({
         gameId: z.string(),
+        name: z.string().optional(),
         shortDescription: z.string().optional(),
         longDescription: z.string().optional(),
         howToPlay: z.string().optional(),
         tags: z.array(z.string()).optional(),
+        contactEmail: z.string().optional(),
+        websiteUrl: z.string().optional(),
+        communityUrl: z.string().optional(),
       }),
     },
-    async ({ gameId, shortDescription, longDescription, howToPlay, tags }) => {
+    async ({
+      gameId,
+      name,
+      shortDescription,
+      longDescription,
+      howToPlay,
+      tags,
+      contactEmail,
+      websiteUrl,
+      communityUrl,
+    }) => {
       const input = { gameId }
+      if (name !== undefined) input.name = name
       if (shortDescription !== undefined) input.shortDescription = shortDescription
       if (longDescription !== undefined) input.longDescription = longDescription
       if (howToPlay !== undefined) input.howToPlay = howToPlay
       if (tags !== undefined) input.tags = tags
+      if (contactEmail !== undefined) input.contactEmail = contactEmail
+      if (websiteUrl !== undefined) input.websiteUrl = websiteUrl
+      if (communityUrl !== undefined) input.communityUrl = communityUrl
 
       const data = await gql(MUTATIONS.updateMyGameMetadata, { input })
       return textResult(data.updateMyGameMetadata)
