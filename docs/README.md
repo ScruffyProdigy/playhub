@@ -10,7 +10,7 @@ Documentation for **JoinQuest** — the platform that connects players to third-
 |----------|------------|
 | Evaluating or partnering on a game | [vision.md](vision.md) → [lobby-protocol-handoff.md](lobby-protocol-handoff.md) |
 | Implementing game integration | [lobby-protocol-handoff.md](lobby-protocol-handoff.md), [game-catalog-architecture.md](game-catalog-architecture.md), [seat-templates-and-matchmaking.md](seat-templates-and-matchmaking.md) |
-| Hacking on this repo | [development.md](development.md), [architecture.md](architecture.md), [contributing.md](contributing.md) |
+| Hacking on this repo | [../AGENTS.md](../AGENTS.md), [lobby-maintenance.md](lobby-maintenance.md), [development.md](development.md), [architecture.md](architecture.md) |
 
 ## Documentation structure
 
@@ -30,6 +30,8 @@ Documentation for **JoinQuest** — the platform that connects players to third-
 - **[Seat templates & LFG](seat-templates-and-matchmaking.md)** — Seat map contract and matchmaking spec
 
 ### Getting started (contributors)
+- **[AGENTS.md](../AGENTS.md)** — Agent/maintainer quick reference
+- **[Lobby maintenance runbook](lobby-maintenance.md)** — Deploy, doc sync, MCP publish
 - **[Development Guide](development.md)** — Local setup and day-to-day workflow
 - **[Environment Configuration](environment-configuration.md)** — Runtime env injection (local, k8s)
 - **[Testing Guide](testing.md)** — Backend, frontend, and E2E tests
@@ -46,14 +48,15 @@ Documentation for **JoinQuest** — the platform that connects players to third-
 ## Quick start
 
 1. **Prerequisites**: Go 1.25+, Node.js 20+, Docker
-2. **Clone**: `git clone https://github.com/scruffyprodigy/playhub.git`
+2. **Clone**: `git clone https://github.com/scruffyprodigy/playhub.git` (folder may be `lobby` locally)
 3. **Setup**: `./scripts/setup.sh` from the project root
 4. **Start**: `./scripts/dev.sh` (frontend `:5173`, GraphQL `:8080/graphql`)
 
 ## Project structure
 
 ```text
-playhub/                 # repository root (module name unchanged)
+lobby/ (playhub on GitHub)   # JoinQuest platform — repo root
+├── AGENTS.md            # Maintainer / AI agent guide
 ├── backend/             # Go GraphQL API (Lobby / JoinQuest server)
 ├── frontend/            # React + Vite — player-facing JoinQuest UI
 ├── k8s/                 # Kubernetes manifests

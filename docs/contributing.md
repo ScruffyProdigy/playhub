@@ -4,13 +4,15 @@ Thank you for your interest in contributing to JoinQuest!
 
 We are building infrastructure so indie web developers can **ship multiplayer games** without getting stuck on lobby, auth, and commerce first. If that mission resonates, you are in the right place. Background: **[Product vision](vision.md)**.
 
-This guide will help you get started technically.
+**AI agents / maintainers:** start with **[AGENTS.md](../AGENTS.md)** and **[lobby-maintenance.md](lobby-maintenance.md)** before exploring the codebase.
+
+> **Naming:** product = **JoinQuest** (`joinquest.cc`). GitHub repo = [`scruffyprodigy/playhub`](https://github.com/scruffyprodigy/playhub). Local folder is often `lobby`. Legacy `playhub` names remain in Docker images and database names.
 
 ## Getting Started
 
-1. **Fork the repository** on GitHub
-2. **Clone your fork** locally
-3. **Set up the development environment** using our setup script
+1. **Fork the repository** on GitHub (or work on a branch if you have write access)
+2. **Clone** locally
+3. **Set up** with `./scripts/setup.sh`
 4. **Create a feature branch** for your changes
 5. **Make your changes** and test them
 6. **Submit a pull request**
@@ -19,8 +21,8 @@ This guide will help you get started technically.
 
 ### Quick Setup
 ```bash
-git clone https://github.com/your-username/playhub.git
-cd playhub
+git clone https://github.com/scruffyprodigy/playhub.git
+cd playhub   # folder may be named lobby locally
 ./scripts/setup.sh
 ```
 
@@ -36,16 +38,19 @@ git checkout -b feature/your-feature-name
 
 ### 2. Make Your Changes
 - Write clean, readable code
-- Follow existing code style
+- Follow existing code style in the surrounding files
 - Add tests for new functionality
 - Update documentation as needed
+- After editing `docs/developer-agent-playbook.md` or `docs/developer-integration-guide.md`, run `./scripts/sync-developer-docs.sh`
+- After GraphQL schema changes, run `cd backend && make generate`
 
 ### 3. Test Your Changes
 ```bash
-# Run all tests
-./scripts/test.sh
+# Pre-ship checks (recommended)
+./scripts/ship-joinquest.sh --check
 
-# Run specific test suites
+# Or run individually
+./scripts/test.sh
 ./scripts/test-backend.sh
 ./scripts/test-frontend.sh --e2e
 ```
@@ -53,8 +58,10 @@ git checkout -b feature/your-feature-name
 ### 4. Commit Your Changes
 ```bash
 git add .
-git commit -m "feat: add new feature description"
+git commit -m "Add short description of why"
 ```
+
+Use clear commit messages focused on the *why* (see recent history on `main`).
 
 ### 5. Push and Create Pull Request
 ```bash
@@ -74,8 +81,11 @@ Then create a pull request on GitHub.
 ### Frontend (JavaScript/React)
 - Use ESLint configuration provided
 - Follow React best practices
-- Write tests for components
-- Use TypeScript when possible
+- Write tests for components (Vitest)
+- Frontend uses JSX (not TypeScript)
+
+### Developer dashboard / MCP changes
+When changing developer-facing GraphQL operations, update backend, frontend, MCP, and docs together — see the checklist in [AGENTS.md](../AGENTS.md).
 
 ### General
 - Use meaningful variable and function names
@@ -98,16 +108,15 @@ Then create a pull request on GitHub.
 - Run E2E tests for critical paths
 
 ### Test Coverage
-- Aim for >80% test coverage
-- Focus on critical business logic
+- Focus on critical business logic and integration paths
 - Don't test implementation details
 
 ## Pull Request Guidelines
 
 ### Before Submitting
-- [ ] All tests pass
+- [ ] `./scripts/ship-joinquest.sh --check` passes (or equivalent test runs)
 - [ ] Code follows style guidelines
-- [ ] Documentation is updated
+- [ ] Documentation is updated (including `./scripts/sync-developer-docs.sh` if playbook/guide changed)
 - [ ] No sensitive data is committed
 - [ ] Commit messages are clear
 

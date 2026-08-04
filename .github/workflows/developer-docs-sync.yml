@@ -1,0 +1,34 @@
+name: Developer Docs Sync
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/developer-agent-playbook.md'
+      - 'docs/developer-integration-guide.md'
+      - 'backend/internal/developer/**'
+      - '.agents/skills/joinquest-integration/**'
+      - 'plugins/joinquest/skills/**'
+      - 'scripts/sync-developer-docs.sh'
+      - 'scripts/check-developer-docs-sync.sh'
+      - '.github/workflows/developer-docs-sync.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/developer-agent-playbook.md'
+      - 'docs/developer-integration-guide.md'
+      - 'backend/internal/developer/**'
+      - '.agents/skills/joinquest-integration/**'
+      - 'plugins/joinquest/skills/**'
+      - 'scripts/sync-developer-docs.sh'
+      - 'scripts/check-developer-docs-sync.sh'
+      - '.github/workflows/developer-docs-sync.yml'
+
+jobs:
+  check-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify developer doc copies match canonical sources
+        run: ./scripts/check-developer-docs-sync.sh

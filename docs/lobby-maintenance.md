@@ -1,0 +1,165 @@
+# Lobby maintenance runbook
+
+Operational guide for **JoinQuest platform contributors** — local dev, testing, doc sync, deploy, and MCP publish. AI agents maintaining this repo should read [AGENTS.md](../AGENTS.md) first.
+
+## Repository identity
+
+| Term | Meaning |
+|------|---------|
+| `lobby` | This git repo / local folder |
+| **JoinQuest** | Product; [joinquest.cc](https://joinquest.cc) |
+| `playhub` | Legacy name in Docker images, DB names, k8s templates, GitHub repo |
+
+Clone:
+
+```bash
+git clone https://github.com/scruffyprodigy/playhub.git
+cd playhub    # folder may be named lobby locally
+```
+
+## Local stack
+
+```bash
+./scripts/setup.sh
+./scripts/dev.sh
+```
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| GraphQL | http://localhost:8080/graphql |
+| Postgres | `playhub` (dev), `playhub_test` (backend tests) |
+
+Stop: Ctrl+C in the dev terminal, or `docker compose down`.
+
+## Testing
+
+```bash
+./scripts/test.sh                    # backend + frontend unit tests
+./scripts/test-backend.sh            # backend only (isolated test DB)
+./scripts/test-frontend.sh           # frontend unit tests
+./scripts/test-frontend.sh --e2e     # Playwright (requires running stack)
+cd backend && make check-drift       # gqlgen schema vs generated code
+cd mcp/joinquest-integration && npm test
+./scripts/check-developer-docs-sync.sh
+```
+
+Or run all pre-ship checks:
+
+```bash
+./scripts/ship-joinquest.sh --check
+```
+
+## Developer doc sync
+
+Canonical sources live in `docs/`:
+
+- `docs/developer-agent-playbook.md`
+- `docs/developer-integration-guide.md`
+
+After editing either file:
+
+```bash
+./scripts/sync-developer-docs.sh
+```
+
+This updates:
+
+- `backend/internal/developer/agent_playbook.md` (served via GraphQL/MCP)
+- `backend/internal/developer/integration_guide.md`
+- `.agents/skills/joinquest-integration/playbook.md`
+- `plugins/joinquest/skills/joinquest-integration/`
+
+CI fails if copies drift. Verify locally with `./scripts/check-developer-docs-sync.sh`.
+
+## GraphQL changes
+
+```bash
+# 1. Edit backend/graph/schema/*.graphqls
+cd backend && make generate
+# 2. Implement resolvers + store
+go test ./...
+```
+
+Drift detection runs in CI (`TestGqlgenDrift`).
+
+## Developer feature fan-out
+
+When adding or changing developer-dashboard operations, update all surfaces:
+
+| Layer | Path |
+|-------|------|
+| Schema | `backend/graph/schema/developer.graphqls` |
+| Codegen | `make generate` |
+| Store | `backend/internal/store/developer.go` |
+| Resolver | `backend/graph/developer.resolvers.go` |
+| Frontend API | `frontend/src/lib/developers.js` |
+| Frontend UI | `frontend/src/components/developers/` |
+| MCP GraphQL | `mcp/joinquest-integration/src/graphql.js` |
+| MCP tools | `mcp/joinquest-integration/src/tools.js` |
+| MCP version | `mcp/joinquest-integration/package.json` |
+| Docs | `docs/developer-self-service.md`, `docs/developer-agent-playbook.md` |
+| Sync | `./scripts/sync-developer-docs.sh` |
+
+## Deploy to joinquest.cc (GKE)
+
+Requires: Docker Hub login, `kubectl`, GKE credentials, secrets in `k8s/secrets/`.
+
+```bash
+# 1. Build and push images
+./scripts/build-and-push.sh --push
+
+# 2. Refresh cluster credentials (if kubectl returns Unauthorized)
+gcloud container clusters get-credentials joinquest --region us-east1 --project joinquest-demo
+
+# 3. Deploy
+./scripts/deploy-joinquest.sh
+```
+
+`deploy-joinquest.sh` applies `k8s/base/*` with namespace rewritten `playhub` → `joinquest`, runs migration job, patches game handoff URLs, and restarts deployments.
+
+Post-deploy smoke:
+
+- https://joinquest.cc loads
+- https://joinquest.cc/graphql responds
+- Developer dashboard: https://joinquest.cc/developers
+
+## Publish MCP package
+
+Only when `mcp/joinquest-integration/` changed:
+
+1. Bump version in `mcp/joinquest-integration/package.json`
+2. Run tests: `cd mcp/joinquest-integration && npm test`
+3. Publish:
+
+```bash
+./scripts/publish-joinquest-mcp.sh
+# or: NPM_OTP=123456 ./scripts/publish-joinquest-mcp.sh
+```
+
+Requires npm login with publish access to `@joinquest` scope. GitHub Actions alternative: workflow **Publish JoinQuest MCP** (`workflow_dispatch`) with `NPM_TOKEN` secret.
+
+Verify: `npx -y @joinquest/mcp-integration@<version>` (stdio MCP; Ctrl+C to exit).
+
+## Typical ship sequence
+
+When the user asks to commit, push, deploy, and publish:
+
+```bash
+./scripts/ship-joinquest.sh --check
+git add … && git commit -m "…"
+git push origin main
+./scripts/build-and-push.sh --push
+./scripts/deploy-joinquest.sh
+./scripts/publish-joinquest-mcp.sh   # if MCP changed
+```
+
+Each destructive step needs explicit user approval.
+
+## Related docs
+
+- [AGENTS.md](../AGENTS.md) — agent quick reference
+- [development.md](development.md) — contributor setup
+- [contributing.md](contributing.md) — PR guidelines
+- [environment-configuration.md](environment-configuration.md) — k8s env injection
+- [testing.md](testing.md) — test layout and philosophy

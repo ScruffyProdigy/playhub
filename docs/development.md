@@ -2,7 +2,11 @@
 
 This guide will help you set up and run JoinQuest locally for development.
 
+**AI agents / maintainers:** [AGENTS.md](../AGENTS.md) · [lobby-maintenance.md](lobby-maintenance.md)
+
 **Context:** JoinQuest is the shared lobby and integration platform described in **[Product vision](vision.md)**. This repo is the server + player UI; partner games (e.g. `demo-game-rps`) integrate via the handoff protocol.
+
+> **Naming:** product = **JoinQuest**. GitHub repo = `scruffyprodigy/playhub`. Local folder is often `lobby`. Legacy `playhub` identifiers (DB, Docker images) are intentional.
 
 ## Current Development Status
 
@@ -35,7 +39,7 @@ This guide will help you set up and run JoinQuest locally for development.
 1. **Clone the repository**
    ```bash
    git clone https://github.com/scruffyprodigy/playhub.git
-   cd playhub
+   cd playhub   # folder may be named lobby locally
    ```
 
 2. **Run the setup script**
@@ -148,6 +152,8 @@ Production deploys also run `k8s/jobs/patch-game-handoff-urls.yaml` via `./scrip
 - **All tests**: `./scripts/test.sh`
 - **Test DB only**: `./scripts/db.sh test-migrate` then `export DATABASE_URL="$(./scripts/db.sh test-url)"`
 - **JoinQuest integration MCP**: `cd mcp/joinquest-integration && npm test` — see [mcp/joinquest-integration/README.md](../mcp/joinquest-integration/README.md)
+- **Developer doc sync check**: `./scripts/check-developer-docs-sync.sh`
+- **Pre-ship checks**: `./scripts/ship-joinquest.sh --check`
 - **Agent skill**: [`.agents/skills/joinquest-integration/`](../.agents/skills/joinquest-integration/) — copy into game projects; playbook at [docs/developer-agent-playbook.md](./developer-agent-playbook.md)
 
 ### JoinQuest integration MCP (developer agents)

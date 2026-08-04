@@ -56,6 +56,14 @@ This project consists of:
 
 See [Architecture Overview](docs/architecture.md) and [Vision](docs/vision.md).
 
+## For AI agents / maintainers
+
+Maintaining this repo (backend, dashboard, deploy): start with **[AGENTS.md](AGENTS.md)** and **[docs/lobby-maintenance.md](docs/lobby-maintenance.md)**.
+
+Helping a game developer integrate with JoinQuest: use the skill in [`.agents/skills/joinquest-integration/`](.agents/skills/joinquest-integration/) (usually installed into their game repo).
+
+> **Naming:** the product is **JoinQuest** (`joinquest.cc`). This folder is often named `lobby` locally. The GitHub repo and some internals still use the legacy name `playhub` (Docker images, database names).
+
 ## Getting Started
 
 ### Prerequisites
@@ -68,7 +76,7 @@ See [Architecture Overview](docs/architecture.md) and [Vision](docs/vision.md).
 
 ```bash
 git clone https://github.com/scruffyprodigy/playhub.git
-cd playhub
+cd playhub   # or lobby — same repo
 ./scripts/setup.sh
 ./scripts/dev.sh
 ```
@@ -149,6 +157,8 @@ See [Environment Configuration](docs/environment-configuration.md) for detailed 
 
 ## Documentation
 
+- **[AGENTS.md](AGENTS.md)** — AI agent / maintainer quick reference (repo map, checklists, ship)
+- **[Lobby maintenance runbook](docs/lobby-maintenance.md)** — Deploy, doc sync, MCP publish
 - **[Product vision](docs/vision.md)** — Why JoinQuest exists; indie dev + integration story
 - **[End-to-end partner checklist](docs/end-to-end-partner-checklist.md)** — Verify sign-in → queue → play → return
 - **[Development Guide](docs/development.md)** — Setup and development workflow
