@@ -62,6 +62,7 @@ vi.mock('../../lib/developers', () => ({
     ({ apiKey }) => `curl -fsSL ... -o install-joinquest-dev.sh\nless install-joinquest-dev.sh`,
   ),
   INSTALL_DEV_SCRIPT_GITHUB: 'https://github.com/example/install-joinquest-dev.sh',
+  INSTALL_SETUP_MANIFEST_GITHUB: 'https://github.com/example/joinquest-setup/README.md',
   INSTALL_CURSOR_PLUGIN_SCRIPT_GITHUB: 'https://github.com/example/install-joinquest-cursor-plugin.sh',
   INSTALL_CLAUDE_PLUGIN_SCRIPT_GITHUB: 'https://github.com/example/install-joinquest-claude-plugin.sh',
   CURSOR_PLUGIN_GITHUB: 'https://github.com/example/plugins/joinquest',

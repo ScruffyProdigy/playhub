@@ -50,6 +50,26 @@ describe('buildInstallDevCommand', () => {
   })
 })
 
+describe('buildInstallDevInspectCommand', () => {
+  it('downloads all five shell files for review', async () => {
+    const { buildInstallDevInspectCommand, INSTALL_DEV_LIB_FILES } = await import('./developers')
+    const cmd = buildInstallDevInspectCommand({ apiKey: 'lq_dev_test', client: 'copilot' })
+    expect(cmd).toContain('install-joinquest-dev.sh')
+    for (const file of INSTALL_DEV_LIB_FILES) {
+      expect(cmd).toContain(`joinquest-setup-lib/${file}`)
+    }
+    expect(cmd).toContain('--dry-run --copilot')
+    expect(cmd).toContain('JOINQUEST_API_KEY=lq_dev_test')
+  })
+})
+
+describe('buildInstallDevDryRunCommand', () => {
+  it('pipes entry script with --dry-run', async () => {
+    const { buildInstallDevDryRunCommand } = await import('./developers')
+    expect(buildInstallDevDryRunCommand({ client: 'cursor' })).toContain('--dry-run --cursor')
+  })
+})
+
 describe('REQUIRED_INTEGRATION_CHECKS', () => {
   it('matches backend requiredPassChecks', () => {
     const goSource = readFileSync(join(repoRoot, 'backend/internal/store/developer.go'), 'utf8')

@@ -11,6 +11,7 @@ import {
   INSTALL_CLAUDE_PLUGIN_SCRIPT_GITHUB,
   INSTALL_CURSOR_PLUGIN_SCRIPT_GITHUB,
   INSTALL_DEV_SCRIPT_GITHUB,
+  INSTALL_SETUP_MANIFEST_GITHUB,
   CURSOR_PLUGIN_GITHUB,
   developerLandingHref,
 } from '../../lib/developers'
@@ -574,13 +575,20 @@ export default function DeveloperMcpWizard({ defaultExpanded = false, alwaysExpa
                       </li>
                     </ul>
                     <p className="panel-copy">
-                      <a className="auth-link" href={INSTALL_DEV_SCRIPT_GITHUB} target="_blank" rel="noreferrer">
-                        Read the script on GitHub
+                      <a className="auth-link" href={INSTALL_SETUP_MANIFEST_GITHUB} target="_blank" rel="noreferrer">
+                        Complete file list
                       </a>{' '}
-                      before you run it, if you like.
+                      (five shell files + skill — nothing else) ·{' '}
+                      <a className="auth-link" href={INSTALL_DEV_SCRIPT_GITHUB} target="_blank" rel="noreferrer">
+                        entry script on GitHub
+                      </a>
                     </p>
                     <details className="developer-mcp__details">
-                      <summary>Want to download and review first?</summary>
+                      <summary>Download and review all install scripts first</summary>
+                      <p className="panel-copy">
+                        Downloads the entry script plus four helper libraries — the full shell surface,
+                        with no hidden scripts.
+                      </p>
                       <pre className="developer-mcp__config">{installInspectCommand}</pre>
                       <button
                         type="button"
