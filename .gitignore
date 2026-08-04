@@ -1,5 +1,6 @@
-# Dependencies
-node_modules/
+# Generated CLI assets (prepublish)
+packages/joinquest/assets/
+
 */node_modules/
 
 # Build outputs

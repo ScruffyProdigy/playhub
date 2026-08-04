@@ -1,0 +1,24 @@
+{
+  "name": "create-joinquest",
+  "version": "0.1.0",
+  "description": "npm create joinquest — install JoinQuest agent skill + MCP",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "create-joinquest": "bin/create-joinquest.js"
+  },
+  "dependencies": {
+    "joinquest": "file:../joinquest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scruffyprodigy/playhub.git",
+    "directory": "packages/create-joinquest"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,37 @@
+name: Publish JoinQuest CLI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Sync assets and test joinquest
+        working-directory: packages/joinquest
+        run: |
+          npm run sync-assets
+          npm test
+
+      - name: Publish joinquest
+        working-directory: packages/joinquest
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Install create-joinquest dependency
+        working-directory: packages/create-joinquest
+        run: npm install
+
+      - name: Publish create-joinquest
+        working-directory: packages/create-joinquest
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

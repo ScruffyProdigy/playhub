@@ -46,21 +46,20 @@ vi.mock('../../lib/developers', () => ({
   ),
   buildInstallCursorPluginCommand: vi.fn(
     ({ apiKey }) =>
-      `export JOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'}\ncurl -fsSL .../install-joinquest-cursor-plugin.sh | sh`,
+      `JOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'}\nnpx -y joinquest install cursor --plugin`,
   ),
   buildInstallClaudePluginCommand: vi.fn(
     ({ apiKey }) =>
-      `export JOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'}\ncurl -fsSL .../install-joinquest-claude-plugin.sh | sh`,
+      `JOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'}\nnpx -y joinquest install claude --plugin`,
   ),
   buildInstallDevCommand: vi.fn(
     ({ apiKey, client }) =>
-      client === 'skill-only'
-        ? 'curl -fsSL .../install-joinquest-dev.sh | sh -s -- --skill-only'
-        : `export JOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'}\ncurl -fsSL .../install-joinquest-dev.sh | sh -s -- --${client}`,
+      `JOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'}\nnpx -y joinquest install ${client === 'skill-only' ? 'skill' : client}`,
   ),
   buildInstallDevInspectCommand: vi.fn(
-    ({ apiKey }) => `curl -fsSL ... -o install-joinquest-dev.sh\nless install-joinquest-dev.sh`,
+    ({ apiKey }) => `npx -y joinquest install cursor --dry-run\nJOINQUEST_API_KEY=${apiKey || 'lq_dev_PASTE_YOUR_KEY'}`,
   ),
+  JOINQUEST_CLI_GITHUB: 'https://github.com/example/joinquest',
   INSTALL_DEV_SCRIPT_GITHUB: 'https://github.com/example/install-joinquest-dev.sh',
   INSTALL_SETUP_MANIFEST_GITHUB: 'https://github.com/example/joinquest-setup/README.md',
   INSTALL_CURSOR_PLUGIN_SCRIPT_GITHUB: 'https://github.com/example/install-joinquest-cursor-plugin.sh',
@@ -117,7 +116,7 @@ describe('DeveloperMcpWizard', () => {
     expect(buildInstallCursorPluginCommand).toHaveBeenCalledWith(
       expect.objectContaining({ apiKey: 'lq_dev_saved_key_abc' }),
     )
-    expect(screen.getByText(/install-joinquest-cursor-plugin\.sh/)).toBeInTheDocument()
+    expect(screen.getByText(/npx -y joinquest install cursor --plugin/)).toBeInTheDocument()
   })
 
   it('shows Claude Code plugin install after switching tabs', async () => {
@@ -139,7 +138,7 @@ describe('DeveloperMcpWizard', () => {
     expect(buildInstallDevCommand).toHaveBeenCalledWith(
       expect.objectContaining({ client: 'copilot' }),
     )
-    expect(screen.getByText(/--copilot/)).toBeInTheDocument()
+    expect(screen.getByText(/install copilot/)).toBeInTheDocument()
   })
 
   it('explains ChatGPT is unsupported and links to manual registration', async () => {

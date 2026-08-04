@@ -12,6 +12,7 @@ import {
   INSTALL_CURSOR_PLUGIN_SCRIPT_GITHUB,
   INSTALL_DEV_SCRIPT_GITHUB,
   INSTALL_SETUP_MANIFEST_GITHUB,
+  JOINQUEST_CLI_GITHUB,
   CURSOR_PLUGIN_GITHUB,
   developerLandingHref,
 } from '../../lib/developers'
@@ -575,19 +576,19 @@ export default function DeveloperMcpWizard({ defaultExpanded = false, alwaysExpa
                       </li>
                     </ul>
                     <p className="panel-copy">
-                      <a className="auth-link" href={INSTALL_SETUP_MANIFEST_GITHUB} target="_blank" rel="noreferrer">
-                        Complete file list
+                      <a className="auth-link" href={JOINQUEST_CLI_GITHUB} target="_blank" rel="noreferrer">
+                        joinquest npm package
                       </a>{' '}
-                      (five shell files + skill — nothing else) ·{' '}
-                      <a className="auth-link" href={INSTALL_DEV_SCRIPT_GITHUB} target="_blank" rel="noreferrer">
-                        entry script on GitHub
+                      on GitHub ·{' '}
+                      <a className="auth-link" href={INSTALL_SETUP_MANIFEST_GITHUB} target="_blank" rel="noreferrer">
+                        setup overview
                       </a>
                     </p>
                     <details className="developer-mcp__details">
-                      <summary>Download and review all install scripts first</summary>
+                      <summary>Preview install (--dry-run)</summary>
                       <p className="panel-copy">
-                        Downloads the entry script plus four helper libraries — the full shell surface,
-                        with no hidden scripts.
+                        Shows what would be written without changing your project. Same package as MCP (
+                        <code>npx joinquest</code>).
                       </p>
                       <pre className="developer-mcp__config">{installInspectCommand}</pre>
                       <button

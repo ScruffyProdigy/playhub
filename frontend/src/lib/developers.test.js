@@ -45,28 +45,27 @@ describe('buildMcpServerConfig', () => {
 describe('buildInstallDevCommand', () => {
   it('maps platform flags', async () => {
     const { buildInstallDevCommand } = await import('./developers')
-    expect(buildInstallDevCommand({ apiKey: 'k', client: 'copilot' })).toContain('--copilot')
-    expect(buildInstallDevCommand({ apiKey: 'k', client: 'roo' })).toContain('--roo')
+    expect(buildInstallDevCommand({ apiKey: 'k', client: 'copilot' })).toContain('install copilot')
+    expect(buildInstallDevCommand({ apiKey: 'k', client: 'roo' })).toContain('install roo')
   })
 })
 
 describe('buildInstallDevInspectCommand', () => {
-  it('downloads all five shell files for review', async () => {
-    const { buildInstallDevInspectCommand, INSTALL_DEV_LIB_FILES } = await import('./developers')
+  it('uses npx joinquest dry-run and install', async () => {
+    const { buildInstallDevInspectCommand, JOINQUEST_CLI_PACKAGE } = await import('./developers')
     const cmd = buildInstallDevInspectCommand({ apiKey: 'lq_dev_test', client: 'copilot' })
-    expect(cmd).toContain('install-joinquest-dev.sh')
-    for (const file of INSTALL_DEV_LIB_FILES) {
-      expect(cmd).toContain(`joinquest-setup-lib/${file}`)
-    }
-    expect(cmd).toContain('--dry-run --copilot')
+    expect(cmd).toContain(`npx -y ${JOINQUEST_CLI_PACKAGE} install copilot --dry-run`)
     expect(cmd).toContain('JOINQUEST_API_KEY=lq_dev_test')
+    expect(cmd).toContain('install copilot')
   })
 })
 
 describe('buildInstallDevDryRunCommand', () => {
-  it('pipes entry script with --dry-run', async () => {
-    const { buildInstallDevDryRunCommand } = await import('./developers')
-    expect(buildInstallDevDryRunCommand({ client: 'cursor' })).toContain('--dry-run --cursor')
+  it('uses npx joinquest install --dry-run', async () => {
+    const { buildInstallDevDryRunCommand, JOINQUEST_CLI_PACKAGE } = await import('./developers')
+    expect(buildInstallDevDryRunCommand({ client: 'cursor' })).toBe(
+      `npx -y ${JOINQUEST_CLI_PACKAGE} install cursor --dry-run`,
+    )
   })
 })
 

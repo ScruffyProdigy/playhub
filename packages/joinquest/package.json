@@ -1,0 +1,47 @@
+{
+  "name": "joinquest",
+  "version": "0.1.0",
+  "description": "Install JoinQuest agent skill and MCP for Cursor, Claude, Copilot, and other AI editors",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "joinquest",
+    "mcp",
+    "cursor",
+    "claude",
+    "copilot",
+    "game-development"
+  ],
+  "files": [
+    "bin",
+    "src",
+    "assets",
+    "README.md"
+  ],
+  "bin": {
+    "joinquest": "bin/joinquest.js"
+  },
+  "exports": {
+    ".": "./src/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scruffyprodigy/playhub.git",
+    "directory": "packages/joinquest"
+  },
+  "bugs": {
+    "url": "https://github.com/scruffyprodigy/playhub/issues"
+  },
+  "homepage": "https://joinquest.cc/developers",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "sync-assets": "node scripts/sync-assets.mjs",
+    "test": "node --test test/*.test.js",
+    "prepublishOnly": "npm run sync-assets && npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -9,8 +9,14 @@ Install the agent skill + MCP in your **game repo** or as a Cursor/Claude plugin
 Quick start:
 
 ```bash
-JOINQUEST_API_KEY=lq_dev_... curl -fsSL https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts/install-joinquest-dev.sh | sh -s -- --cursor
+JOINQUEST_API_KEY=lq_dev_... npx joinquest install cursor
+# or
+npm create joinquest@latest -- --cursor
 ```
+
+See [packages/joinquest/README.md](../packages/joinquest/README.md).
+
+Legacy `curl | sh` wrappers forward to `npx joinquest` after publish.
 
 ## Lobby contributors (this repo)
 

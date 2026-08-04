@@ -487,6 +487,7 @@ function joinquestMcpEnv({ apiKey }) {
 }
 
 const MCP_NPX_PACKAGE = '@joinquest/mcp-integration'
+export const JOINQUEST_CLI_PACKAGE = 'joinquest'
 export const INSTALL_DEV_SCRIPT_BASE =
   'https://raw.githubusercontent.com/scruffyprodigy/playhub/main/scripts'
 export const INSTALL_DEV_SCRIPT_URL = `${INSTALL_DEV_SCRIPT_BASE}/install-joinquest-dev.sh`
@@ -494,7 +495,9 @@ export const INSTALL_DEV_SCRIPT_GITHUB =
   'https://github.com/scruffyprodigy/playhub/blob/main/scripts/install-joinquest-dev.sh'
 export const INSTALL_SETUP_MANIFEST_GITHUB =
   'https://github.com/scruffyprodigy/playhub/blob/main/scripts/joinquest-setup/README.md'
-/** Complete shell surface for install-joinquest-dev.sh (no other scripts are loaded). */
+export const JOINQUEST_CLI_GITHUB =
+  'https://github.com/scruffyprodigy/playhub/tree/main/packages/joinquest'
+/** @deprecated Shell libs — use npx joinquest install instead. */
 export const INSTALL_DEV_LIB_FILES = [
   'joinquest-skill.sh',
   'joinquest-mcp-env.sh',
@@ -512,39 +515,58 @@ export const INSTALL_CLAUDE_PLUGIN_SCRIPT_GITHUB =
 export const CURSOR_PLUGIN_GITHUB =
   'https://github.com/scruffyprodigy/playhub/tree/main/plugins/joinquest'
 
-export function buildInstallCursorPluginCommand({ apiKey }) {
+function joinquestInstallPlatform(client) {
+  switch (client) {
+    case 'claude':
+    case 'claude-code':
+      return 'claude'
+    case 'claude-desktop':
+      return 'claude-desktop'
+    case 'copilot':
+      return 'copilot'
+    case 'roo':
+      return 'roo'
+    case 'windsurf':
+      return 'windsurf'
+    case 'cline':
+      return 'cline'
+    case 'skill-only':
+      return 'skill'
+    default:
+      return 'cursor'
+  }
+}
+
+/** @deprecated Use joinquestInstallPlatform */
+function joinquestInstallDevFlag(client) {
+  const platform = joinquestInstallPlatform(client)
+  return platform === 'skill' ? '--skill-only' : `--${platform}`
+}
+
+function joinquestInstallEnvPrefix(apiKey) {
   const key = apiKey || 'lq_dev_PASTE_YOUR_KEY'
-  return `export JOINQUEST_API_KEY=${key}
-curl -fsSL ${INSTALL_CURSOR_PLUGIN_SCRIPT_URL} | sh`
+  return `JOINQUEST_API_KEY=${key}`
+}
+
+export function buildJoinquestInstallCommand({ apiKey, client = 'cursor', plugin = false }) {
+  const platform = joinquestInstallPlatform(client)
+  const flags = plugin && (platform === 'cursor' || platform === 'claude') ? ' --plugin' : ''
+  return `${joinquestInstallEnvPrefix(apiKey)}
+npx -y ${JOINQUEST_CLI_PACKAGE} install ${platform}${flags}`
+}
+
+export function buildJoinquestCreateCommand({ apiKey, client = 'cursor' }) {
+  const platform = joinquestInstallPlatform(client)
+  return `${joinquestInstallEnvPrefix(apiKey)}
+npm create joinquest@latest -- --${platform}`
+}
+
+export function buildInstallCursorPluginCommand({ apiKey }) {
+  return buildJoinquestInstallCommand({ apiKey, client: 'cursor', plugin: true })
 }
 
 export function buildInstallClaudePluginCommand({ apiKey }) {
-  const key = apiKey || 'lq_dev_PASTE_YOUR_KEY'
-  return `export JOINQUEST_API_KEY=${key}
-curl -fsSL ${INSTALL_CLAUDE_PLUGIN_SCRIPT_URL} | sh`
-}
-
-function joinquestInstallDevFlag(client) {
-  switch (client) {
-    case 'claude':
-      return '--claude'
-    case 'claude-desktop':
-      return '--claude-desktop'
-    case 'copilot':
-      return '--copilot'
-    case 'roo':
-      return '--roo'
-    case 'windsurf':
-      return '--windsurf'
-    case 'cline':
-      return '--cline'
-    case 'all':
-      return '--all'
-    case 'skill-only':
-      return '--skill-only'
-    default:
-      return '--cursor'
-  }
+  return buildJoinquestInstallCommand({ apiKey, client: 'claude', plugin: true })
 }
 
 function joinquestStdioMcpServer({ apiKey, clientId }) {
@@ -565,50 +587,25 @@ function joinquestStdioMcpServer({ apiKey, clientId }) {
 }
 
 export function buildInstallDevCommand({ apiKey, client = 'cursor' }) {
-  const flag = joinquestInstallDevFlag(client)
-  if (client === 'skill-only') {
-    return `curl -fsSL ${INSTALL_DEV_SCRIPT_URL} | sh -s -- ${flag}`
-  }
-  const key = apiKey || 'lq_dev_PASTE_YOUR_KEY'
-  return `export JOINQUEST_API_KEY=${key}
-curl -fsSL ${INSTALL_DEV_SCRIPT_URL} | sh -s -- ${flag}`
-}
-
-function joinquestInstallDevLibDownloadLines() {
-  return INSTALL_DEV_LIB_FILES.map(
-    (file) =>
-      `curl -fsSL ${INSTALL_DEV_SCRIPT_BASE}/lib/${file} -o joinquest-setup-lib/${file}`,
-  ).join('\n')
+  return buildJoinquestInstallCommand({ apiKey, client })
 }
 
 export function buildInstallDevDryRunCommand({ client = 'cursor' }) {
-  const flag = joinquestInstallDevFlag(client)
-  return `curl -fsSL ${INSTALL_DEV_SCRIPT_URL} | sh -s -- --dry-run ${flag}`
+  const platform = joinquestInstallPlatform(client)
+  return `npx -y ${JOINQUEST_CLI_PACKAGE} install ${platform} --dry-run`
 }
 
 export function buildInstallDevInspectCommand({ apiKey, client = 'cursor' }) {
-  const flag = joinquestInstallDevFlag(client)
-  const libDownloads = joinquestInstallDevLibDownloadLines()
-  const reviewFiles = 'install-joinquest-dev.sh joinquest-setup-lib/*.sh'
+  const platform = joinquestInstallPlatform(client)
   const dryRun = buildInstallDevDryRunCommand({ client })
+  const install = buildJoinquestInstallCommand({ apiKey, client })
+  return `# Preview planned actions (no writes):
+${dryRun}
 
-  if (client === 'skill-only') {
-    return `mkdir -p joinquest-setup-lib
-curl -fsSL ${INSTALL_DEV_SCRIPT_URL} -o install-joinquest-dev.sh
-${libDownloads}
-less ${reviewFiles}
-# ${dryRun}
-# bash install-joinquest-dev.sh ${flag}`
-  }
+# When ready:
+${install}
 
-  const key = apiKey || 'lq_dev_PASTE_YOUR_KEY'
-  return `mkdir -p joinquest-setup-lib
-curl -fsSL ${INSTALL_DEV_SCRIPT_URL} -o install-joinquest-dev.sh
-${libDownloads}
-less ${reviewFiles}
-# ${dryRun}
-export JOINQUEST_API_KEY=${key}
-# bash install-joinquest-dev.sh ${flag}`
+# Package source: ${JOINQUEST_CLI_GITHUB}`
 }
 
 export function buildClaudeMcpAddCommand({ apiKey }) {
